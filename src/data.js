@@ -19,66 +19,86 @@
 
 import Color from 'color'
 
-// eslint-disable-next-line no-undef
 const now = () => performance.now()
 
 export class Sink {
+  // eslint-disable-next-line no-unused-vars
   startPath(time, objnum, curclient, x, y, type, color, width, pressure) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   addToPath(time, objnum, curclient, x, y, pressure) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   finishPath(time, objnum, curclient) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   scrollBoard(time, clientnum, x, y) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   addPicture(time, objnum, curclient, x, y, width, height, uuid) {
     // do nothing in base class
   }
 
   addForm(
+    // eslint-disable-next-line no-unused-vars
     time,
+    // eslint-disable-next-line no-unused-vars
     objnum,
+    // eslint-disable-next-line no-unused-vars
     curclient,
+    // eslint-disable-next-line no-unused-vars
     x,
+    // eslint-disable-next-line no-unused-vars
     y,
+    // eslint-disable-next-line no-unused-vars
     width,
+    // eslint-disable-next-line no-unused-vars
     height,
+    // eslint-disable-next-line no-unused-vars
     type,
+    // eslint-disable-next-line no-unused-vars
     bColor,
+    // eslint-disable-next-line no-unused-vars
     fColor,
+    // eslint-disable-next-line no-unused-vars
     lw
   ) {
     // do nothing in base class
   }
-
+  // eslint-disable-next-line no-unused-vars
   deleteObject(time, objnum, curclient, storagenum) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   moveObject(time, objnum, curclient, x, y) {
     // do nothing in base class, note a change of storagenum is not allowed
   }
 
+  // eslint-disable-next-line no-unused-vars
   startApp(time, x, y, width, height, id, sha, appid) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   moveApp(time, x, y, width, height) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   closeApp(time) {
     // do nothing in base class
   }
 
+  // eslint-disable-next-line no-unused-vars
   dataApp(time, buffer) {
     // do nothing in base class
   }
@@ -182,7 +202,7 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  scrollBoard(time, clientnum, x, y) {
+  scrollBoard(time, _clientnum, x, y) {
     // clientnum is ignored, only relevant for live scrolling
     const tempbuffer = new ArrayBuffer(32) // actually it is a waste, but may be we need it later
     const dataview = new DataView(tempbuffer)
@@ -198,7 +218,7 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  addPicture(time, objnum, curclient, x, y, width, height, id) {
+  addPicture(time, objnum, _curclient, x, y, width, height, id) {
     // ok id was before a uuid, now it is general a hex coded id
     const buflength = id.length / 2 // it is hex coded so two bytes per byte
     if (buflength > 255) {
@@ -287,7 +307,8 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  deleteObject(time, objnum, curclient, storagenum) {
+  // eslint-disable-next-line no-unused-vars
+  deleteObject(time, objnum, curclient, _storagenum) {
     const tempbuffer = new ArrayBuffer(16)
     const dataview = new DataView(tempbuffer)
 
@@ -449,7 +470,8 @@ export class Container extends Sink {
 }
 
 export class MemContainer extends Container {
-  constructor(num, dummy) {
+  // eslint-disable-next-line no-unused-vars
+  constructor(num, _dummy) {
     super()
     this.storage = new ArrayBuffer(6400)
     this.storageAllocSize = 6400
@@ -1178,7 +1200,7 @@ export class Collection extends Sink {
     // First step determine covered area
     let storedmin = 0
     let storedmax = 0
-    this.containers.forEach(function (obj, num) {
+    this.containers.forEach(function (_obj, num) {
       storedmin = Math.min(storedmin, num)
       storedmax = Math.max(storedmax, num)
     })
@@ -1842,10 +1864,12 @@ export class DrawObject {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   commitPreshift(target) {
     // implement in derived class
   }
 
+  // eslint-disable-next-line no-unused-vars
   copyAndDeselect(target, shift) {
     // implement in derived class
     // return the copied object
@@ -2831,7 +2855,7 @@ export class DrawObjectContainer extends Sink {
     this.workobj = {}
   }
 
-  addPicture(time, objnum, curclient, x, y, width, height, uuid) {
+  addPicture(_time, objnum, _curclient, x, y, width, height, uuid) {
     const pictinfo = this.pictures.find((el) => el.sha === uuid)
 
     const addpict = new DrawObjectPicture(objnum)
@@ -2851,9 +2875,9 @@ export class DrawObjectContainer extends Sink {
   }
 
   addForm(
-    time,
+    _time,
     objnum,
-    curclient,
+    _curclient,
     x,
     y,
     width,
@@ -2879,7 +2903,7 @@ export class DrawObjectContainer extends Sink {
     this.objects.push(addform)
   }
 
-  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
+  startPath(_time, objnum, _curclient, x, y, type, color, w, pressure) {
     this.workobj[objnum] = new DrawObjectGlyph(objnum)
     this.objects.push(this.workobj[objnum])
     this.workobj[objnum].startPath(
@@ -2892,7 +2916,7 @@ export class DrawObjectContainer extends Sink {
     )
   }
 
-  addToPath(time, objid, curclient, x, y, pressure) {
+  addToPath(_time, objid, _curclient, x, y, pressure) {
     if (this.workobj[objid]) {
       // TODO handle objid
       this.workobj[objid].addToPath(
@@ -2903,17 +2927,20 @@ export class DrawObjectContainer extends Sink {
     }
   }
 
-  finishPath(time, objid, curclient) {
+  // eslint-disable-next-line no-unused-vars
+  finishPath(_time, objid, curclient) {
     if (this.workobj[objid]) {
       this.workobj[objid].finishPath()
       delete this.workobj[objid]
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   scrollBoard(time, x, y) {
     // do ... nothing....
   }
 
+  // eslint-disable-next-line no-unused-vars
   deleteObject(time, objnum, curclient, storagenum) {
     if (this.workobj[objnum]) {
       delete this.workobj[objnum]
@@ -2921,7 +2948,7 @@ export class DrawObjectContainer extends Sink {
     this.objects = this.objects.filter((el) => el.objid !== objnum)
   }
 
-  moveObject(time, objnum, curclient, x, y) {
+  moveObject(_time, objnum, _curclient, x, y) {
     if (!this.objects) return
     this.objects.forEach((el) => {
       if (el.objid === objnum) {
