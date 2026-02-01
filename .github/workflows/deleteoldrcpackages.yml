@@ -24,6 +24,7 @@ jobs:
           'lectureapp',
           'app',
           'config',
+          'data',
           ]
     steps:
     - name: Delete old versions of ${{ matrix.package }}

@@ -10,6 +10,7 @@ on:
           - lectureapp
           - app
           - config
+          - data
       logLevel:
         description: 'Log level'     
         required: true
