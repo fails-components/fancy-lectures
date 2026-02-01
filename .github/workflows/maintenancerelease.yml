@@ -12,6 +12,7 @@ on:
           - avsdispatcher
           - housekeeping
           - ltihandler
+          - notepadhandler
       logLevel:
         description: 'Log level'     
         required: true

@@ -44,6 +44,8 @@ jobs:
             context: ./daemons/housekeeping
           - container: ltihandler
             context: ./daemons/ltihandler
+          - container: notepadhandler
+            context: ./daemons/notepadhandler
     if: >-
       !startsWith(github.ref, 'refs/tags/') || 
       contains(github.ref_name, matrix.container)

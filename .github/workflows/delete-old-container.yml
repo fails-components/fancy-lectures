@@ -27,6 +27,7 @@ jobs:
           avsdispatcher,
           housekeeping,
           ltihandler,
+          notepadhandler,
         ]
 
     steps:
@@ -40,4 +41,3 @@ jobs:
           untagged-keep-latest: 5
           tag-regex: ^v\d+\.\d+\.\d+-rc\d+$
 
- 

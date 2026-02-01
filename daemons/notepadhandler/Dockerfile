@@ -1,7 +1,4 @@
-<<<<<<<< HEAD:daemons/ltihandler/Dockerfile
-========
 # syntax = docker/dockerfile:1.2
->>>>>>>> notepadhandler/monorepo-prep:daemons/notepadhandler/Dockerfile
 FROM node:22-trixie-slim
 
 ARG ENV
