@@ -1,0 +1,58 @@
+name: Version Increment on security and maintenance release (package)
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Which package to update?'
+        required: true
+        type: choice
+        options:
+          - lectureapp
+          - app
+          - config
+          - data
+          - security
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Security release'
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    env:
+      NEEDS_BROWSERSLIST: ${{ contains(fromJSON('["lectureapp", "app"]'), github.event.inputs.package) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PUSH_TO_GIT }}
+      - name: Git Config
+        run: |
+          git config --global user.name 'Fails maintenance bot'
+          git config --global user.email 'marten.richter@freenet.de'
+      - name: Update Browserslist
+        if: env.NEEDS_BROWSERSLIST == 'true'
+        run: npx browserslist@latest --update-db --yes
+        working-directory: packages/${{ inputs.package }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit Browserslist changes
+        if: env.NEEDS_BROWSERSLIST == 'true'
+        run: |
+          git add ../../package-lock.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "update browserslist for ${{ inputs.package }}"
+        working-directory: packages/${{ inputs.package }}      
+      - name: NPM Version Patch
+        run: |
+          # %s is a placeholder for the version number
+          npm version patch \
+            --tag-version-prefix="${{ inputs.package }}@" \
+            -m "chore(release): ${{ inputs.package }} %s"
+        working-directory: packages/${{ inputs.package }}
+      - name: Push Changes
+        run: |
+          git push --tags
+          git push
