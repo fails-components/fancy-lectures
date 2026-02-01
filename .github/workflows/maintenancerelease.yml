@@ -44,9 +44,13 @@ jobs:
           git diff --quiet && git diff --staged --quiet || git commit -m "update browserslist for ${{ inputs.package }}"
         working-directory: packages/${{ inputs.package }}      
       - name: NPM Version Patch
-        run: npm version patch
+        run: |
+          # %s is a placeholder for the version number
+          npm version patch \
+            --tag-version-prefix="${{ inputs.package }}@" \
+            -m "chore(release): ${{ inputs.package }} %s"
         working-directory: packages/${{ inputs.package }}
       - name: Push Changes
         run: |
           git push --tags
-          git pus
+          git push
