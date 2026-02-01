@@ -28,6 +28,7 @@ jobs:
           housekeeping,
           ltihandler,
           notepadhandler,
+          noteshandler,
         ]
 
     steps:
