@@ -3,6 +3,12 @@ name: Version Increment on security and maintenance release
 on:
   workflow_dispatch:
     inputs:
+      daemon:
+        description: 'Select the daemon to version'
+        required: true
+        type: choice
+        options:
+          - notepadhandler
       logLevel:
         description: 'Log level'     
         required: true
@@ -14,11 +20,21 @@ jobs:
   version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PUSH_TO_GIT }}
-      - run: git config --global user.name 'Fails maintenance bot'
-      - run: git config --global user.email 'marten.richter@freenet.de'
-      - run: npm version patch
-      - run: git push --tags
-      - run: git push
+          fetch-depth: 0
+      - name: Configure Git
+        run: |
+          git config --global user.name 'Fails maintenance bot'
+          git config --global user.email 'marten.richter@freenet.de'
+
+      - name: Increment Version
+        working-directory: ./daemons/${{ github.event.inputs.daemon }}
+        run: |
+          npm config set tag-version-prefix "${{ github.event.inputs.daemon }}-v"
+          npm version patch -m "chore(release): ${{ github.event.inputs.daemon }} %s [skip ci]"
+
+      - name: Push changes
+        run: |
+          git push --follow-tags
