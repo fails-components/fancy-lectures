@@ -11,6 +11,7 @@ on:
           - app
           - config
           - data
+          - security
       logLevel:
         description: 'Log level'     
         required: true

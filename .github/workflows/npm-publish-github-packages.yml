@@ -35,6 +35,8 @@ jobs:
             path: 'packages/config'
           - name: 'data'
             path: 'packages/data'
+          - name: 'security'
+            path: 'packages/security'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

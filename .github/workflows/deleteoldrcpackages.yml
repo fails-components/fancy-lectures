@@ -25,6 +25,7 @@ jobs:
           'app',
           'config',
           'data',
+          'security',
           ]
     steps:
     - name: Delete old versions of ${{ matrix.package }}
