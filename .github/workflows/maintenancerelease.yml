@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - apphandler
+          - avsdispatcher
       logLevel:
         description: 'Log level'     
         required: true

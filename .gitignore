@@ -4,3 +4,4 @@ packages/*/.env.development.local
 packages/*/build
 packages/*/dist
 /.npmrc
+.env
