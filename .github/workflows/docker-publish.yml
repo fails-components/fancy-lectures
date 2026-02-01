@@ -1,9 +1,5 @@
-name: Publish noteshandler
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+name: Publish daemons
+# portions from gemini pro
 
 on:
   schedule:
@@ -11,9 +7,11 @@ on:
   push:
     branches: [ master, next ]
     # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
+    tags: [ '*-v*.*.*' ]
+    paths: [ 'daemons/**' ]
   pull_request:
     branches: [ master, next ]
+    paths: [ 'daemons/**' ]
   workflow_dispatch:
     inputs:
       logLevel:
@@ -24,28 +22,69 @@ on:
         description: 'Testing the container build mechanism' 
 
 env:
-  # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
-  # github.repository as <account>/<repo>
-  IMAGE_NAME: ${{ github.repository }}
 
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: noteshandler
+            context: ./daemons/noteshandler
+    if: >-
+      !startsWith(github.ref, 'refs/tags/') || 
+      contains(github.ref_name, matrix.container)
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
+      - name: Check for changes in ${{ matrix.context }}
+        id: changed
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            src:
+              - '${{ matrix.context }}/**'     
+
+      - name: Determine Build Status
+        id: check
+        run: |
+          # Default: Don't build
+          BUILD="false"
+          CLEAN_VER=""
+
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Trigger: Schedule/Manual -> Building."
+            BUILD="true"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "Trigger: Tag -> Building."
+            BUILD="true"
+            # Extract clean version (apphandler-v1.2.3 -> 1.2.3)
+            CLEAN_VER=$(echo "${{ github.ref_name }}" | sed 's/.*-v//')
+          elif [[ "${{ steps.changed.outputs.src }}" == "true" ]]; then
+            echo "Trigger: Push with changes -> Building."
+            BUILD="true"
+          else
+            echo "Trigger: Push but no changes -> Skipping."
+          fi
+
+          # Export to GITHUB_ENV so all next steps can see it simply
+          echo "SHOULD_BUILD=$BUILD" >> $GITHUB_ENV
+          echo "VERSION_TAG=$CLEAN_VER" >> $GITHUB_ENV    
+
       - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
+        if: env.SHOULD_BUILD == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
@@ -56,25 +95,29 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
+        if: env.SHOULD_BUILD == 'true'
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}
           tags: |
             type=schedule
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern=v{{version}}
-            type=semver,pattern=v{{major}}.{{minor}}
-            type=semver,pattern=v{{major}}
+            type=semver,pattern=v{{version}},value=${{ env.VERSION_TAG }}
+            type=semver,pattern=v{{major}}.{{minor}},value=${{ env.VERSION_TAG }}
+            type=semver,pattern=v{{major}},value=${{ env.VERSION_TAG }}
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
-        uses: docker/build-push-action@v3
+        if: env.SHOULD_BUILD == 'true'
+        uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ${{ matrix.context }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
