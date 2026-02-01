@@ -1,0 +1,64 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.appscroll .p-scrollpanel-wrapper {
+  border-right: 9px solid #f4f4f4;
+}
+
+.appscroll .p-scrollpanel-bar {
+  background-color: #aaaaaa;
+  opacity: 1;
+  transition: background-color .3s;
+}
+
+
+.appscroll .p-scrollpanel-bar:hover {
+  background-color: #135ba1;
+}
+
+.p-button.fails-tree {
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+.fails-tree-scrollable {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.link-button {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+.p-dialog.jupyterDialog .p-dialog-header {
+  padding-bottom: 0.3rem;
+}
+
+.p-button.p-button-danger.p-button-text:hover {
+  background: rgba(182, 63, 0, 0.04);
+  border-color: transparent;
+  color: #B63F00;
+}
+
+.urlTableEntry {
+  white-space: normal !important;
+  word-break: break-word;
+}
+

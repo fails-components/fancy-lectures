@@ -29,6 +29,8 @@ jobs:
         include:
           - name: 'lectureapp'
             path: 'packages/lectureapp'
+          - name: 'app'
+            path: 'packages/app'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

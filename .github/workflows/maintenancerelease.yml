@@ -8,6 +8,7 @@ on:
         type: choice
         options:
           - lectureapp
+          - app
       logLevel:
         description: 'Log level'     
         required: true
