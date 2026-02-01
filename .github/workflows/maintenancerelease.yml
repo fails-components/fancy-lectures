@@ -11,6 +11,7 @@ on:
           - apphandler
           - avsdispatcher
           - housekeeping
+          - ltihandler
       logLevel:
         description: 'Log level'     
         required: true
