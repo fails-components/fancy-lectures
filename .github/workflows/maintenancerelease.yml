@@ -9,6 +9,7 @@ on:
         options:
           - lectureapp
           - app
+          - config
       logLevel:
         description: 'Log level'     
         required: true

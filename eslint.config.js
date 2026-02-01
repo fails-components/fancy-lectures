@@ -1,66 +1,54 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { FlatCompat } from '@eslint/eslintrc'
 import js from '@eslint/js'
+import promise from 'eslint-plugin-promise'
 import babelParser from '@babel/eslint-parser'
-import prettierRecommended from 'eslint-plugin-prettier/recommended'
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
+import globals from 'globals'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended
-})
-
-const config = [
+export default [
+  js.configs.recommended,
+  eslintPluginPrettierRecommended,
   {
-    ignores: ['**/src/libav.js/**/*.js', 'dist/', 'node_modules/']
-  },
-
-  ...compat.extends('eslint-config-standard'),
-  ...compat.extends('eslint-config-react-app'),
-
-  {
-    files: ['**/*.{js,jsx,mjs,cjs}'],
+    plugins: {
+      promise
+    },
     languageOptions: {
+      globals: {
+        ...globals.node
+      },
       parser: babelParser,
       ecmaVersion: 2020,
-      sourceType: 'module',
       parserOptions: {
-        requireConfigFile: false,
-        babelOptions: {
-          babelrc: false,
-          configFile: false,
-          presets: ['@babel/preset-react']
-        },
         ecmaFeatures: {
           legacyDecorators: true,
           jsx: true
-        }
-      },
-      // Equivalent to env: { jest: true }
-      globals: {
-        jest: 'readonly',
-        describe: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        it: 'readonly'
+        },
+        requireConfigFile: false
       }
     },
+    ignores: [
+      'build/*',
+      'dist/*',
+      'node_modules/*',
+      '.snapshots/*',
+      '*.min.js'
+    ],
     settings: {
       react: {
         version: '16'
       }
     },
     rules: {
-      'space-before-function-paren': 'off',
-      'import/export': 'off',
-      'promise/catch-or-return': 'error'
+      'space-before-function-paren': 0,
+      'import/export': 0,
+      'promise/catch-or-return': 'error',
+      'no-useless-return': 1,
+      camelcase: 1
     }
   },
-
-  prettierRecommended
+  {
+    files: ['test/*.spec.js'],
+    rules: {
+      'no-undef': 0
+    }
+  }
 ]
-
-export default config
