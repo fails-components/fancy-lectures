@@ -10,6 +10,7 @@ on:
         options:
           - apphandler
           - avsdispatcher
+          - housekeeping
       logLevel:
         description: 'Log level'     
         required: true

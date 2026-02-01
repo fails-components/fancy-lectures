@@ -24,7 +24,8 @@ jobs:
       matrix:
         container: [
           apphandler, 
-          avsdispatcher
+          avsdispatcher,
+          housekeeping,
         ]
 
     steps:
