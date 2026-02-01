@@ -1,5 +1,6 @@
 node_modules
 .env.development.local
-/build
-/dist
+packages/*/.env.development.local
+packages/*/build
+packages/*/dist
 .npmrc
