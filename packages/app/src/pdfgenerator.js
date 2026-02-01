@@ -174,6 +174,7 @@ export class PDFGenerator extends DrawObjectContainer {
     this.drawpath = []
   }
 
+  // eslint-disable-next-line no-unused-vars
   endPage(ystart, yend) {
     const page = this.page
 
@@ -203,6 +204,7 @@ export class PDFGenerator extends DrawObjectContainer {
     this.workobj = {}
   }
 
+  // eslint-disable-next-line no-unused-vars
   finalize(callback) {
     this.doc.end()
     // console.log('finalize called');
@@ -225,7 +227,6 @@ export class PDFGenerator extends DrawObjectContainer {
 
         const template = '#000000'
         const strcolor = obj.color.toString(16)
-        // eslint-disable-next-line new-cap
         let mycolor = new tinycolor(
           template.substring(0, 7 - strcolor.length) + strcolor
         )
@@ -233,13 +234,11 @@ export class PDFGenerator extends DrawObjectContainer {
         let alpha = 1
         if (obj.gtype === 0) {
           if (mycolor.toHexString() === '#ffffff')
-            // eslint-disable-next-line new-cap
             mycolor = new tinycolor('black')
           if (mycolor.isLight()) mycolor.darken(20)
         } else if (obj.gtype === 1) {
           alpha = 0.7 // was 0.3
         } else if (obj.gtype === 2) {
-          // eslint-disable-next-line new-cap
           mycolor = new tinycolor('white')
           alpha = 1
         }
@@ -249,7 +248,6 @@ export class PDFGenerator extends DrawObjectContainer {
         let strokealpha
         if (obj.gtype === 0 && !this.bw) {
           strokewidth = 0.25 * obj.width
-          // eslint-disable-next-line new-cap
           const workcolor = new tinycolor(mycolor.toString())
           strokecolor = workcolor.darken(20).toHexString()
           strokealpha = alpha
@@ -329,13 +327,11 @@ export class PDFGenerator extends DrawObjectContainer {
         let bAlpha = ((obj.bColor & 0xff000000) >>> 24) / 255
         const fAlpha = ((obj.fColor & 0xff000000) >>> 24) / 255
         let lw = obj.lw
-        // eslint-disable-next-line new-cap
         let bMycolor = new tinycolor({
           r: (obj.bColor & 0xff0000) >>> 16,
           g: (obj.bColor & 0xff00) >>> 8,
           b: (obj.bColor & 0xff) >>> 0
         })
-        // eslint-disable-next-line new-cap
         let fMycolor = new tinycolor({
           r: (obj.fColor & 0xff0000) >>> 16,
           g: (obj.fColor & 0xff00) >>> 8,
@@ -343,13 +339,11 @@ export class PDFGenerator extends DrawObjectContainer {
         })
         // border threat like a normal line
         if (bMycolor.toHexString() === '#ffffff')
-          // eslint-disable-next-line new-cap
           bMycolor = new tinycolor('black')
         if (bMycolor.isLight()) bMycolor.darken(20)
         if (bAlpha === 0 && fMycolor.toHexString() === '#ffffff') {
           bAlpha = 1.0
           lw = 0.25
-          // eslint-disable-next-line new-cap
           const workcolor = new tinycolor(fMycolor.toString())
           bMycolor = workcolor.darken(20).toHexString()
           bAlpha = fAlpha
@@ -363,7 +357,6 @@ export class PDFGenerator extends DrawObjectContainer {
 
         switch (obj.formtype) {
           case 1: // line
-            // eslint-disable-next-line no-unreachable
             page.drawLine({
               start: {
                 x: this.margins + obj.posx * geoscale,

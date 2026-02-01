@@ -236,22 +236,26 @@ class AVBackgroundRemover {
     if (await FilesetResolver.isSimdSupported()) {
       wasmFileSet = {
         wasmLoaderPath: new URL(
-          '../../../../node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_internal.js',
+          import.meta
+            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.js'),
           import.meta.url
         ).pathname,
         wasmBinaryPath: new URL(
-          '../../../../node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm',
+          import.meta
+            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm'),
           import.meta.url
         ).pathname
       }
     } else {
       wasmFileSet = {
         wasmLoaderPath: new URL(
-          '../../../../node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_nosimd_internal.js',
+          import.meta
+            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm'),
           import.meta.url
         ).pathname,
         wasmBinaryPath: new URL(
-          '../../../../node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_nosimd_internal.wasm',
+          import.meta
+            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm'),
           import.meta.url
         ).pathname
       }
@@ -298,7 +302,7 @@ class AVBackgroundRemover {
         this.timeorigin = timestamp
       }
 
-      const inprogress = new Promise((resolve, reject) => {
+      const inprogress = new Promise((resolve /*, reject*/) => {
         segmenter.segmentForVideo(
           frame,
           timestamp - this.timeorigin,
@@ -377,7 +381,6 @@ class AVBackgroundRemover {
               gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
               avmpworker.sendMessage({
-                // eslint-disable-next-line no-undef
                 frame: new VideoFrame(this.canvas, {
                   duration,
                   timestamp,
@@ -423,7 +426,7 @@ class AVBackgroundRemover {
 }
 
 class AVMediaPipeWorker {
-  constructor(args) {
+  constructor(/* args */) {
     this.onMessage = this.onMessage.bind(this)
     this.objects = {}
   }

@@ -24,9 +24,8 @@ export class SocketInterface {
 
   static interf = null
 
-  constructor(
-    args // do not call directly
-  ) {
+  constructor(/* args */) {
+    // do not call directly
     this.onMessage = this.onMessage.bind(this)
     this.onError = this.onError.bind(this)
     this.onMessageError = this.onMessageError.bind(this)
@@ -69,7 +68,7 @@ export class SocketInterface {
     return SocketInterface.interf
   }
 
-  onMessage(event) {
+  onMessage(/* event */) {
     const task = event.data.task
     switch (task) {
       case 'on':
@@ -204,9 +203,9 @@ export class SocketInterface {
     return this.networkUserhash
   }
 
-  onMessageError(event) {}
+  onMessageError(/* event */) {}
 
-  onError(event) {}
+  onError(/* event */) {}
 
   on(command, handler) {
     this.handlers[command] = handler

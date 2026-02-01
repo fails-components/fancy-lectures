@@ -4,17 +4,27 @@ import eslint from 'vite-plugin-eslint'
 import wasm from 'vite-plugin-wasm'
 import topLevelAwait from 'vite-plugin-top-level-await'
 import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import process from 'node:process'
 
 const ENV_PREFIX = 'REACT_APP_'
 
 export default defineConfig(() => {
+  const dirname = path.dirname(fileURLToPath(import.meta.url))
   return {
     build: {
       outDir: 'build'
     },
     plugins: [
       react(),
-      eslint(),
+      eslint({
+        overrideConfigFile: path.resolve(dirname, '../../eslint.config.js'),
+        cwd: path.resolve(dirname, '../../'),
+        // Disable caching while you are debugging config issues
+        cache: false,
+        include: ['src/**/*.js', 'src/**/*.jsx']
+      }),
       wasm(),
       topLevelAwait(),
       VitePWA({

@@ -21,7 +21,7 @@ import React, { Component } from 'react'
 import * as pdfjs from 'pdfjs-dist'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  '../../../node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+  import.meta.resolve('pdfjs-dist/legacy/build/pdf.worker.min.mjs'),
   import.meta.url
 ).href
 

@@ -59,11 +59,9 @@ import QrScanner from 'qr-scanner'
 import { JupyterEdit } from '@fails-components/jupyter-react-edit'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import workerUrl from 'qr-scanner/qr-scanner-worker.min.js?url'
 
-QrScanner.WORKER_PATH = new URL(
-  '../node_modules/qr-scanner/qr-scanner-worker.min.js',
-  import.meta.url
-)
+QrScanner.WORKER_PATH = workerUrl
 
 window.parent.postMessage(
   JSON.stringify({ subject: 'lti.frameResize', height: '90vh' }),

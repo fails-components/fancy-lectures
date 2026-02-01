@@ -21,7 +21,6 @@ let AudioData
 let encoderPoly
 
 const loadPolyfills = async () => {
-  // eslint-disable-next-line no-constant-condition
   if (!('AudioData' in globalThis)) {
     encoderPoly = true
   } else {
@@ -82,7 +81,7 @@ export class MediaStreamTrackProcessor {
         }
         this.tracknode.connect(this.workletnode)
       },
-      pull: async (controller) => {},
+      pull: async (/*controller*/) => {},
       cancel: (reason) => {
         if (this.queueEmptyRej) this.queueEmptyRej(reason)
         this.ac.close().catch((error) => {
@@ -155,10 +154,10 @@ export class MediaStreamTrackProcessor {
         this._requestVideoCallback(videoCallback)
         await this.videoele.play()
       },
-      pull: async (controller) => {
+      pull: async (/*controller*/) => {
         if (!this.rvfcHandle) this._requestVideoCallback(videoCallback)
       },
-      cancel: async (reason) => {
+      cancel: async (/*reason*/) => {
         await this.videoele.pause()
         if ('cancelVideoFrameCallback' in HTMLVideoElement.prototype) {
           this.videoele.cancelVideoFrameCallback(this.videoele.rvfcHandle)
@@ -169,14 +168,12 @@ export class MediaStreamTrackProcessor {
 
   _enqueueAudio(chunk) {
     // console.log('Audio chunk', chunk)
-    // eslint-disable-next-line no-undef
     this.streamController.enqueue(new AudioData(chunk))
   }
 
-  _enqueueVideo({ now, metadata }) {
+  _enqueueVideo({ /*now, */ metadata }) {
     // console.log('SETUP video enqueue', now, metadata)
     try {
-      // eslint-disable-next-line no-undef
       const frame = new VideoFrame(this.videoele, {
         timestamp: Math.floor(metadata.presentationTime * 1000),
         alpha: 'discard',
@@ -188,7 +185,7 @@ export class MediaStreamTrackProcessor {
         }
       })
       this.streamController.enqueue(frame)
-    } catch (error) {
+    } catch /*(error)*/ {
       console.log('enqueue video problem')
     }
   }

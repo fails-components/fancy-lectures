@@ -18,7 +18,7 @@
 
 export class KeyStore {
   static instance = null
-  constructor(args) {
+  constructor(/* args */) {
     this.keys = {}
     this.keysprom = {}
     this.keysres = {}

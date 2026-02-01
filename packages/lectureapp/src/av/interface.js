@@ -22,7 +22,6 @@ import Color from 'color'
 
 // install polyfills, if required
 let MediaStreamTrackProcessor
-// eslint-disable-next-line no-constant-condition
 if (!('MediaStreamTrackProcessor' in globalThis)) {
   MediaStreamTrackProcessor = MediaStreamTrackProcessorPolyfill
 } else {
@@ -94,7 +93,6 @@ export class AVDeviceInputStream extends AVStream {
 }
 
 export class AVVideoInputStream extends AVDeviceInputStream {
-  // eslint-disable-next-line no-useless-constructor
   constructor(args) {
     super(args)
     this.off = true
@@ -204,7 +202,6 @@ export class AVVideoInputStream extends AVDeviceInputStream {
 
   switchTrack({ track, screenshare }) {
     if (!AVInterface.mstinworker) {
-      // eslint-disable-next-line no-undef
       const trackprocessor = new MediaStreamTrackProcessor({
         track,
         maxBufferSize: 10
@@ -281,7 +278,6 @@ export class AVVideoInputStream extends AVDeviceInputStream {
 }
 
 export class AVMicrophoneStream extends AVDeviceInputStream {
-  // eslint-disable-next-line no-useless-constructor
   constructor(args) {
     super(args)
     this.dbUpdate = this.dbUpdate.bind(this)
@@ -385,7 +381,6 @@ export class AVMicrophoneStream extends AVDeviceInputStream {
     console.log('audio track settings after', track.getSettings())
 
     if (!AVInterface.mstinworker) {
-      // eslint-disable-next-line no-undef
       const trackprocessor = new MediaStreamTrackProcessor({
         track,
         maxBufferSize: 10
@@ -580,9 +575,8 @@ export class AVInterface {
   static userhash // unique hash, should be set, so that we can distinguish users, but should be a hash, so that we can not identify!
   static mstinworker = false
 
-  constructor(
-    args // do not call directly
-  ) {
+  constructor(/* args */) {
+    // do not call directly
     this.onMessage = this.onMessage.bind(this)
     this.onError = this.onError.bind(this)
     this.onMessageError = this.onMessageError.bind(this)
@@ -738,7 +732,6 @@ export class AVInterface {
       AVInterface.mstinworker = true
       console.log('Create MediaStreamTrackProcessor in worker!')
     } catch (error) {
-      // eslint-disable-next-line no-undef
       console.log('DataClone Test error result', error)
       // deactivvate in any error case
       AVInterface.mstinworker = false
@@ -892,7 +885,7 @@ export class AVInterface {
     return this.devices
   }
 
-  async openVideoCamera(args) {
+  async openVideoCamera(/*args*/) {
     if (!AVInterface.mediadevicesupported) return
     try {
       if (!this.devices) await this.getAVDevices()
@@ -952,7 +945,7 @@ export class AVInterface {
     }
   }
 
-  async openAudioMicrophone(args) {
+  async openAudioMicrophone(/*args*/) {
     if (!AVInterface.mediadevicesupported) return
     try {
       if (!this.devices) await this.getAVDevices()
@@ -1031,7 +1024,7 @@ export class AVInterface {
     if (device) this.switchSpeaker(device.deviceId)
   }
 
-  async openAudioOutput(args) {
+  async openAudioOutput(/*args*/) {
     // if (!this.mediadevicesupported) return
     try {
       await this.getSpeakerDevice()

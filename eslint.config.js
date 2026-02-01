@@ -12,11 +12,8 @@ export default [
       promise
     },
     languageOptions: {
-      globals: {
-        ...globals.node
-      },
       parser: babelParser,
-      ecmaVersion: 2020,
+      ecmaVersion: 2021,
       parserOptions: {
         ecmaFeatures: {
           legacyDecorators: true,
@@ -46,7 +43,39 @@ export default [
     }
   },
   {
+    files: ['packages/lectureapp/**', 'packages/app/**'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.serviceworker
+      }
+    }
+  },
+  {
+    files: ['packages/config/**', 'packages/security/**'],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      }
+    }
+  },
+  {
+    files: ['packages/data/**'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node
+      }
+    }
+  },
+  {
     files: ['test/*.spec.js'],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+        ...globals.node
+      }
+    },
     rules: {
       'no-undef': 0
     }

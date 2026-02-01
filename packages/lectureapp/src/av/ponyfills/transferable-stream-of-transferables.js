@@ -2,7 +2,6 @@ let AudioData
 let encoderPoly
 
 const loadPolyfills = async () => {
-  // eslint-disable-next-line no-constant-condition
   if (!('AudioData' in globalThis)) {
     encoderPoly = true
   } else {
@@ -85,7 +84,6 @@ class ReadableFromExternal {
           numberOfChannels,
           timestamp
         } = chunk
-        // eslint-disable-next-line no-undef
         chunk = new AudioData({
           data,
           format,
@@ -110,7 +108,6 @@ class ReadableFromExternal {
           displayHeight,
           colorSpace
         } = chunk
-        // eslint-disable-next-line no-undef
         chunk = new VideoFrame(data, {
           format,
           codedWidth,
@@ -178,7 +175,7 @@ class ReadableToExternal {
         })
         this.finalization.register(this)
       },
-      write: async (chunk, controller) => {
+      write: async (chunk /*, controller*/) => {
         // TODO block writing
         let transfer
         if (chunk._data?.buffer)
@@ -197,7 +194,7 @@ class ReadableToExternal {
           })
         }
       },
-      close: async (controller) => {
+      close: async (/*controller*/) => {
         this.port.postMessage({
           task: 'ReadableToExternalClose'
         })

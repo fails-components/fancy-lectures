@@ -176,6 +176,7 @@ export class FailsConfig {
     if (env.FAILS_KEYS_SECRET) this.keyssecret = env.FAILS_KEYS_SECRET
     else if (!this.react) throw new Error('Please specifiy FAILS_KEYS_SECRET')
 
+    // eslint-disable-next-line camelcase
     this.lms_list = {}
     if (env.FAILS_LMS_LIST) {
       const lmss = env.FAILS_LMS_LIST.split(' ')
@@ -184,9 +185,12 @@ export class FailsConfig {
         const lmsarr = lms.split('|')
         if (lmsarr.length !== 5) throw new Error('FAILS_LMS_LIST wrong format')
         const newone = {}
+        // eslint-disable-next-line camelcase
         newone.keyset_url = lmsarr[1]
+        // eslint-disable-next-line camelcase
         newone.access_token_url = lmsarr[2]
 
+        // eslint-disable-next-line camelcase
         newone.auth_request_url = lmsarr[3]
         const name = lmsarr[4]
         if (
