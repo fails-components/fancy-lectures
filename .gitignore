@@ -3,4 +3,4 @@ node_modules
 packages/*/.env.development.local
 packages/*/build
 packages/*/dist
-.npmrc
+/.npmrc
