@@ -1,4 +1,3 @@
-/* eslint-disable node/no-callback-literal */
 /*
     Fails Components (Fancy Automated Internet Lecture System - Components)
     Copyright (C)  2015-2017 (original FAILS), 
@@ -69,7 +68,7 @@ export class NoteScreenConnection extends CommonConnection {
     this.lastaccess = this.lastaccess.bind(this)
   }
 
-  lastaccess(uuid) {
+  lastaccess(/*uuid */) {
     // TODO
     // console.log('lastaccess', uuid)
   }
@@ -389,7 +388,7 @@ export class NoteScreenConnection extends CommonConnection {
       }
     })
 
-    socket.on('sendboards', async (cmd) => {
+    socket.on('sendboards', async (/* cmd */) => {
       await loadlectprom
       // console.log('notepad connected, send board data')
       this.sendBoardsToSocket(notepadscreenid.lectureuuid, socket)
@@ -523,7 +522,7 @@ export class NoteScreenConnection extends CommonConnection {
       }
     })
 
-    socket.on('switchAppMaster', async (cmd) => {
+    socket.on('switchAppMaster', async (/* cmd */) => {
       const masterCommand = { appletMaster: socket.id }
       this.notepadio
         .to(notepadscreenid.roomname)
@@ -689,9 +688,14 @@ export class NoteScreenConnection extends CommonConnection {
     this.getLectDetail(purescreen, socket)
 
     // console.log('screen send board data')
-    loadlectprom.then(() => {
-      this.sendBoardsToSocket(purescreen.lectureuuid, socket)
-    })
+    loadlectprom
+      .then(() => {
+        this.sendBoardsToSocket(purescreen.lectureuuid, socket)
+      })
+      .catch((error) => {
+        console.error('Failed to load lecture:', error)
+      })
+
     purescreen.roomname = this.getRoomName(purescreen.lectureuuid)
     /* console.log(
       'screen is connected to notepad, join room',
@@ -756,7 +760,7 @@ export class NoteScreenConnection extends CommonConnection {
       ) {
         try {
           let toid
-          Promise.any([
+          await Promise.any([
             routerurl,
             new Promise((resolve, reject) => {
               toid = setTimeout(reject, 20 * 1000)
@@ -1914,14 +1918,14 @@ export class NoteScreenConnection extends CommonConnection {
   }
   */
 
-  async getNoteScreens(args, funct) {
+  async getNoteScreens(args /*, funct*/) {
     try {
       const screens = await this.redis.sMembers(
         'lecture:' + args.lectureuuid + ':notescreens'
       )
       // console.log('our screens', screens)
       const screenret = Promise.all(
-        screens.map(async (el, ind) => {
+        screens.map(async (el) => {
           const temp = await this.redis.hmGet(
             'lecture:' + args.lectureuuid + ':notescreen:' + el,
             ['name', 'purpose', 'channel', 'active', 'lastaccess']

@@ -1,4 +1,3 @@
-/* eslint-disable node/no-callback-literal */
 /*
     Fails Components (Fancy Automated Internet Lecture System - Components)
     Copyright (C)  2015-2017 (original FAILS), 
@@ -128,7 +127,7 @@ export class NotesConnection extends CommonConnection {
       // console.log("chatquestion",cmd);
     })
 
-    socket.on('closevideoquestion', (cmd) => {
+    socket.on('closevideoquestion', (/*cmd*/) => {
       this.closeVideoQuestion(purenotes, { id: purenotes.socketid }).catch(
         (error) => {
           console.log('Problem in closeVideoQuestion', error)

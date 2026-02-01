@@ -33,13 +33,13 @@ export class AppHandler {
     this.maxFileSize = 30000000
   }
 
-  notepadURL(lectureuuid) {
+  notepadURL(/* lectureuuid */) {
     // later we will ask redis, where the primary lecture is handled, or if a new one should be started
 
     return this.fixednotepadURL
   }
 
-  notesURL(lectureuuid) {
+  notesURL(/* lectureuuid */) {
     // later we will ask redis, where the secondary lecture is handled, or if a new one should be started
 
     return this.fixednotesURL

@@ -1,4 +1,3 @@
-/* eslint-disable node/no-callback-literal */
 /*
     Fails Components (Fancy Automated Internet Lecture System - Components)
     Copyright (C)  2015-2017 (original FAILS), 
