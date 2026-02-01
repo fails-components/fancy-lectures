@@ -17,59 +17,61 @@ on:
         default: 'warning'
       tags:
         description: 'Testing node.js package publish workflow'
-  
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm test
-
   publish-gpr:
-    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false 
+      matrix:
+        include:
+          - name: 'data'
+            path: 'packages/data'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - uses: actions/setup-node@v3
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://npm.pkg.github.com/
-      - run: npm ci
-
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ matrix.path }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Check if version has been updated
         id: check
         uses: EndBug/version-check@v2
         with: 
-         diff-search: true
+          diff-search: true
+          file-url: ${{ matrix.path }}/package.json
       - name: Log when changed
         if: steps.check.outputs.changed == 'true'
-        run: 'echo "Version change found in commit ${{ steps.check.outputs.commit }}! New version: ${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"'
+        run: 'echo "Version change found in ${{ matrix.name }}! New version: ${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"'
       - name: Log when unchanged
         if: steps.check.outputs.changed == 'false'
-        run: 'echo "No version change :/"'
+        run: 'echo "No version change for ${{ matrix.name }} :/"'      
+# no tests declared
+#      - run: npm test
+#        env:
+#          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish Stable (Master)
+        if: steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/master'
+        run: |
+          npm publish --tag stable
+          npm dist-tag add @fails-components/${{ matrix.name }}@${{ steps.check.outputs.version }} latest
+        working-directory: ${{ matrix.path }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: npm publish --tag stable
-        if: ${{ steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/master' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm publish --tag next
-        if: ${{ steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/next' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm dist-tag add @fails-components/data@${{ steps.check.outputs.version }} latest
-        if: ${{ steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/master' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm dist-tag add @fails-components/data@${{ steps.check.outputs.version }} latestunstable
-        if: ${{ steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/next' }}
+      - name: Publish Next (Next branch)
+        if: steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/next'
+        run: |
+          npm publish --tag next
+          npm dist-tag add @fails-components/${{ matrix.name }}@${{ steps.check.outputs.version }} latestunstable
+        working-directory: ${{ matrix.path }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
