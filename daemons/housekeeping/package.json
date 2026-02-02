@@ -17,7 +17,8 @@
   "scripts": {
     "start": "node src/main.js",
     "test": "run-s test:lint",
-    "test:lint": "eslint ."
+    "test:lint": "eslint .",
+    "docker:build": "docker build -t ghcr.io/fails-components/housekeeping:master --secret id=GH_TOKEN -f Dockerfile ../.."
   },
   "devDependencies": {
     "babel-eslint": "^10.0.3",

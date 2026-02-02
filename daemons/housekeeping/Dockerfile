@@ -1,17 +1,19 @@
-# syntax = docker/dockerfile:1.2
-FROM node:22-trixie-slim
+FROM node:24-trixie-slim
 
 ARG ENV
 
-WORKDIR /usr/src/housekeeping
+WORKDIR /usr/src/fails
 
-COPY package*.json ./
+COPY package-lock.json ./ 
+COPY daemons/housekeeping/package*.json ./daemons/housekeeping/
 COPY .npmrc ./
 
 #debug
 RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`; if [ "$ENV" = "debug" ] ; then npm install ; else  npm ci --only=production; fi
 
-COPY . .
+COPY daemons/housekeeping ./daemons/housekeeping
+
+WORKDIR /usr/src/fails/daemons/housekeeping
 
 EXPOSE 8080
 

@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "run-s test:lint",
-    "test:lint": "eslint ."
+    "test:lint": "eslint .",
+    "docker:build": "docker build -t ghcr.io/fails-components/avsdispatcher:master --secret id=GH_TOKEN -f Dockerfile ../.."
   },
   "repository": {
     "type": "git",

@@ -1,20 +1,19 @@
-<<<<<<<< HEAD:daemons/ltihandler/Dockerfile
-========
-# syntax = docker/dockerfile:1.2
->>>>>>>> notepadhandler/monorepo-prep:daemons/notepadhandler/Dockerfile
-FROM node:22-trixie-slim
+FROM node:24-trixie-slim
 
 ARG ENV
 
-WORKDIR /usr/src/ltihandler
+WORKDIR /usr/src/fails
 
-COPY package*.json ./
+COPY package-lock.json ./ 
+COPY daemons/ltihandler/package*.json ./daemons/ltihandler/
 COPY .npmrc ./
 
 #debug
 RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`; if [ "$ENV" = "debug" ] ; then npm install ; else  npm ci --only=production; fi
 
-COPY . .
+COPY daemons/ltihandler ./daemons/ltihandler
+
+WORKDIR /usr/src/fails/daemons/ltihandler
 
 EXPOSE 8080
 
