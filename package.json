@@ -5,12 +5,16 @@
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "test": "npm test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
+    "start": "npm-run-all --parallel start:*",
+    "start:app": "npm start -w packages/app",
+    "start:lectureapp": "npm start -w packages/lectureapp",
     "serve": "npm-run-all --parallel serve:*",
     "serve:app": "npm run serve -w packages/app",
-    "serve:lecture": "npm run serve -w packages/lectureapp"
+    "serve:lectureapp": "npm run serve -w packages/lectureapp"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",
