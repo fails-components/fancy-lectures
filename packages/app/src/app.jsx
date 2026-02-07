@@ -1924,7 +1924,15 @@ class App extends Component {
                     this.setState({
                       jupyterDocument: {
                         metadata: {
-                          orig_nbformat: 4
+                          orig_nbformat: 4,
+                          kernelspec: {
+                            display_name: 'Python (XPython)',
+                            language: 'python',
+                            name: 'xpython'
+                          },
+                          language_info: {
+                            name: 'python'
+                          }
                         },
                         nbformat_minor: 5,
                         nbformat: 4,
@@ -2385,10 +2393,12 @@ class App extends Component {
               </div>
               <div className='p-col-9'>
                 <p>
-                  The system is generating {this.state.pdfgenerate.filetype}.{' '}
+                  The system is generating {this.state.pdfgenerate.filetype}
+                  .{' '}
                 </p>
                 <p>
-                  Current status is: <br /> {this.state.pdfgenerate.message}{' '}
+                  Current status is: <br />{' '}
+                  {this.state.pdfgenerate.message}{' '}
                 </p>
               </div>
             </div>
@@ -2882,17 +2892,18 @@ class App extends Component {
                         </Card>
                       </div>
                     )}
-                    {jupyter && (jupyterdata.length >= 1 || showemptyjupyter) && (
-                      <div className='p-col-12'>
-                        <Card title='Jupyter notebooks and apps'>
-                          <Tree
-                            value={jupyterdata}
-                            className='fails-tree-scrollable'
-                            nodeTemplate={this.jupyterTemplate}
-                          ></Tree>
-                        </Card>
-                      </div>
-                    )}
+                    {jupyter &&
+                      (jupyterdata.length >= 1 || showemptyjupyter) && (
+                        <div className='p-col-12'>
+                          <Card title='Jupyter notebooks and apps'>
+                            <Tree
+                              value={jupyterdata}
+                              className='fails-tree-scrollable'
+                              nodeTemplate={this.jupyterTemplate}
+                            ></Tree>
+                          </Card>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>
