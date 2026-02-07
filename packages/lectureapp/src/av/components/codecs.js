@@ -28,7 +28,6 @@ const loadPolyfills = async () => {
   let decoderPoly = false
   let encoderPoly = false
 
-  // eslint-disable-next-line no-constant-condition
   if (!('AudioDecoder' in globalThis)) {
     decoderPoly = true
   } else {
@@ -37,7 +36,6 @@ const loadPolyfills = async () => {
     EncodedAudioChunk = globalThis.EncodedAudioChunk
   }
 
-  // eslint-disable-next-line no-constant-condition
   if (!('AudioEncoder' in globalThis)) {
     encoderPoly = true
   } else {
@@ -87,7 +85,6 @@ const loadPolyfills = async () => {
 let scalabilityModeSupported = false
 const scalabilityModes = []
 if ('VideoEncoder' in globalThis) {
-  // eslint-disable-next-line no-undef
   VideoEncoder.isConfigSupported({
     codec: 'avc1.420034', // aka h264, maybe add profile
     avc: {
@@ -103,7 +100,7 @@ if ('VideoEncoder' in globalThis) {
     scalabilityMode: 'L1T3',
     latencyMode: 'realtime'
   })
-    .then(({ supported, config }) => {
+    .then(({ supported /*, config */ }) => {
       console.log('L1T3 mode supported', supported)
       if (supported) {
         scalabilityModeSupported = true
@@ -113,7 +110,6 @@ if ('VideoEncoder' in globalThis) {
     .catch((error) => {
       console.log('Testing encoder properties failed', error)
     })
-  // eslint-disable-next-line no-undef
   VideoEncoder.isConfigSupported({
     codec: 'avc1.420034', // aka h264, maybe add profile
     avc: {
@@ -129,7 +125,7 @@ if ('VideoEncoder' in globalThis) {
     scalabilityMode: 'L1T2',
     latencyMode: 'realtime'
   })
-    .then(({ supported, config }) => {
+    .then(({ supported /*, config*/ }) => {
       console.log('L1T2 mode supported', supported)
       if (supported) {
         scalabilityModeSupported = true
@@ -174,10 +170,10 @@ class AVCodec {
 
     this.writable = new WritableStream(
       {
-        start(controller) {},
+        start(/*controller*/) {},
         write: this.write,
         close: this.closeWritable,
-        abort(reason) {}
+        abort(/*reason*/) {}
       },
       { highWaterMark: this.highWaterMarkWritable }
     )
@@ -201,12 +197,12 @@ class AVCodec {
     this.readableController = controller
   }
 
-  async closeWritable(controller) {
+  async closeWritable(/*controller*/) {
     await this.codec.flush()
     this.codec.close()
   }
 
-  pullReadable(controller) {
+  pullReadable(/*controller*/) {
     this.checkResPendingWrit()
   }
 
@@ -347,7 +343,6 @@ export class AVVideoEncoder extends AVEncoder {
     await super.recreateCodec()
     await AVComponentsLoaded
     this.lastkeyframetime = 0
-    // eslint-disable-next-line no-undef
     this.codec = new VideoEncoder({
       output: this.output,
       error(error) {
@@ -427,7 +422,6 @@ export class AVAudioEncoder extends AVEncoder {
     console.log('recreateCodec Encoder')
     await super.recreateCodec()
     await AVComponentsLoaded
-    // eslint-disable-next-line no-undef
     this.codec = new AudioEncoder({
       output: this.output,
       error(error) {
@@ -522,7 +516,6 @@ export class AVVideoDecoder extends AVDecoder {
   async recreateCodec() {
     await super.recreateCodec()
     await AVComponentsLoaded
-    // eslint-disable-next-line no-undef
     this.codec = new VideoDecoder({
       output: this.output,
       error(error) {
@@ -551,7 +544,6 @@ export class AVAudioDecoder extends AVDecoder {
   async recreateCodec() {
     await super.recreateCodec()
     await AVComponentsLoaded
-    // eslint-disable-next-line no-undef
     this.codec = new AudioDecoder({
       output: this.output,
       error(error) {

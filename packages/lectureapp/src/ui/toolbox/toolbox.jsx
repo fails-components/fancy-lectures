@@ -67,7 +67,6 @@ import {
   fiJupyterLiteIcon,
   fiStartActivityIcon
 } from '../icons/icons.jsx'
-import { UAParser } from 'ua-parser-js'
 import { ToolHandling } from './toolhandling.jsx'
 import { detectLatex, convertToLatex } from '../misc/latex.jsx'
 import { InputTextarea } from 'primereact/inputtextarea'
@@ -382,6 +381,29 @@ export class ToolBox extends ToolHandling {
   }
 
   render() {
+    // browser info
+    let browser = 'Unknown'
+    let version = '?'
+    let engine = 'Unknown'
+    if (navigator.userAgentData) {
+      const brand =
+        navigator.userAgentData.brands.filter((b) => b.brand !== 'Not(A:Brand') ||
+        uaData.brands[0]
+      browser = brand.map((el)=> el.brand).join(' ')
+      version = brand[0].version
+      engine = 'Blink'
+    } else {
+      const ua = navigator.userAgent
+      if (ua.includes('Firefox')) {
+        browser = 'Firefox'
+        version = ua.split('Firefox/')[1]
+        engine = 'Gecko'
+      } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+        browser = 'Safari'
+        version = ua.split('Version/')[1]?.split(' ')[0]
+        engine = 'WebKit'
+      }
+    }
     const ttopts = {
       className: 'teal-tooltip',
       position: 'top',
@@ -1026,7 +1048,6 @@ export class ToolBox extends ToolHandling {
 
     let tbclass = 'toolboxMove'
     if (this.state.scrollmodeactiv) tbclass = 'toolboxStatic'
-    const uaparser = new UAParser()
     return (
       <div
         className={tbclass}
@@ -1079,10 +1100,8 @@ export class ToolBox extends ToolHandling {
           <br /> <br />
           Lectureapp version {import.meta.env.REACT_APP_VERSION}{' '}
           {this.props.experimental && <b>(Experimental version)</b>}
-          <br /> Browser: {uaparser.getBrowser().name} (Version:{' '}
-          {uaparser.getBrowser().version}) with Engine:{' '}
-          {uaparser.getEngine().name} (Version: {uaparser.getEngine().version})
-          {uaparser.getEngine().name !== 'Blink' && (
+          <br /> Browser: {browser} (Version: {version}) with Engine: {engine}
+          {engine !== 'Blink' && (
             <React.Fragment>
               <br /> <br />
               Fails is developed for browsers with Blink engine like Chrome,

@@ -1,4 +1,4 @@
-import { KeyStore } from '../../misc/keystore'
+import { KeyStore } from '../../misc/keystore.js'
 import {
   AVAudioDecoder,
   AVAudioEncoder,
@@ -14,9 +14,9 @@ import {
   AVOneToManyCopy,
   AVOneFrameToManyScaler,
   AVFrameSceneChange
-} from '../components'
-import { AVTransport } from './transport'
-import { AVWorker } from './avworker'
+} from '../components/index.js'
+import { AVTransport } from './transport.js'
+import { AVWorker } from './avworker.js'
 
 export const videoQualities = [
   {
@@ -503,7 +503,6 @@ export class AVInputProcessor extends AVProcessor {
       delete this.track
     }
     this.track = args.track
-    // eslint-disable-next-line no-undef
     this.trackprocessor = new MediaStreamTrackProcessor({
       track: args.track,
       maxBufferSize: 10
@@ -966,7 +965,6 @@ export class AVVideoInputProcessor extends AVInputProcessor {
     if (this.sceneDetect) {
       outputlevel.unshift('scene') // scene detector
 
-      // eslint-disable-next-line dot-notation
       outputwidth['scene'] = 160
       outputlevelmain++
     }
@@ -1008,7 +1006,6 @@ export class AVVideoInputProcessor extends AVInputProcessor {
   buildOutgoingPipeline() {
     super.buildOutgoingPipeline()
     if (this.sceneDetect) {
-      // eslint-disable-next-line dot-notation
       const curstream = this.multscaler.readable['scene']
       // encoder
       const pipeTos = []
@@ -1404,7 +1401,9 @@ export class AVOutputProcessor extends AVProcessor {
             }
             if (!tickets) {
               console.log('setSrcID ticket not found retry')
-              await new Promise((resolve, reject) => setTimeout(resolve, 5000))
+              await new Promise((resolve /*, reject*/) =>
+                setTimeout(resolve, 5000)
+              )
             }
           }
           console.log('srcId', {
@@ -1451,7 +1450,7 @@ export class AVAudioOutputProcessor extends AVOutputProcessor {
     this.decoder = new AVAudioDecoder()
   }
 
-  writeframe(frame, controller) {
+  writeframe(frame /*, controller*/) {
     if (this.audioport) {
       // an AudioData Object seems to be not transferable to an AudioWorklet
       const {
@@ -1515,7 +1514,6 @@ export class AVVideoOutputProcessor extends AVOutputProcessor {
             init.transfer.push(data.buffer)
           }
         }
-        // eslint-disable-next-line no-undef
         return new EncodedVideoChunk(init)
       },
       keyStore: KeyStore.getKeyStore()
@@ -1524,7 +1522,7 @@ export class AVVideoOutputProcessor extends AVOutputProcessor {
     this.decoder = new AVVideoDecoder()
   }
 
-  writeframe(frame, controller) {
+  writeframe(frame /*, controller*/) {
     if (this.outputrender && this.outputrender.ctx) {
       const offscreen = this.outputrender.offscreen
       const ctx = this.outputrender.ctx

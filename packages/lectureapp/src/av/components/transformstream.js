@@ -41,10 +41,10 @@ export class AVTransformStream {
 
     this.writable = new WritableStream(
       {
-        start(controller) {},
+        start(/*controller*/) {},
         write: this.write,
-        close(controller) {},
-        abort(reason) {}
+        close(/*controller*/) {},
+        abort(/*reason*/) {}
       },
       { highWaterMark: this.highWaterMarkWritable }
     )

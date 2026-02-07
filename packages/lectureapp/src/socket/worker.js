@@ -25,7 +25,7 @@ import {
 } from 'bson'
 
 class SocketWorker {
-  constructor(args) {
+  constructor(/* args */) {
     this.onMessage = this.onMessage.bind(this)
     this.objects = {}
 
@@ -219,7 +219,7 @@ class SocketWorker {
       }
       this.socket.emit('sendKey', cryptMess)
     } catch (error) {
-      console.log('error in send and encrypt')
+      console.log('error in send and encrypt', error)
     }
   }
 
@@ -755,7 +755,6 @@ class SocketWorker {
 
   authCB(cb) {
     const token = this.getToken()
-    // eslint-disable-next-line n/no-callback-literal
     cb({ token })
   }
 
@@ -763,6 +762,7 @@ class SocketWorker {
     const curtoken = this.getToken()
     if (curtoken !== this.lastdectoken && curtoken !== undefined) {
       try {
+        // eslint-disable-next-line camelcase
         this.decoded_token_int = jwt_decode(curtoken)
         this.lastdectoken = curtoken
       } catch (error) {
@@ -783,7 +783,7 @@ class SocketWorker {
 
   initializeSocketHandlersNotepads() {
     this.socket.removeAllListeners('connect')
-    this.socket.on('connect', (data) => {
+    this.socket.on('connect', (/* data */) => {
       setTimeout(() => {
         this.socket.emit('sendboards', {})
       }, 100)
@@ -795,7 +795,7 @@ class SocketWorker {
 
   initializeSocketHandlersScreens() {
     this.socket.removeAllListeners('connect')
-    this.socket.on('connect', (data) => {
+    this.socket.on('connect', (/* data */) => {
       this.connectCrypto()
       this.scheduleReauthor()
       this.sendId()
@@ -804,7 +804,7 @@ class SocketWorker {
 
   initializeSocketHandlersNotes() {
     this.socket.removeAllListeners('connect')
-    this.socket.on('connect', (data) => {
+    this.socket.on('connect', (/* data */) => {
       this.connectCrypto()
       this.scheduleReauthor()
       this.sendId()

@@ -1,23 +1,23 @@
-import { KeyStore } from '../../misc/keystore'
-import { receiveReadableStream } from '../ponyfills/transferable-stream-of-transferables'
+import { KeyStore } from '../../misc/keystore.js'
+import { receiveReadableStream } from '../ponyfills/transferable-stream-of-transferables.js'
 import {
   AVVideoInputProcessor,
   AVAudioInputProcessor,
   AVVideoOutputProcessor,
   AVAudioOutputProcessor
-} from './processors'
-import { AVTransport } from './transport'
-import { AVVideoRenderInt } from './videorenderint'
+} from './processors.js'
+import { AVTransport } from './transport.js'
+import { AVVideoRenderInt } from './videorenderint.js'
 
 export class AVWorker {
   static ncPipe = null
   static networkRes = null
   static worker = null
-  static networkProm = new Promise((resolve, reject) => {
+  static networkProm = new Promise((resolve /*,reject*/) => {
     AVWorker.networkRes = resolve
   })
 
-  constructor(args) {
+  constructor(/*args*/) {
     this.onMessage = this.onMessage.bind(this)
     this.objects = {}
 
@@ -98,7 +98,7 @@ export class AVWorker {
     }
     try {
       await this.transportInfoProm
-    } catch (error) {
+    } catch {
       // ignore, not my business
     }
     this.transportInfoProm = new Promise((resolve, reject) => {

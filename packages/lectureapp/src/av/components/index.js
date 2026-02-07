@@ -22,13 +22,13 @@ export {
   AVAudioEncoder,
   AVAudioDecoder,
   createEncodedAudioChunk
-} from './codecs'
-export { AVDecrypt, AVEncrypt } from './crypt'
-export { AVFrameSceneChange } from './framescenechange'
-export { AVFramer, AVDeFramer, BsonFramer, BsonDeFramer } from './framing'
+} from './codecs.js'
+export { AVDecrypt, AVEncrypt } from './crypt.js'
+export { AVFrameSceneChange } from './framescenechange.js'
+export { AVFramer, AVDeFramer, BsonFramer, BsonDeFramer } from './framing.js'
 export {
   AVOneToMany,
   AVOneFrameToManyScaler,
   AVOneToManyCopy
-} from './onetomany'
-export { AVSink } from './sink'
+} from './onetomany.js'
+export { AVSink } from './sink.js'

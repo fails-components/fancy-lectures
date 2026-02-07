@@ -7,6 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import process from 'node:process'
+// import { visualizer } from 'rollup-plugin-visualizer'
 
 const ENV_PREFIX = 'REACT_APP_'
 
@@ -33,7 +34,13 @@ export default defineConfig(() => {
           sourcemap: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg}']
         }
-      })
+      }) /* ,
+      visualizer({
+        open: true, // Automatically opens the report in your browser after build
+        filename: 'bundle-stats-lectureapp.html',
+        gzipSize: true,
+        brotliSize: true
+      }) */
     ],
     worker: {
       format: 'module'

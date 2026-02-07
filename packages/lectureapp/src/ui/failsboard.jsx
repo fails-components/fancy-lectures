@@ -35,12 +35,27 @@ import { fiEyeOn, fiEyeOff } from './icons/icons'
 import { NoteScreenBase } from './notepad/notepad'
 import { PictureSelect } from './widgets/pictureselect'
 import { ShortcutsMessage } from './widgets/shortcutsmessage'
-import Pica from 'pica'
-import ImageBlobReduce from 'image-blob-reduce'
 import { notebookEditPseudoAppid } from './blackboard/jupyterhublet'
 import { maybeUseLatex, convertToLatex } from './misc/latex'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faUser } from '@fortawesome/free-solid-svg-icons'
+
+async function calcThumbnail(pictureBlob) {
+  const bitmap = await createImageBitmap(pictureBlob, {
+    resizeWidth: 100,
+    resizeQuality: 'high' 
+  });
+
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const ctx = canvas.getContext('bitmaprenderer');
+
+  ctx.transferFromImageBitmap(bitmap);
+
+  return await canvas.convertToBlob({
+    type: 'image/jpeg',
+    quality: 0.8
+  });
+}
 
 export class FailsBoard extends FailsBasis {
   constructor(props) {
@@ -452,11 +467,8 @@ export class FailsBoard extends FailsBasis {
       }
     }
 
-    if (!this.reduce) {
-      const pica = Pica({ features: ['js', 'wasm', 'cib'] })
-      this.reduce = new ImageBlobReduce({ pica })
-    }
-    const thumbnail = await this.reduce.toBlob(picture, { max: 100 })
+    const thumbnail = await calcThumbnail(picture)
+    console.log('thumbnail result', thumbnail)
 
     const result = await this.socket.uploadPicture(
       'screenshot_' +

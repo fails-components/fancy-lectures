@@ -15,12 +15,11 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-import { AVTransport } from './transport'
-import { AVWorker } from './avworker'
+import { AVTransport } from './transport.js'
+import { AVWorker } from './avworker.js'
 
 console.log('AVWorker before startConnection')
 
-// eslint-disable-next-line prefer-const
 let avworker
 new AVTransport({
   cb: async () => {

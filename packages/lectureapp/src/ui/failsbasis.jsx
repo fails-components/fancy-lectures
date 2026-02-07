@@ -26,7 +26,6 @@ import { Dialog } from 'primereact/dialog'
 import { OverlayPanel } from 'primereact/overlaypanel'
 import { ProgressBar } from 'primereact/progressbar'
 import React, { Component } from 'react'
-import { UAParser } from 'ua-parser-js'
 import { AVInterface } from '../av/interface'
 import { SpeakerSet } from '../avwidgets'
 import { KeyStore } from '../misc/keystore'
@@ -830,7 +829,9 @@ export class FailsBasis extends Component {
         document.featurePolicy.getAllowlistForFeature('camera')
       )
     }
-    if (new UAParser().getEngine().name !== 'Blink') {
+    const isBlink = (navigator.userAgentData?.brands?.some(b => b.brand === 'Chromium')) || 
+                (window.chrome !== undefined);
+    if (!isBlink) {
       confirmDialog({
         message:
           'Please use a Blink based browser such as Chrome, Chromium, Edge, etc..!',

@@ -17,7 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 import React from 'react'
-import katex from 'katex'
+
+const katex = await import('katex')
 
 export function detectLatex(string) {
   if (typeof string !== 'string') return false

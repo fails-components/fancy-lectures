@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AVTransformStream } from './transformstream'
+import { AVTransformStream } from './transformstream.js'
 
 export class AVEncrypt extends AVTransformStream {
   constructor(args) {
@@ -127,7 +127,6 @@ export class AVDecrypt extends AVTransformStream {
         metadata: {
           ...chunk.metadata
         },
-        // eslint-disable-next-line no-undef
         frame: this.chunkMaker({
           type: chunk.framedata.key ? 'key' : 'delta',
           timestamp: chunk.framedata.timestamp.toString(),

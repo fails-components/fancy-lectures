@@ -16,7 +16,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-import { SHA1 } from 'jshashes'
+import sha1 from 'tiny-hashes/sha1'
 import React, { Component, Fragment } from 'react'
 import { Tooltip } from 'primereact/tooltip'
 import {
@@ -124,8 +124,7 @@ class DictCompressor extends Dict {
       this._dictNum++
       this._dictId = parseInt(
         '0x' +
-          new SHA1()
-            .hex(this._compressorId + this._dictNum.toString(36))
+            sha1(this._compressorId + this._dictNum.toString(36))
             .substr(0, 8)
       )
     }

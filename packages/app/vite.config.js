@@ -5,6 +5,7 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import process from 'node:process'
+// import { visualizer } from 'rollup-plugin-visualizer'
 
 const ENV_PREFIX = 'REACT_APP_'
 
@@ -23,7 +24,13 @@ export default defineConfig(() => {
         cache: false,
         include: ['src/**/*.js', 'src/**/*.jsx']
       }),
-      topLevelAwait()
+      topLevelAwait() /*,
+      visualizer({
+        open: true, // Automatically opens the report in your browser after build
+        filename: 'bundle-stats-app.html',
+        gzipSize: true,
+        brotliSize: true
+      })*/
     ],
     worker: {
       format: 'module'

@@ -20,7 +20,7 @@ import {
   deserialize as BSONdeserialize,
   serialize as BSONserialize
 } from 'bson'
-import { AVTransformStream } from './transformstream'
+import { AVTransformStream } from './transformstream.js'
 
 export class BsonFramer extends AVTransformStream {
   reset() {

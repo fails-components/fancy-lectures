@@ -15,8 +15,8 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-import { AVMediaPipe } from './mediapipe/index'
-import { AVTransformStream } from './transformstream'
+import { AVMediaPipe } from './mediapipe/index.js'
+import { AVTransformStream } from './transformstream.js'
 
 export class AVOneToMany extends AVTransformStream {
   constructor(args) {
@@ -96,7 +96,6 @@ export class AVOneFrameToManyScaler extends AVOneToMany {
       // ok now we do the math and scale the frame
       const targetwidth = Math.min(this.outputwidth[out], frame.displayWidth)
 
-      // eslint-disable-next-line no-undef
       resframe[out] = new VideoFrame(frame, {
         visibleRect,
         displayWidth: targetwidth,
@@ -126,7 +125,6 @@ export class AVOneToManyCopy extends AVOneToMany {
       if (out > this.outputlevelmax) continue // outlevel seems to be suspended
 
       // ok now we do the math and scale the frame
-      // eslint-disable-next-line no-undef
       resframe[out] = frame.clone()
     }
     frame.close()

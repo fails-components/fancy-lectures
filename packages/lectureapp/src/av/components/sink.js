@@ -24,16 +24,16 @@ export class AVSink {
 
     this.writable = new WritableStream(
       {
-        start(controller) {},
+        start(/*controller*/) {},
         write: this.write,
         close: this.closeWritable,
-        abort(reason) {}
+        abort(/*reason*/) {}
       },
       { highWaterMark: this.highWaterMarkWritable }
     )
   }
 
-  async closeWritable(controller) {
+  async closeWritable(/*controller*/) {
     if (this.close) await this.close()
   }
 
