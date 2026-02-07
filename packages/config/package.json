@@ -10,7 +10,7 @@
   },
   "main": "src/config.js",
   "module": "src/config.js",
-  "source": "src/config.js",
+  "files": ["src/config.js"],
   "type": "module",
   "engines": {
     "node": ">=16"

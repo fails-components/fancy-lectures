@@ -3,7 +3,8 @@
   "description": "Root of fails components mono repo",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "daemons/*"
   ],
   "type": "module",
   "scripts": {
@@ -14,7 +15,8 @@
     "start:lectureapp": "npm start -w packages/lectureapp",
     "serve": "npm-run-all --parallel serve:*",
     "serve:app": "npm run serve -w packages/app",
-    "serve:lectureapp": "npm run serve -w packages/lectureapp"
+    "serve:lectureapp": "npm run serve -w packages/lectureapp",
+    "docker:build": "npm run docker:build --workspaces --if-present"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",

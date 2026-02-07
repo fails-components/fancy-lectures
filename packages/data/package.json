@@ -9,7 +9,7 @@
     "url": "git+https://github.com/fails-components/data.git"
   },
   "main": "src/data.js",
-  "source": "src/data.js",
+  "files": ["src/data.js"],
   "type": "module",
   "engines": {
     "node": ">=16"

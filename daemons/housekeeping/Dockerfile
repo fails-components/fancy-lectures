@@ -1,19 +1,35 @@
-FROM node:24-trixie-slim
-
+ARG DAEMON_NAME=housekeeping
 ARG ENV
-
+FROM node:24-trixie-slim AS prebuilder
+ARG DAEMON_NAME
 WORKDIR /usr/src/fails
+RUN npm install -g isolate-package
 
-COPY package-lock.json ./ 
-COPY daemons/housekeeping/package*.json ./daemons/housekeeping/
+COPY . .
+
 COPY .npmrc ./
 
-#debug
-RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`; if [ "$ENV" = "debug" ] ; then npm install ; else  npm ci --only=production; fi
+RUN if [ "$ENV" = "debug" ] ; then \
+        npm install --no-workspaces; \
+    else  \
+        npm ci --only=production --no-workspaces;\
+    fi
 
-COPY daemons/housekeeping ./daemons/housekeeping
+WORKDIR /usr/src/fails/daemons/${DAEMON_NAME}
 
-WORKDIR /usr/src/fails/daemons/housekeeping
+RUN npx isolate-package
+
+FROM node:24-trixie-slim
+ARG ENV
+ARG DAEMON_NAME
+WORKDIR /usr/src/fails/daemons/${DAEMON_NAME}
+COPY --from=prebuilder /usr/src/fails/daemons/${DAEMON_NAME}/isolate/ ./
+
+RUN if [ "$ENV" = "debug" ] ; then \
+        npm install --no-workspaces; \
+    else  \
+        npm ci --only=production --no-workspaces;\
+    fi
 
 EXPOSE 8080
 
