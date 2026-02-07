@@ -15,7 +15,11 @@
   "engines": {
     "node": ">=18"
   },
-  "files": ["src/*.js"],
+  "files": [
+    "src/*.js",
+    "failslogo.svg",
+    "failslogolicensereadme.txt"
+  ],
   "scripts": {
     "start": "node src/server.js",
     "test": "run-s test:lint",

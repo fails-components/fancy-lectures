@@ -10,7 +10,11 @@
   },
   "private": true,
   "main": "src/main.js",
-  "files": ["src/*.js"],
+  "files": [
+    "src/*.js",
+    "failslogo.svg",
+    "failslogolicensereadme.txt"
+  ],
   "type": "module",
   "engines": {
     "node": ">=18"

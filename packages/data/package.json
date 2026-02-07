@@ -9,7 +9,11 @@
     "url": "git+https://github.com/fails-components/data.git"
   },
   "main": "src/data.js",
-  "files": ["src/data.js"],
+  "files": [
+    "src/data.js",
+    "failslogo.svg",
+    "failslogolicensereadme.txt"
+  ],
   "type": "module",
   "engines": {
     "node": ">=16"

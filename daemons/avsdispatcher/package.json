@@ -3,7 +3,11 @@
   "version": "1.2.14",
   "description": "Audio, Video, Screensharing dispatcher",
   "main": "src/server.js",
-  "files": ["src/*.js"],
+  "files": [
+    "src/*.js",
+    "failslogo.svg",
+    "failslogolicensereadme.txt"
+  ],
   "type": "module",
   "private": true,
   "scripts": {
