@@ -1,0 +1,36 @@
+{
+  "name": "@fails-components/staticserver",
+  "version": "1.2.73",
+  "description": "fails static webpages served through nginx",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "jupyter/*",
+    "40-copy-fails-env.sh",
+    "overrides.json",
+    "failslogo.svg",
+    "failslogolicensereadme.txt",
+    "nginx.*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fails-components/staticserver.git"
+  },
+  "author": "Marten Richter <marten.richter@freenet.de>",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/fails-components/staticserver#readme",
+  "dependencies": {
+    "@fails-components/app": "v1.2.24",
+    "@fails-components/appexperimental": "npm:@fails-components/app@^1.2.25",
+    "@fails-components/apphandler": "github:fails-components/apphandler#master",
+    "@fails-components/authhandler": "github:fails-components/authhandler#master",
+    "@fails-components/avsdispatcher": "github:fails-components/avsdispatcher#master",
+    "@fails-components/housekeeping": "github:fails-components/housekeeping#master",
+    "@fails-components/lectureapp": "v1.2.57",
+    "@fails-components/lectureappexperimental": "npm:@fails-components/lectureapp@1.2.57",
+    "@fails-components/ltihandler": "github:fails-components/ltihandler#master",
+    "@fails-components/notepadhandler": "github:fails-components/notepadhandler#master",
+    "@fails-components/noteshandler": "github:fails-components/noteshandler#master"
+  }
+}
