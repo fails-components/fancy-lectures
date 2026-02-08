@@ -5,6 +5,14 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "jupyter/*",
+    "40-copy-fails-env.sh",
+    "overrides.json",
+    "failslogo.svg",
+    "failslogolicensereadme.txt",
+    "nginx.*"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fails-components/staticserver.git"
