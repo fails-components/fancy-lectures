@@ -1,7 +1,6 @@
 ARG DAEMON_NAME=apphandler
 ARG ENV
 FROM node:24-trixie-slim AS prebuilder
-ARG DAEMON_NAME
 WORKDIR /usr/src/fails
 RUN npm install -g isolate-package
 
@@ -15,7 +14,7 @@ RUN if [ "$ENV" = "debug" ] ; then \
         npm ci --only=production --no-workspaces;\
     fi
 
-
+ARG DAEMON_NAME
 WORKDIR /usr/src/fails/daemons/${DAEMON_NAME}
 
 RUN npx isolate-package

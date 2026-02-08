@@ -1,52 +1,74 @@
-FROM node:24-trixie-slim AS build-stage
-
+ARG DAEMON_NAME=staticserver
 ARG ENV
+ARG STATIC_SERVER_WORK=/usr/src/fails/daemons/staticserver
+ARG BASE_WORK=/usr/src/fails
 
-WORKDIR /usr/src/staticserver
+FROM node:24-trixie-slim AS build-stage
+ARG ENV
+ARG DAEMON_NAME
+WORKDIR /usr/src/fails
 
-COPY package*.json ./
-COPY .npmrc ./
-RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`; npx browserslist@latest --update-db
-RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`; npm ci --only=production 
+COPY . .
+
+RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`;\
+       npx update-browserslist-db@latest
+RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`;\
+      npm ci --only=production 
 #build the app
-WORKDIR /usr/src/staticserver/node_modules/@fails-components/app
-RUN mkdir -p /usr/src/staticserver/node_modules/@fails-components/app/node_modules -p && mv /usr/src/staticserver/node_modules/@fails-components/appexperimental/public/iconexp.svg /usr/src/staticserver/node_modules/@fails-components/appexperimental/public/icon.svg && ln -s /usr/src/staticserver/node_modules/qr-scanner /usr/src/staticserver/node_modules/@fails-components/app/node_modules/qr-scanner
+ARG BASE_WORK
+WORKDIR ${BASE_WORK}/node_modules/@fails-components/appstable
+RUN mkdir -p ${BASE_WORK}/node_modules/@fails-components/appstable/node_modules -p \
+        && mv ${BASE_WORK}/node_modules/@fails-components/appexperimental/public/iconexp.svg \
+              ${BASE_WORK}/node_modules/@fails-components/appexperimental/public/icon.svg \
+        && ln -s ${BASE_WORK}/node_modules/qr-scanner \
+           ${BASE_WORK}/node_modules/@fails-components/app/node_modules/qr-scanner
 RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g'); \
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
     npm run build
 # build the experimental app
-WORKDIR /usr/src/staticserver/node_modules/@fails-components/appexperimental
-RUN mkdir -p /usr/src/staticserver/node_modules/@fails-components/appexperimental/node_modules -p \
-    && mv /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/public/iconexp.svg /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/public/icon.svg \
-    && ln -s /usr/src/staticserver/node_modules/qr-scanner /usr/src/staticserver/node_modules/@fails-components/appexperimental/node_modules/qr-scanner \
-    && ln -s /usr/src/staticserver/node_modules/libav.js /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/node_modules/libav.js \
-    && ln -s /usr/src/staticserver/node_modules/pdfjs-dist /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/node_modules/pdfjs-dist \ 
-    && ln -s /usr/src/staticserver/node_modules/libavjs-webcodecs-polyfill /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/node_modules/libavjs-webcodecs-polyfill \
-    && mkdir -p /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe \
-    && ln -s /usr/src/staticserver/node_modules/@mediapipe/tasks-vision /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe/tasks-vision \
-    && ln -s /usr/src/staticserver/node_modules/libav.js /usr/src/staticserver/node_modules/@fails-components/lectureapp/node_modules/libav.js \
-    && ln -s /usr/src/staticserver/node_modules/pdfjs-dist /usr/src/staticserver/node_modules/@fails-components/lectureapp/node_modules/pdfjs-dist \ 
-    && ln -s /usr/src/staticserver/node_modules/libavjs-webcodecs-polyfill /usr/src/staticserver/node_modules/@fails-components/lectureapp/node_modules/libavjs-webcodecs-polyfill \
-    && mkdir -p /usr/src/staticserver/node_modules/@fails-components/lectureapp/node_modules/@mediapipe \
-    && ln -s /usr/src/staticserver/node_modules/@mediapipe/tasks-vision /usr/src/staticserver/node_modules/@fails-components/lectureapp/node_modules/@mediapipe/tasks-vision
+WORKDIR ${BASE_WORK}/node_modules/@fails-components/appexperimental
+RUN mkdir -p ${BASE_WORK}/node_modules/@fails-components/appexperimental/node_modules -p \
+    && mv ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/public/iconexp.svg \
+          ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/public/icon.svg \
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/qr-scanner \
+          ${BASE_WORK}/node_modules/@fails-components/appexperimental/node_modules/qr-scanner \
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/libav.js \
+         ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/libav.js \
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/pdfjs-dist \
+           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/pdfjs-dist \ 
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/libavjs-webcodecs-polyfill \
+           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/libavjs-webcodecs-polyfill \
+    && mkdir -p ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe \
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/@mediapipe/tasks-vision \
+           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe/tasks-vision \
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/libav.js \
+          ${BASE_WORK}/node_modules/@fails-components/lectureappstable/node_modules/libav.js \
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/pdfjs-dist \
+           ${BASE_WORK}/node_modules/@fails-components/lectureappstable/node_modules/pdfjs-dist \ 
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/libavjs-webcodecs-polyfill \
+         ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/libavjs-webcodecs-polyfill \
+    && mkdir -p ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/@mediapipe \
+    && ln -s ${STATIC_SERVER_WORK}/node_modules/@mediapipe/tasks-vision \
+         ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/@mediapipe/tasks-vision
 RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g');\
     export PUBLIC_URL=/static/experimental/app/;\
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
     npm run build
 #build the lectureapp
-WORKDIR /usr/src/staticserver/node_modules/@fails-components/lectureapp
+WORKDIR ${BASE_WORK}/node_modules/@fails-components/lectureappstable
 RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g'); \
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
     npm run build
 #build the experimental lectureapp
-WORKDIR /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental
+WORKDIR ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental
 RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g'); \
     export PUBLIC_URL=/static/experimental/lecture/;\
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
     npm run build
-
-WORKDIR /usr/src/staticserver
-RUN npm i -g oss-attribution-generator && mkdir -p oss-attribution && generate-attribution
+ARG STATIC_SERVER_WORK
+WORKDIR ${BASE_WORK}
+RUN mkdir -p ${STATIC_SERVER_WORK}/oss-attribution
+RUN npx generate-license-file --input ./package.json --output ${BASE_WORK}/daemons/staticserver/oss-attribution/attribution.txt
 
 FROM node:24-trixie-slim AS jupyter-build
 
@@ -79,39 +101,44 @@ RUN ~/miniconda3/bin/conda run -n failscomponents jupyter lite build
 
 
 FROM nginx:stable AS staticserver-noassets
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/app/build/ /usr/share/nginx/html/static/app
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/lectureapp/build/ /usr/share/nginx/html/static/lecture
+ARG BASE_WORK
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/appstable/build/ /usr/share/nginx/html/static/app
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureapp/build/ /usr/share/nginx/html/static/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/lecture/sw.js /usr/share/nginx/html/static/lecture/service-worker.js
 
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/appexperimental/build/ /usr/share/nginx/html/static/experimental/app
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/build/ /usr/share/nginx/html/static/experimental/lecture
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/appexperimental/build/ \
+       /usr/share/nginx/html/static/experimental/app
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/build/ \
+       /usr/share/nginx/html/static/experimental/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/experimental/lecture/sw.js /usr/share/nginx/html/static/experimental/lecture/service-worker.js
-
-COPY --from=build-stage /usr/src/staticserver/oss-attribution/ /usr/share/nginx/html/static/oss/
+ARG STATIC_SERVER_WORK
+COPY --from=build-stage ${STATIC_SERVER_WORK}/oss-attribution/ /usr/share/nginx/html/static/oss/
 RUN mkdir -p /usr/share/nginx/html/config
-COPY ./nginx.conf.noassets /etc/nginx/templates/default.conf.template
-COPY ./40-copy-fails-env.sh /docker-entrypoint.d
+COPY ./daemons/staticserver/nginx.conf.noassets /etc/nginx/templates/default.conf.template
+COPY ./daemons/staticserver/40-copy-fails-env.sh /docker-entrypoint.d
 
 RUN echo "pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev" | tr ' ' '\n' | sed 's/$/ 1;/' > /etc/nginx/allowed_jupyter_proxy_hosts.conf
 COPY --from=jupyter-build /usr/src/jupyterlite/jupyterLiteFailsOut/ /usr/share/nginx/html/jupyter/
 
 FROM nginx:stable
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/app/build/ /usr/share/nginx/html/static/app
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/lectureapp/build/ /usr/share/nginx/html/static/lecture
+ARG BASE_WORK
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/appstable/build/ /usr/share/nginx/html/static/app
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureapp/build/ /usr/share/nginx/html/static/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/lecture/sw.js /usr/share/nginx/html/static/lecture/service-worker.js
 
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/appexperimental/build/ /usr/share/nginx/html/static/experimental/app
-COPY --from=build-stage /usr/src/staticserver/node_modules/@fails-components/lectureappexperimental/build/ /usr/share/nginx/html/static/experimental/lecture
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/appexperimental/build/ /usr/share/nginx/html/static/experimental/app
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/build/ /usr/share/nginx/html/static/experimental/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/experimental/lecture/sw.js /usr/share/nginx/html/static/experimental/lecture/service-worker.js
 
-COPY --from=build-stage /usr/src/staticserver/oss-attribution/ /usr/share/nginx/html/static/oss/
+ARG STATIC_SERVER_WORK
+COPY --from=build-stage ${STATIC_SERVER_WORK}/oss-attribution/ /usr/share/nginx/html/static/oss/
 RUN mkdir -p /usr/share/nginx/html/config
-COPY ./nginx.conf /etc/nginx/templates/default.conf.template
-COPY ./40-copy-fails-env.sh /docker-entrypoint.d
+COPY ./daemons/staticserver/nginx.conf /etc/nginx/templates/default.conf.template
+COPY ./daemons/staticserver/40-copy-fails-env.sh /docker-entrypoint.d
 
 RUN echo "pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev" | tr ' ' '\n' | sed 's/$/ 1;/' > /etc/nginx/allowed_jupyter_proxy_hosts.conf
 COPY --from=jupyter-build /usr/src/jupyterlite/jupyterLiteFailsOut/ /usr/share/nginx/html/jupyter/
