@@ -1,29 +1,3 @@
-#libAV stage to be removed after libav is released with fixes
-#FROM emscripten/emsdk as libavstage
-
-#RUN apt-get update -y && apt-get upgrade -y && apt-get install -y pkg-config git
-
-#WORKDIR /usr/src
-
-#RUN git clone https://github.com/Yahweasel/libav.js.git
-
-#WORKDIR /usr/src/libav.js
-#RUN  git checkout 2aab58662ca6b0ba24eac71dd33918925bd799a8
-
-#RUN make build-opus
-
-#FROM node:18-bookworm-slim as libavcodecstage
-
-#WORKDIR /usr/src
-#RUN git clone https://github.com/ennuicastr/libavjs-webcodecs-polyfill.git
-# clone a specific branch until merged
-
-#WORKDIR /usr/src/libavjs-webcodecs-polyfill
-#RUN git checkout e148ad33037c8575e27b8f9500d119c4523d23c5
-
-#RUN make
-# end temporary code
-
 FROM node:24-trixie-slim AS build-stage
 
 ARG ENV
@@ -32,8 +6,6 @@ WORKDIR /usr/src/staticserver
 
 COPY package*.json ./
 COPY .npmrc ./
-# next line is a dummy to prevent parallel execution
-#COPY --from=libavstage /usr/src/libav.js/dist/libav-*opus*.js /tmp/
 RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`; npx browserslist@latest --update-db
 RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`; npm ci --only=production 
 #build the app
@@ -42,9 +14,6 @@ RUN mkdir -p /usr/src/staticserver/node_modules/@fails-components/app/node_modul
 RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g'); \
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
     npm run build
-# tempcode for libav
-#COPY --from=libavstage /usr/src/libav.js/dist/libav-*opus* /usr/src/staticserver/node_modules/libav.js/
-#COPY --from=libavcodecstage /usr/src/libavjs-webcodecs-polyfill/libavjs-* /usr/src/staticserver/node_modules/libavjs-webcodecs-polyfill/
 # build the experimental app
 WORKDIR /usr/src/staticserver/node_modules/@fails-components/appexperimental
 RUN mkdir -p /usr/src/staticserver/node_modules/@fails-components/appexperimental/node_modules -p \
