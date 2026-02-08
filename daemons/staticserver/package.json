@@ -4,7 +4,7 @@
   "description": "fails static webpages served through nginx",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "docker:build": "docker build -t ghcr.io/fails-components/staticserver:master --secret id=GH_TOKEN -f Dockerfile ../.."
+    "docker:build": "docker build -t ghcr.io/fails-components/staticserver:master --progress=plain --secret id=GH_TOKEN -f Dockerfile ../.."
   },
   "files": [
     "jupyter/*",

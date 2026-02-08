@@ -13,15 +13,17 @@ COPY . .
 RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`;\
        npx update-browserslist-db@latest
 RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`;\
-      npm ci --only=production 
+      npm ci
+
 #build the app
 ARG BASE_WORK
 WORKDIR ${BASE_WORK}/node_modules/@fails-components/appstable
 RUN mkdir -p ${BASE_WORK}/node_modules/@fails-components/appstable/node_modules -p \
         && mv ${BASE_WORK}/node_modules/@fails-components/appexperimental/public/iconexp.svg \
-              ${BASE_WORK}/node_modules/@fails-components/appexperimental/public/icon.svg \
-        && ln -s ${BASE_WORK}/node_modules/qr-scanner \
-           ${BASE_WORK}/node_modules/@fails-components/app/node_modules/qr-scanner
+              ${BASE_WORK}/node_modules/@fails-components/appexperimental/public/icon.svg 
+              #\
+#        && ln -s ${BASE_WORK}/node_modules/qr-scanner \
+#           ${BASE_WORK}/node_modules/@fails-components/app/node_modules/qr-scanner
 RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g'); \
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
     npm run build
@@ -30,26 +32,26 @@ WORKDIR ${BASE_WORK}/node_modules/@fails-components/appexperimental
 RUN mkdir -p ${BASE_WORK}/node_modules/@fails-components/appexperimental/node_modules -p \
     && mv ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/public/iconexp.svg \
           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/public/icon.svg \
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/qr-scanner \
-          ${BASE_WORK}/node_modules/@fails-components/appexperimental/node_modules/qr-scanner \
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/libav.js \
-         ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/libav.js \
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/pdfjs-dist \
-           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/pdfjs-dist \ 
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/libavjs-webcodecs-polyfill \
-           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/libavjs-webcodecs-polyfill \
-    && mkdir -p ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe \
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/@mediapipe/tasks-vision \
-           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe/tasks-vision \
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/libav.js \
-          ${BASE_WORK}/node_modules/@fails-components/lectureappstable/node_modules/libav.js \
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/pdfjs-dist \
-           ${BASE_WORK}/node_modules/@fails-components/lectureappstable/node_modules/pdfjs-dist \ 
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/libavjs-webcodecs-polyfill \
-         ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/libavjs-webcodecs-polyfill \
-    && mkdir -p ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/@mediapipe \
-    && ln -s ${STATIC_SERVER_WORK}/node_modules/@mediapipe/tasks-vision \
-         ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/@mediapipe/tasks-vision
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/qr-scanner \
+#          ${BASE_WORK}/node_modules/@fails-components/appexperimental/node_modules/qr-scanner \
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/libav.js \
+#         ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/libav.js \
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/pdfjs-dist \
+#           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/pdfjs-dist \ 
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/libavjs-webcodecs-polyfill \
+#           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/libavjs-webcodecs-polyfill \
+#    && mkdir -p ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe \
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/@mediapipe/tasks-vision \
+#           ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/node_modules/@mediapipe/tasks-vision \
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/libav.js \
+#          ${BASE_WORK}/node_modules/@fails-components/lectureappstable/node_modules/libav.js \
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/pdfjs-dist \
+#           ${BASE_WORK}/node_modules/@fails-components/lectureappstable/node_modules/pdfjs-dist \ 
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/libavjs-webcodecs-polyfill \
+#         ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/libavjs-webcodecs-polyfill \
+#    && mkdir -p ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/@mediapipe \
+#    && ln -s ${STATIC_SERVER_WORK}/node_modules/@mediapipe/tasks-vision \
+#        ${BASE_WORK}/node_modules/@fails-components/lectureapp/node_modules/@mediapipe/tasks-vision
 RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g');\
     export PUBLIC_URL=/static/experimental/app/;\
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
@@ -95,8 +97,8 @@ RUN ~/miniconda3/bin/conda run -n failscomponents pip install \
 
 WORKDIR /usr/src/jupyterlite/
 
-COPY jupyter/*.yml ./
-COPY jupyter/*.json ./
+COPY daemons/staticserver/jupyter/*.yml ./
+COPY daemons/staticserver/jupyter/*.json ./
 RUN ~/miniconda3/bin/conda run -n failscomponents jupyter lite build
 
 
