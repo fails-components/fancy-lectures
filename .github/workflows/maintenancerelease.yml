@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - apphandler
+          - authhandler
           - avsdispatcher
           - housekeeping
           - ltihandler

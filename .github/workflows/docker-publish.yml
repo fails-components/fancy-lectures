@@ -38,6 +38,8 @@ jobs:
         include:
           - container: apphandler
             context: ./daemons/apphandler
+          - container: authhandler
+            context: ./daemons/authhandler  
           - container: avsdispatcher
             context: ./daemons/avsdispatcher
           - container: housekeeping

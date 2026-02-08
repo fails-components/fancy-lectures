@@ -1,4 +1,5 @@
 node_modules
+files
 .env.development.local
 packages/*/.env.development.local
 packages/*/build
