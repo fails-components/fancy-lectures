@@ -57,6 +57,7 @@ export default [
     files: [
       'packages/lectureapp/**',
       'packages/app/**',
+      'packages/avcore/**',
       'packages/avcomponents/**',
       'packages/avkeystore/**'
     ],

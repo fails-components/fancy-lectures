@@ -16,7 +16,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+/* global AudioWorkletProcessor, registerProcessor */
 export class AVAudioOutput extends AudioWorkletProcessor {
   static framelength = 480
 
@@ -32,7 +32,7 @@ export class AVAudioOutput extends AudioWorkletProcessor {
     }
   }
 
-  process(inputs, outputs, parameters) {
+  process(inputs, outputs /*, parameters*/) {
     let outputpos = 0
     // FIXME outputs seems to be zero sometimes
     while (outputpos < outputs[0][0].length) {

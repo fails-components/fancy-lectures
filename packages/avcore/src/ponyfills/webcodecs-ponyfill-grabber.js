@@ -16,11 +16,12 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+/* global AudioWorkletProcessor, registerProcessor */
 
 export class BufferGrabber extends AudioWorkletProcessor {
   static framelength = 480
 
-  process(inputs, outputs, parameters) {
+  process(inputs /*, outputs, parameters*/) {
     // if (!this.startnow) this.startnow = now
     // now -= this.startnow
     let srcoffset = 0

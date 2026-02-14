@@ -20,7 +20,7 @@
 import { Button } from 'primereact/button'
 import { OverlayPanel } from 'primereact/overlaypanel'
 import React, { Component } from 'react'
-import { AVInterface, setSetting, getSetting } from '../av/interface.js'
+import { AVInterface, setSetting, getSetting } from '@fails-components/avcore/src/interface.js'
 import { AVVideoRender } from './videorender.jsx'
 import { Dropdown } from 'primereact/dropdown'
 import { SelectButton } from 'primereact/selectbutton'

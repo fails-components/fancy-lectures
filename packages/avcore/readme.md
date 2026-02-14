@@ -7,8 +7,9 @@ A web-based system developed out of university lectures.
 This package is part of the audio, video stack of **FAILS**,
 which may be useful outside of FAILS.
 
-It provides multiple components that process in a streaming way,
-audio and video data. For decoding and encoding Webcodecs are used.
+It provides the core worker of **FAILS** audio, video processing,
+sitting on top of avcomponents. It also provides several polyfills for webcodecs,
+and uses Webtransport or a uses Webtransport over Websocket wrapper as fallback.
 
 Feedback on errors/issues is appreciated via github's issue function.
 

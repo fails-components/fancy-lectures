@@ -24,6 +24,7 @@ jobs:
           'lectureapp',
           'app',
           'assets',
+          'avcore',
           'avkeystore',
           'avcomponents',
           'config',

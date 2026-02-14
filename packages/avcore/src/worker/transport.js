@@ -74,7 +74,6 @@ export class AVTransport {
         }
         const url = hinfo.url // 'https://' + this.hostname + ':' + this.port + '/avfails'
         // const wsurl = hinfo.wsurl
-        // eslint-disable-next-line no-useless-concat
         // 'ws://' + /* this.hostname */ 'localhost' + ':' + this.port + '/avfails'
         const spki = hinfo.spki
         // '42:93:91:B2:8C:A6:8E:F1:E9:89:41:04:D6:9C:57:CE:B9:0A:0B:5E:11:4C:04:24:9A:5E:15:3E:D8:59:1B:8D'
@@ -91,17 +90,14 @@ export class AVTransport {
         let webtransport = false
         try {
           if (this.statuscb) this.statuscb({ status: 'connecting' })
-          // eslint-disable-next-line no-undef
           if (forcewebsocket) {
             this.transport = new WebTransportPonyfill(url, {
               serverCertificateHashes
             })
-            // eslint-disable-next-line no-undef
           } else if (
             preventwebsocket &&
             typeof globalThis.WebTransport !== 'undefined'
           ) {
-            // eslint-disable-next-line no-undef
             this.transport = new WebTransport(url, {
               serverCertificateHashes
             })

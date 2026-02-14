@@ -12,6 +12,7 @@ on:
           - assets
           - avkeystore
           - avcomponents
+          - avcore
           - commonhandler
           - config
           - data

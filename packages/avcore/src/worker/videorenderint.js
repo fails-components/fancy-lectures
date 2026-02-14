@@ -10,7 +10,6 @@ export class AVVideoRenderInt {
   }
 
   updateRenderSize(args) {
-    console.log('updateRenderSize', args)
     if (this.offscreen) {
       this.offscreen.width = args.width // * args.devicePixelRatio
     }
