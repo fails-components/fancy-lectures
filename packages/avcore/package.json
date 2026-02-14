@@ -8,8 +8,8 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/config.git"
   },
-  "main": "src/index.js",
-  "module": "src/index.js",
+  "main": "src/interface.js",
+  "module": "src/interface.js",
   "files": [
     "src/**/*.js",
     "failslogo.svg",
