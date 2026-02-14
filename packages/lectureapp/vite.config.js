@@ -32,7 +32,7 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         workbox: {
           sourcemap: true,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}']
         }
       }) /* ,
       visualizer({
@@ -58,7 +58,7 @@ export default defineConfig(() => {
       ? process.env.PUBLIC_URL
       : '/static/lecture/',
     optimizeDeps: {
-      include: ['pdfjs-dist']
+      include: ['pdfjs-dist', 'libav.js']
     },
     envPrefix: ENV_PREFIX
   }

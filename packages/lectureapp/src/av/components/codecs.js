@@ -49,23 +49,31 @@ const loadPolyfills = async () => {
     LibAVlib = await import('libav.js/dist/libav-4.8.6.0.1-opus.js')
     console.log('LibAV loaded', LibAVlib, globalThis.LibAV)
     const target = globalThis.LibAV.target()
-    globalThis.LibAV.wasmurl = new URL(
-      `../../../node_modules/libav.js/dist/libav-${globalThis.LibAV.VER}-opus.${target}.wasm`,
-      import.meta.url
-    ).href
-    globalThis.LibAV.toImport = new URL(
-      `../../../node_modules/libav.js/dist/libav-${globalThis.LibAV.VER}-opus.${target}.js`,
-      import.meta.url
-    ).href
-    /* globalThis.LibAV.importedjs = await import(
-      `../node_modules/libav.js/libav-${globalThis.LibAV.VER}-opus.${target}.js`
-    ) */
+    let wasmUrl, jsUrl
+    switch (target) {
+      case 'simd':
+        ;({ wasmUrl, jsUrl } = await import('./libavimpots/libavwasmsimd.js'))
+        break
+      case 'simdthr':
+        ;({ wasmUrl, jsUrl } =
+          await import('./libavimpots/libavwasmthrsimd.js'))
+        break
+      case 'thr':
+        ;({ wasmUrl, jsUrl } = await import('./libavimpots/libavwasmthr.js'))
+        break
+      case 'wasm':
+        ;({ wasmUrl, jsUrl } = await import('./libavimpots/libavwasmwasm.js'))
+        break
+      default:
+        throw new Error('Libav target not defined:' + target)
+    }
+
+    globalThis.LibAV.wasmurl = wasmUrl
+
+    globalThis.LibAV.toImport = jsUrl
+
     globalThis.LibAV.importedjs = await import(
-      /* @vite-ignore */
-      new URL(
-        `../../../node_modules/libav.js/dist/libav-${globalThis.LibAV.VER}-opus.${target}.js`,
-        import.meta.url
-      ).href
+      /* @vite-ignore */ globalThis.LibAV.toImport
     )
 
     const LibAVWebCodecs = await import('libavjs-webcodecs-polyfill')
