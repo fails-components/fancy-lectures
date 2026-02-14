@@ -54,7 +54,12 @@ export default [
     }
   },
   {
-    files: ['packages/lectureapp/**', 'packages/app/**'],
+    files: [
+      'packages/lectureapp/**',
+      'packages/app/**',
+      'packages/avcomponents/**',
+      'packages/avkeystore/**'
+    ],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -66,7 +71,6 @@ export default [
     files: [
       'packages/config/**',
       'packages/assets/**',
-      'packages/avkeystore/**',
       'packages/commonhandler/**',
       'packages/security/**',
       'daemons/**'

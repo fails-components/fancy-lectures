@@ -15,7 +15,6 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-// import * as LibAVWebCodecs from 'libavjs-webcodecs-polyfill'
 
 let AudioDecoder
 let AudioEncoder
@@ -52,17 +51,17 @@ const loadPolyfills = async () => {
     let wasmUrl, jsUrl
     switch (target) {
       case 'simd':
-        ;({ wasmUrl, jsUrl } = await import('./libavimpots/libavwasmsimd.js'))
+        ;({ wasmUrl, jsUrl } = await import('./libavimports/libavwasmsimd.js'))
         break
       case 'simdthr':
         ;({ wasmUrl, jsUrl } =
-          await import('./libavimpots/libavwasmthrsimd.js'))
+          await import('./libavimports/libavwasmthrsimd.js'))
         break
       case 'thr':
-        ;({ wasmUrl, jsUrl } = await import('./libavimpots/libavwasmthr.js'))
+        ;({ wasmUrl, jsUrl } = await import('./libavimports/libavwasmthr.js'))
         break
       case 'wasm':
-        ;({ wasmUrl, jsUrl } = await import('./libavimpots/libavwasmwasm.js'))
+        ;({ wasmUrl, jsUrl } = await import('./libavimports/libavwasmwasm.js'))
         break
       default:
         throw new Error('Libav target not defined:' + target)

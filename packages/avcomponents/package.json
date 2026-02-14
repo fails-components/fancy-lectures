@@ -1,23 +1,30 @@
 {
-  "name": "@fails-components/avkeystore",
+  "name": "@fails-components/avcomponents",
   "version": "1.2.57",
-  "description": "Keystore for end2end encryption of audio video transmission of fails",
+  "description": "Reusable avcomponents, the backbone of FAILS audio video functionality",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fails-components/config.git"
   },
-  "main": "src/keystore.js",
-  "module": "src/keystore.js",
+  "main": "src/index.js",
+  "module": "src/index.js",
   "files": [
-    "src/config.js",
+    "src/**/*.js",
     "failslogo.svg",
-    "failslogolicensereadme.txt"
+    "failslogolicensereadme.txt",
+    "packages/*"
   ],
   "type": "module",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "bson": "^4.6.3",
+    "libav.js": "=4.8.6",
+    "libavjs-webcodecs-polyfill": "^0.4.4",
+    "@mediapipe/tasks-vision": "file:./packages/vision_pkg.tgz"
   },
   "scripts": {
     "test": "run-s  test:lint",

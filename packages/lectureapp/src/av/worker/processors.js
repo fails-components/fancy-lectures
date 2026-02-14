@@ -14,7 +14,7 @@ import {
   AVOneToManyCopy,
   AVOneFrameToManyScaler,
   AVFrameSceneChange
-} from '../components/index.js'
+} from '@fails-components/avcomponents'
 import { AVTransport } from './transport.js'
 import { AVWorker } from './avworker.js'
 

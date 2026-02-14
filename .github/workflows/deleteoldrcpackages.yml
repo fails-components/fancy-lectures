@@ -25,6 +25,7 @@ jobs:
           'app',
           'assets',
           'avkeystore',
+          'avcomponents',
           'config',
           'commonhandler',
           'data',

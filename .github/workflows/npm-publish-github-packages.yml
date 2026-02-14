@@ -35,6 +35,8 @@ jobs:
             path: 'packages/assets'
           - name: 'avkeystore'
             path: 'packages/avkeystore'
+          - name: 'avcomponents'
+            path: 'packages/avcomponents'
           - name: 'commonhandler'
             path: 'packages/commonhandler'
           - name: 'config'
