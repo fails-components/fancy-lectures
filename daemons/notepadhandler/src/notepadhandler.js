@@ -24,13 +24,22 @@ import {
   /*  MemContainer, */
   CallbackContainer
 } from '@fails-components/data'
-import { v4 as uuidv4, validate as isUUID } from 'uuid'
+import { randomUUID } from 'node:crypto'
 import { promisify } from 'util'
 import Redlock from 'redlock'
 import { randomBytes, createHash } from 'crypto'
 import { RedisRedlockProxy } from '@fails-components/security'
 import { WatchError } from 'redis'
-import { CommonConnection } from './commonhandler.js'
+import { CommonConnection } from '@fails-components/commonhandler'
+
+// next function from Gemini
+// probably coming from this stackoverflow question:
+// https://stackoverflow.com/questions/7905929/how-to-test-valid-uuid-guid
+function isUUID(str) {
+  const regex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return regex.test(str)
+}
 
 export class NoteScreenConnection extends CommonConnection {
   constructor(args) {
@@ -843,7 +852,7 @@ export class NoteScreenConnection extends CommonConnection {
   async createScreenForLecture(notepadscreenid, maxrenew) {
     const content = {
       lectureuuid: notepadscreenid.lectureuuid,
-      notescreenuuid: uuidv4(),
+      notescreenuuid: randomUUID(),
       purpose: 'screen',
       notepadhandler: this.notepadhandlerURL,
       appversion: notepadscreenid.appversion,
@@ -858,7 +867,7 @@ export class NoteScreenConnection extends CommonConnection {
   async createNotepadForLecture(notepadscreenid, maxrenew) {
     const content = {
       lectureuuid: notepadscreenid.lectureuuid,
-      notescreenuuid: uuidv4(),
+      notescreenuuid: randomUUID(),
       purpose: 'lecture',
       name: 'Secondary Notebook',
       user: notepadscreenid.user,
@@ -1388,7 +1397,7 @@ export class NoteScreenConnection extends CommonConnection {
     type,
     emitscreens // notebooks or screencast
   ) {
-    const newuuid = uuidv4()
+    const newuuid = randomUUID()
     // console.log('addnewchannel')
     try {
       await this.redis

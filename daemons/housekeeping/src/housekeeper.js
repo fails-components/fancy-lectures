@@ -344,7 +344,6 @@ export class Housekeeping {
         cursor = scanret.cursor
       } while (cursor !== 0)
       await Promise.all(allprom) // we are finished giving orders, wait for return
-      return
     } catch (err) {
       console.log('tryLectureRedisPurge error', err)
     }

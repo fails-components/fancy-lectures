@@ -17,7 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 import { createHash } from 'crypto'
-import { CommonConnection } from './commonhandler.js'
+import { CommonConnection } from '@fails-components/commonhandler'
 
 export class NotesConnection extends CommonConnection {
   constructor(args) {

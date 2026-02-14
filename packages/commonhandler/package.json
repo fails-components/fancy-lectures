@@ -1,0 +1,34 @@
+{
+  "name": "@fails-components/commonhandler",
+  "version": "1.2.18",
+  "description": "Common server side handling for notepads and notes",
+  "author": "Marten Richter",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fails-components/notepadhandler.git"
+  },
+  "main": "src/commonhandler.js",
+  "module": "src/commonhandler.js",
+  "files": [
+    "src/commonhandler.js",
+    "failslogo.svg",
+    "failslogolicensereadme.txt"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "test": "run-s  test:lint",
+    "test:lint": "eslint ."
+  },
+  "dependencies": {
+    "bson": "^4.7.0",
+    "cidr-matcher": "^2.1.1",
+    "redis": "^4.0.6"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

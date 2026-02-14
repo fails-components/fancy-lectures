@@ -25,6 +25,7 @@ jobs:
           'app',
           'assets',
           'config',
+          'commonhandler',
           'data',
           'security',
           ]
