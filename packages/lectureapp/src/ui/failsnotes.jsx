@@ -30,7 +30,7 @@ import { OverlayPanel } from 'primereact/overlaypanel'
 import { ChatMessage } from './widgets/chatmessage'
 import { Toast } from 'primereact/toast'
 import React from 'react'
-import { FloatingVideo, AVVideoRender, VideoControl } from '../avwidgets'
+import { FloatingVideo, AVVideoRender, VideoControl } from '@fails-components/avreactwidgets'
 import { FailsBasis } from './failsbasis'
 import {
   fiScreenCast,

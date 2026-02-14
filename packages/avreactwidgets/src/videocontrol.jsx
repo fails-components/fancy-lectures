@@ -20,7 +20,7 @@
 import { Button } from 'primereact/button'
 import { OverlayPanel } from 'primereact/overlaypanel'
 import React, { Component } from 'react'
-import { AVInterface, setSetting, getSetting } from '@fails-components/avcore/src/interface.js'
+import { AVInterface, setSetting, getSetting } from '@fails-components/avcore'
 import { AVVideoRender } from './videorender.jsx'
 import { Dropdown } from 'primereact/dropdown'
 import { SelectButton } from 'primereact/selectbutton'
@@ -35,7 +35,7 @@ import {
   faVideo,
   faVideoSlash
 } from '@fortawesome/free-solid-svg-icons'
-import { fiScreenCast } from '../ui/icons/icons.jsx'
+import { fiScreenCast } from '../../lectureapp/src/ui/icons/icons.jsx'
 import Color from 'color'
 import { DbMeter } from './dbmeter.jsx'
 

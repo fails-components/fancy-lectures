@@ -59,7 +59,8 @@ export default [
       'packages/app/**',
       'packages/avcore/**',
       'packages/avcomponents/**',
-      'packages/avkeystore/**'
+      'packages/avkeystore/**',
+      'packages/avreactwidgets/**'
     ],
     languageOptions: {
       globals: {

@@ -15,7 +15,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-import { AVInterface } from '@fails-components/avcore/src/interface'
+import { AVInterface } from '@fails-components/avcore'
 
 export class SpeakerSet {
   constructor(args) {

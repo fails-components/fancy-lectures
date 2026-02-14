@@ -15,7 +15,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-import React, { Component } from 'react'
+import { Component } from 'react'
 
 export class DbMeter extends Component {
   constructor(args) {

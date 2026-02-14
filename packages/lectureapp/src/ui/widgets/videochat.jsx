@@ -21,7 +21,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Button } from 'primereact/button'
 import { confirmPopup } from 'primereact/confirmpopup'
 import React from 'react'
-import { VideoControl } from '../../avwidgets'
+import { VideoControl } from '@fails-components/avreactwidgets/src'
 
 export class VideoChat extends React.Component {
   constructor(args) {
