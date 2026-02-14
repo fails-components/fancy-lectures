@@ -17,7 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { Component } from 'react'
+import { Component } from 'react'
 
 export class ImageHelper extends Component {
   constructor(props) {
