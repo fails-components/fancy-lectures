@@ -1,4 +1,4 @@
-import { KeyStore } from '../../misc/keystore.js'
+import { KeyStore } from '../keystore/keystore.js'
 import {
   AVAudioDecoder,
   AVAudioEncoder,
