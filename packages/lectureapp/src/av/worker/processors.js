@@ -1,4 +1,4 @@
-import { KeyStore } from '../keystore/keystore.js'
+import { KeyStore } from '@fails-components/avkeystore/src/keystore.js'
 import {
   AVAudioDecoder,
   AVAudioEncoder,

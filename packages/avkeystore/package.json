@@ -1,0 +1,33 @@
+{
+  "name": "@fails-components/avkeystore",
+  "version": "1.2.57",
+  "description": "Keystore for end2end encryption of audio video transmission of fails",
+  "author": "Marten Richter",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fails-components/config.git"
+  },
+  "main": "src/keystore.js",
+  "module": "src/keystore.js",
+  "files": [
+    "src/config.js",
+    "failslogo.svg",
+    "failslogolicensereadme.txt"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "run-s  test:lint",
+    "test:lint": "eslint ."
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "npm-run-all": "^4.1.5"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

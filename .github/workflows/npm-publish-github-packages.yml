@@ -33,6 +33,8 @@ jobs:
             path: 'packages/app'
           - name: 'assets'
             path: 'packages/assets'
+          - name: 'avkeystore'
+            path: 'packages/avkeystore'
           - name: 'commonhandler'
             path: 'packages/commonhandler'
           - name: 'config'

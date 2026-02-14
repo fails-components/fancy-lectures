@@ -35,7 +35,6 @@ export class KeyStore {
 
   incomingKey(keyobj) {
     const keyid = keyobj.keynum & 0xff
-    console.log('incoming key', keyobj)
     this.keys[keyid] = {
       e2e: keyobj.keyE2E,
       rec: keyobj.keyRec,

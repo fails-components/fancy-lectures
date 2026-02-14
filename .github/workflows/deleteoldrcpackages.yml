@@ -24,6 +24,7 @@ jobs:
           'lectureapp',
           'app',
           'assets',
+          'avkeystore',
           'config',
           'commonhandler',
           'data',

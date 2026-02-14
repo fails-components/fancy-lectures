@@ -66,6 +66,7 @@ export default [
     files: [
       'packages/config/**',
       'packages/assets/**',
+      'packages/avkeystore/**',
       'packages/commonhandler/**',
       'packages/security/**',
       'daemons/**'
