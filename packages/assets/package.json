@@ -1,17 +1,17 @@
 {
-  "name": "@fails-components/security",
+  "name": "@fails-components/assets",
   "version": "1.5.3",
-  "description": "Supplies security format classes for use within the fails ecosystem",
+  "description": "Supplies asset storage for use within the fails ecosystem",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fails-components/security.git"
   },
-  "main": "src/security.js",
-  "module": "src/security.js",
+  "main": "src/assets.js",
+  "module": "src/assets.js",
   "files": [
-    "src/security.js",
+    "src/assets.js",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
@@ -23,13 +23,10 @@
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
   },
-  "devDependencies": {
-    "cross-env": "^7.0.3",
-    "npm-run-all": "^4.1.5"
-  },
   "dependencies": {
-    "express-jwt": "^8.2.0",
-    "jsonwebtoken": "^9.0.0",
+    "@fastify/busboy": "^3.1.1",
+    "axios": "^1.12.0",
+    "fast-xml-parser": "^5.3.4",
     "redlock": "^4.2.0"
   },
   "publishConfig": {

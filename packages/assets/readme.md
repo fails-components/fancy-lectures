@@ -21,7 +21,7 @@ Feedback on errors/issues is appreciated via github's functions.
 FAILS is licensed via GNU Affero GPL version 3.0 
 
 ## Package security
-This package is the library to handle security related tasks and database locking.
+This package is the library to handle connections to file storage.
 
 ## Installation
 For installation instructions for a containerized environment, please see the [fails-components/compositions](https://github.com/fails-components/compositions "fails-components/compositions") repository.

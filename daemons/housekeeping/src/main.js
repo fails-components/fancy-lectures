@@ -22,7 +22,7 @@ import MongoClient from 'mongodb'
 import { Housekeeping } from './housekeeper.js'
 import { writeFile, rm } from 'node:fs/promises'
 import { FailsConfig } from '@fails-components/config'
-import { FailsAssets } from '@fails-components/security'
+import { FailsAssets } from '@fails-components/assets'
 import { CronJob } from 'cron'
 import nodemailer from 'nodemailer'
 

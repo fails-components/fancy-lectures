@@ -23,6 +23,7 @@ jobs:
         package: [
           'lectureapp',
           'app',
+          'assets',
           'config',
           'data',
           'security',

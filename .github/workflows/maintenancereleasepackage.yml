@@ -9,6 +9,7 @@ on:
         options:
           - lectureapp
           - app
+          - assets
           - config
           - data
           - security

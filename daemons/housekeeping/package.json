@@ -29,6 +29,7 @@
     "cross-env": "^7.0.3"
   },
   "dependencies": {
+    "@fails-components/assets": "^1.4.1",
     "@fails-components/config": "^1.7.0",
     "@fails-components/security": "^1.4.1",
     "cron": "^1.8.2",

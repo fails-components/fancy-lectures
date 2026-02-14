@@ -63,7 +63,12 @@ export default [
     }
   },
   {
-    files: ['packages/config/**', 'packages/security/**', 'daemons/**'],
+    files: [
+      'packages/config/**',
+      'packages/assets/**',
+      'packages/security/**',
+      'daemons/**'
+    ],
     languageOptions: {
       globals: {
         ...globals.node
