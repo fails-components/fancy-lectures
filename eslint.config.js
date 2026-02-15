@@ -1,6 +1,7 @@
 import js from '@eslint/js'
 import promise from 'eslint-plugin-promise'
 import babelParser from '@babel/eslint-parser'
+import tseslint from 'typescript-eslint'
 import importplug from 'eslint-plugin-import'
 // eslint-disable-next-line import/extensions
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
@@ -49,6 +50,29 @@ export default [
         {
           js: 'always',
           jsx: 'always'
+        }
+      ]
+    }
+  },
+  {
+    files: ['packages/**/*.ts', 'packages/**/*.tsx'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {}
+    },
+    plugins: {
+      '@typescript-eslint': tseslint.plugin
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      'import/extensions': ['error', 'always', { js: 'always', ts: 'always' }],
+      'no-unused-vars': 'off', // Standard-Regel ausschalten
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          args: 'none',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true
         }
       ]
     }

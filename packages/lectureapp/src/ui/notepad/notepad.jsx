@@ -22,15 +22,15 @@ import { Blackboard, BlackboardNotepad } from '../blackboard/index.jsx'
 import { ToolBox, UtilBox, CopyDeleteBox } from '../toolbox/index.jsx'
 import {
   Dispatcher,
-  Collection,
+  RedrawCollection,
   MemContainer,
   NetworkSink,
   NetworkSource,
-  Sink
+  DummySink
 } from '@fails-components/data'
 import { DBManager } from './dbmanager.js'
 
-class ScrollSink extends Sink {
+class ScrollSink extends DummySink {
   constructor(destsink) {
     super()
     this.destsink = destsink
@@ -44,7 +44,7 @@ class ScrollSink extends Sink {
 class StorageHandler {
   constructor() {
     this.incomdispatcher = new Dispatcher()
-    this.collection = new Collection(function (id, data) {
+    this.collection = new RedrawCollection(function (id, data) {
       return new MemContainer(id, data)
     }, {})
     this.incomdispatcher.addSink(this.collection)

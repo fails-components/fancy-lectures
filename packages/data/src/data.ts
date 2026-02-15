@@ -18,100 +18,334 @@
 */
 
 import Color from 'color'
+import { ReactElement } from 'react'
 
 const now = () => performance.now()
 
-export class Sink {
-  // eslint-disable-next-line no-unused-vars
-  startPath(time, objnum, curclient, x, y, type, color, width, pressure) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  addToPath(time, objnum, curclient, x, y, pressure) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  finishPath(time, objnum, curclient) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  scrollBoard(time, clientnum, x, y) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  addPicture(time, objnum, curclient, x, y, width, height, uuid) {
-    // do nothing in base class
-  }
-
-  addForm(
-    // eslint-disable-next-line no-unused-vars
-    time,
-    // eslint-disable-next-line no-unused-vars
-    objnum,
-    // eslint-disable-next-line no-unused-vars
-    curclient,
-    // eslint-disable-next-line no-unused-vars
-    x,
-    // eslint-disable-next-line no-unused-vars
-    y,
-    // eslint-disable-next-line no-unused-vars
-    width,
-    // eslint-disable-next-line no-unused-vars
-    height,
-    // eslint-disable-next-line no-unused-vars
-    type,
-    // eslint-disable-next-line no-unused-vars
-    bColor,
-    // eslint-disable-next-line no-unused-vars
-    fColor,
-    // eslint-disable-next-line no-unused-vars
-    lw
-  ) {
-    // do nothing in base class
-  }
-  // eslint-disable-next-line no-unused-vars
-  deleteObject(time, objnum, curclient, storagenum) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  moveObject(time, objnum, curclient, x, y) {
-    // do nothing in base class, note a change of storagenum is not allowed
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  startApp(time, x, y, width, height, id, sha, appid) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  moveApp(time, x, y, width, height) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  closeApp(time) {
-    // do nothing in base class
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  dataApp(time, buffer) {
-    // do nothing in base class
-  }
+export enum ToolType {
+  TTPen = 0,
+  TTMarker = 1,
+  TTEraser = 2
 }
 
-export class Container extends Sink {
-  constructor() {
-    super()
-    // this.maxobjectnumber=0;
-    this.lasttime = {}
-  }
+export enum FormType {
+  FTLine = 1,
+  FTRect = 2,
+  FTCircle = 3,
+  FTEllipse = 4
+}
 
-  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
+export type StorageType = number
+export type ClientType = string
+export type ColorType = number // rgb int number
+export type Time = number
+export type OptTime = Time | undefined
+export type ClientNum = number
+export type OptClientNum = ClientNum | undefined
+
+export interface ScrollSink {
+  scrollBoard(time: OptTime, clientnum: ClientType, x: number, y: number): void
+}
+
+export interface Sink {
+  startPath(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    width: number,
+    pressure: number
+  ): void
+
+  addToPath(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    pressure: number
+  ): void
+
+  finishPath(time: OptTime, objnum: number, curclient: OptClientNum): void
+
+  scrollBoard(time: OptTime, clientnum: ClientType, x: number, y: number): void
+
+  addPicture(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string
+  ): void
+
+  addForm(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
+  ): void
+
+  deleteObject(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    storagenum: StorageType | null | undefined
+  ): void
+
+  moveObject(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number
+  ): void
+  // note a change of storagenum is not allowed
+
+  startApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ): void
+
+  moveApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ): void
+
+  closeApp(time: OptTime): void
+
+  dataApp(time: OptTime, buffer: Uint8Array | ArrayBuffer): void
+}
+
+export class DummySink implements Sink {
+  startPath(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    width: number,
+    pressure: number
+  ): void {}
+
+  addToPath(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    pressure: number
+  ): void {}
+
+  finishPath(time: OptTime, objnum: number, curclient: OptClientNum): void {}
+
+  scrollBoard(
+    time: OptTime,
+    clientnum: ClientType,
+    x: number,
+    y: number
+  ): void {}
+
+  addPicture(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string
+  ): void {}
+
+  addForm(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
+  ): void {}
+
+  deleteObject(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    storagenum: StorageType | null | undefined
+  ): void {}
+
+  moveObject(
+    time: OptTime,
+    objnum: number,
+    curclient: OptClientNum,
+    x: number,
+    y: number
+  ): void {}
+  // note a change of storagenum is not allowed
+
+  startApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ): void {}
+
+  moveApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ): void {}
+
+  closeApp(time: OptTime): void {}
+
+  dataApp(time: OptTime, buffer: Uint8Array | ArrayBuffer): void {}
+}
+
+export interface StrictSink {
+  startPath(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    width: number,
+    pressure: number
+  ): void
+
+  addToPath(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    pressure: number
+  ): void
+
+  finishPath(time: Time, objnum: number, curclient: ClientNum): void
+
+  scrollBoard(time: Time, clientnum: ClientType, x: number, y: number): void
+
+  addPicture(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string
+  ): void
+
+  addForm(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
+  ): void
+
+  deleteObject(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    storagenum: StorageType | null | undefined
+  ): void
+
+  moveObject(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number
+  ): void
+  // note a change of storagenum is not allowed
+
+  startApp(
+    time: Time,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ): void
+
+  moveApp(
+    time: Time,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ): void
+
+  closeApp(time: Time): void
+
+  dataApp(time: Time, buffer: Uint8Array | ArrayBuffer): void
+}
+
+type CommandStateType = {
+  time?: number
+  scrollx?: number
+  scrolly?: number
+}
+
+export class Container implements StrictSink {
+  startPath(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    w: number,
+    pressure: number
+  ) {
     const tempbuffer = new ArrayBuffer(36)
     const dataview = new DataView(tempbuffer)
 
@@ -149,12 +383,18 @@ export class Container extends Sink {
     let intpress = 0.5
     if (pressure) intpress = pressure
     dataview.setFloat32(32, intpress) // 32-35
-    this.curobjnum = objnum
 
     this.pushArrayToStorage(tempbuffer)
   }
 
-  addToPath(time, objnum, curclient, x, y, pressure) {
+  addToPath(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    pressure: number
+  ) {
     // todo add objnum
     const tempbuffer = new ArrayBuffer(24)
     const dataview = new DataView(tempbuffer)
@@ -181,7 +421,7 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  finishPath(time, objnum, curclient) {
+  finishPath(time: Time, objnum: number, curclient: ClientNum) {
     const tempbuffer = new ArrayBuffer(12)
     const dataview = new DataView(tempbuffer)
 
@@ -202,7 +442,7 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  scrollBoard(time, _clientnum, x, y) {
+  scrollBoard(time: Time, _clientnum: ClientType, x: number, y: number) {
     // clientnum is ignored, only relevant for live scrolling
     const tempbuffer = new ArrayBuffer(32) // actually it is a waste, but may be we need it later
     const dataview = new DataView(tempbuffer)
@@ -218,7 +458,16 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  addPicture(time, objnum, _curclient, x, y, width, height, id) {
+  addPicture(
+    time: Time,
+    objnum: number,
+    _curclient: ClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string
+  ) {
     // ok id was before a uuid, now it is general a hex coded id
     const buflength = id.length / 2 // it is hex coded so two bytes per byte
     if (buflength > 255) {
@@ -257,17 +506,17 @@ export class Container extends Sink {
   }
 
   addForm(
-    time,
-    objnum,
-    curclient,
-    x,
-    y,
-    width,
-    height,
-    type,
-    bColor,
-    fColor,
-    lw
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
   ) {
     const tempbuffer = new ArrayBuffer(45)
     const dataview = new DataView(tempbuffer)
@@ -302,13 +551,16 @@ export class Container extends Sink {
         dataview.setUint8(44, 1) // 44
         break
     }
-    this.curobjnum = objnum
 
     this.pushArrayToStorage(tempbuffer)
   }
 
-  // eslint-disable-next-line no-unused-vars
-  deleteObject(time, objnum, curclient, _storagenum) {
+  deleteObject(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    _storagenum: StorageType
+  ) {
     const tempbuffer = new ArrayBuffer(16)
     const dataview = new DataView(tempbuffer)
 
@@ -322,7 +574,13 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  moveObject(time, objnum, curclient, x, y) {
+  moveObject(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number
+  ) {
     const tempbuffer = new ArrayBuffer(24)
     const dataview = new DataView(tempbuffer)
 
@@ -339,7 +597,16 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  startApp(time, x, y, width, height, id, sha, appid) {
+  startApp(
+    time: Time,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ) {
     if (typeof id !== 'string') return
     if (typeof sha !== 'string') return
     if (typeof appid !== 'string') return
@@ -393,7 +660,7 @@ export class Container extends Sink {
     }
   }
 
-  closeApp(time) {
+  closeApp(time: Time) {
     const tempbuffer = new ArrayBuffer(12)
     const dataview = new DataView(tempbuffer)
     dataview.setUint8(0, 11) // major command type, closeApp is 11
@@ -403,7 +670,7 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  dataApp(time, buffer) {
+  dataApp(time: Time, buffer: Uint8Array | ArrayBuffer) {
     // this one is tricky
     const ab = buffer instanceof ArrayBuffer ? buffer : buffer.buffer
     if (!ab) return
@@ -441,7 +708,7 @@ export class Container extends Sink {
       // 1 start with default coding
       if (chunk === 0) dataview.setFloat64(pos + 4, time) // 4..11
       pos += headersize
-      const ua = new Uint8Array(buffer, bufferpos, payloadsize)
+      const ua = new Uint8Array(ab, bufferpos, payloadsize)
       arrayview.set(ua, pos)
       pos += headersize
       remainlength -= payloadsize
@@ -450,14 +717,21 @@ export class Container extends Sink {
     this.pushArrayToStorage(tempbuffer)
   }
 
-  moveApp(time, x, y, width, height, deactivate) {
+  moveApp(
+    time: Time,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ) {
     const tempbuffer = new ArrayBuffer(28)
     const dataview = new DataView(tempbuffer)
 
     dataview.setUint8(0, 13) // major command type, moveApp is 13
 
     dataview.setUint16(1, 28) // length  1..2
-    dataview.setUint8(3, 0 | (deactivate && 0x1)) // reserved 3
+    dataview.setUint8(3, deactivate ? 0x1 : 0) // reserved 3
     dataview.setFloat64(4, time) // 4..11
     // positioning
     dataview.setFloat32(12, x) // 12-15
@@ -467,15 +741,17 @@ export class Container extends Sink {
 
     this.pushArrayToStorage(tempbuffer)
   }
+
+  pushArrayToStorage(data: ArrayBuffer) {
+    throw new Error('pushArrayToStorage is not implemented')
+  }
+
+  private lasttime: { [key: number]: number } = {}
 }
 
 export class MemContainer extends Container {
-  // eslint-disable-next-line no-unused-vars
-  constructor(num, _dummy) {
+  constructor(num: StorageType, _dummy: any) {
     super()
-    this.storage = new ArrayBuffer(6400)
-    this.storageAllocSize = 6400
-    this.storageSize = 0
     this.number = num
   }
 
@@ -487,7 +763,7 @@ export class MemContainer extends Container {
     return clonestorage
   }
 
-  pushArrayToStorage(array) {
+  pushArrayToStorage(array: ArrayBuffer) {
     while (array.byteLength + this.storageSize > this.storageAllocSize) {
       // realloc data
       this.storageAllocSize *= 2
@@ -500,7 +776,7 @@ export class MemContainer extends Container {
     this.storageSize += array.byteLength
   }
 
-  replaceStoredData(data) {
+  replaceStoredData(data: ArrayBuffer) {
     if (data.byteLength > this.storageAllocSize) {
       this.storageAllocSize = data.byteLength + 6400
       this.storage = new ArrayBuffer(this.storageAllocSize)
@@ -516,7 +792,7 @@ export class MemContainer extends Container {
     new Uint8Array(this.storage).set(new Uint8Array(data)) // copy data
   }
 
-  getElementTime(position, lasttime) {
+  getElementTime(position: StorageType, lasttime: number) {
     if (position + 8 > this.storageSize) return 0 // should never happen
     const dataview = new DataView(this.storage)
     const command = dataview.getUint8(position)
@@ -586,7 +862,7 @@ export class MemContainer extends Container {
     return time
   }
 
-  getElementObjnum(position, lastobjnum) {
+  getElementObjnum(position: number, lastobjnum: number) {
     if (position + 8 > this.storageSize) return 0 // should never happen
     const dataview = new DataView(this.storage)
     const command = dataview.getUint8(position)
@@ -649,7 +925,7 @@ export class MemContainer extends Container {
     return objnum
   }
 
-  redrawElementTo(datasink, pos, lasttime) {
+  redrawElementTo(datasink: Sink, pos: number, lasttime: number) {
     // First Check size
     const dataview = new DataView(this.storage)
     if (2 + pos > this.storageSize) {
@@ -799,7 +1075,7 @@ export class MemContainer extends Container {
     return pos + length
   }
 
-  reparseCommand(pos, commandstate) {
+  reparseCommand(pos: StorageType, commandstate: CommandStateType) {
     // First Check size
     const dataview = new DataView(this.storage)
     if (2 + pos > this.storageSize) {
@@ -842,7 +1118,7 @@ export class MemContainer extends Container {
     return commandstate
   }
 
-  reparseJupyter(datasink, pos) {
+  reparseJupyter(datasink: Sink, pos: StorageType) {
     // First Check size
     const dataview = new DataView(this.storage)
     if (2 + pos > this.storageSize) {
@@ -971,57 +1247,89 @@ export class MemContainer extends Container {
 
     return pos + length
   }
+
+  private storage: ArrayBuffer = new ArrayBuffer(6400)
+  private storageAllocSize: number = 6400
+  private storageSize: number = 0
+  private number: number
 }
 
+type CallbackContainerConfig = {
+  obj: {}
+  writeData: WriteData
+}
+
+type WriteData = (
+  obj: {},
+  number: StorageType,
+  data: ArrayBuffer,
+  append: boolean
+) => void
+
 export class CallbackContainer extends Container {
-  constructor(num, config) {
+  constructor(num: StorageType, config: CallbackContainerConfig) {
     super()
     this.writeData = config.writeData
     this.obj = config.obj
     this.number = num
   }
 
-  pushArrayToStorage(array) {
+  pushArrayToStorage(array: ArrayBuffer) {
     this.writeData(this.obj, this.number, array, true)
   }
 
-  replaceStoredData(data) {
+  replaceStoredData(data: ArrayBuffer) {
     this.writeData(this.obj, this.number, data, false)
   }
+
+  private writeData: WriteData
+  private obj: {}
+  private number: StorageType
 }
 
-export class Collection extends Sink {
-  constructor(containertype, containerconfig) {
-    super()
-    this.lasttime = 0
+type SpecialContainerId = 'command' | 'jupyter'
+type ContainerId = SpecialContainerId | number
 
-    this.lastcontainer = {}
-    this.containers = []
-    this.contdirty = []
-    this.dirty = false
+type CollectionContainerConfig = {
+  obj: {}
+  writeData: WriteData
+}
 
-    this.containertype = containertype
-    this.containerconfig = containerconfig
-    this.commandcontainer = this.containertype('command', containerconfig)
-    this.jupytercontainer = this.containertype('jupyter', containerconfig)
+type CollectionContainerType = (
+  id: ContainerId,
+  config: CollectionContainerConfig
+) => Container
+
+export class Collection implements StrictSink {
+  constructor(
+    containertype: CollectionContainerType,
+    containerconfig: CollectionContainerConfig
+  ) {
+    this.containertype_ = containertype
+    this.containerconfig_ = containerconfig
+    this.commandcontainer_ = this.containertype('command', containerconfig)
+    this.jupytercontainer_ = this.containertype('jupyter', containerconfig)
   }
 
-  setOnDirty(cb) {
-    this.ondirty = cb
-    this.ondirty(this.dirty)
+  setOnDirty(cb: (dirty: boolean) => void) {
+    this.ondirty_ = cb
+    this.ondirty_(this.dirty)
   }
 
-  unDirty(cont) {
-    this.contdirty[cont] = false
-    if (!this.contdirty.some((el) => !!el)) {
-      if (this.dirty) {
-        this.dirty = false
-        if (this.ondirty) this.ondirty(false)
-      }
+  ondirty(dirty: boolean): void {
+    if (this.ondirty_) {
+      this.ondirty_(dirty)
     }
   }
 
-  checkContainerExistsAndDirty(storagenum) {
+  unDirty(cont: number) {
+    this.contdirty[cont] = false
+    if (!this.contdirty.some((el) => !!el)) {
+      this.dirty = false
+    }
+  }
+
+  checkContainerExistsAndDirty(storagenum: StorageType) {
     if (!(storagenum in this.containers)) {
       // TODO for the network case sync with server
       this.containers[storagenum] = this.containertype(
@@ -1031,14 +1339,21 @@ export class Collection extends Sink {
     }
     if (!this.contdirty[storagenum]) {
       this.contdirty[storagenum] = true
-      if (!this.dirty) {
-        this.dirty = true
-        if (this.ondirty) this.ondirty()
-      }
+      this.dirty = true
     }
   }
 
-  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
+  startPath(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    w: number,
+    pressure: number
+  ) {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
     // console.log("strnm SP",storagenum);
     this.checkContainerExistsAndDirty(storagenum)
@@ -1057,12 +1372,21 @@ export class Collection extends Sink {
     )
   }
 
-  addToPath(time, objnum, curclient, x, y, pressure) {
+  addToPath(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    pressure: number
+  ) {
     if (!(objnum in this.lastcontainer)) {
       this.lastcontainer[objnum] = Math.floor(y) // may be not optimal, but better than nothing
     }
     const storagenum = this.lastcontainer[objnum] // in Normalized coordinates we have rectangular areas
     // console.log("strnm atp",storagenum);
+    if (typeof storagenum !== 'number')
+      throw new Error('Wrong Type of storage number')
     this.checkContainerExistsAndDirty(storagenum)
 
     this.containers[storagenum].addToPath(
@@ -1075,20 +1399,31 @@ export class Collection extends Sink {
     )
   }
 
-  finishPath(time, objnum, curclient) {
+  finishPath(time: Time, objnum: number, curclient: ClientNum) {
     if (!(objnum in this.lastcontainer)) {
       // we have to skip it, no guess possible
       return
     }
     const storagenum = this.lastcontainer[objnum] // in Normalized coordinates we have rectangular areas
     // console.log("strnm fp",storagenum);
+    if (typeof storagenum !== 'number')
+      throw new Error('Wrong Type of storage number')
     this.checkContainerExistsAndDirty(storagenum)
     delete this.lastcontainer[objnum]
 
     this.containers[storagenum].finishPath(time, objnum, curclient)
   }
 
-  addPicture(time, objnum, curclient, x, y, width, height, uuid) {
+  addPicture(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string
+  ) {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
     this.checkContainerExistsAndDirty(storagenum)
     // console.log("addPicture in failsdata collection",storagenum);
@@ -1106,17 +1441,17 @@ export class Collection extends Sink {
   }
 
   addForm(
-    time,
-    objnum,
-    curclient,
-    x,
-    y,
-    width,
-    height,
-    type,
-    bColor,
-    fColor,
-    lw
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
   ) {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
     this.checkContainerExistsAndDirty(storagenum)
@@ -1136,7 +1471,12 @@ export class Collection extends Sink {
     )
   }
 
-  deleteObject(time, objnum, curclient, storagenum) {
+  deleteObject(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    storagenum: StorageType
+  ) {
     if (!Number.isInteger(storagenum)) return
     this.checkContainerExistsAndDirty(storagenum)
     this.containers[storagenum].deleteObject(
@@ -1147,33 +1487,157 @@ export class Collection extends Sink {
     )
   }
 
-  moveObject(time, objnum, curclient, x, y) {
+  moveObject(
+    time: Time,
+    objnum: number,
+    curclient: ClientNum,
+    x: number,
+    y: number
+  ) {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
     this.checkContainerExistsAndDirty(storagenum)
     this.containers[storagenum].moveObject(time, objnum, curclient, x, y)
   }
 
-  scrollBoard(time, clientnum, x, y) {
-    this.commandcontainer.scrollBoard(time, clientnum, x, y)
+  scrollBoard(time: Time, clientnum: ClientType, x: number, y: number) {
+    this.commandcontainer_.scrollBoard(time, clientnum, x, y)
   }
 
-  startApp(time, x, y, width, height, id, sha, appid) {
-    this.jupytercontainer.startApp(time, x, y, width, height, id, sha, appid)
+  startApp(
+    time: Time,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ) {
+    this.jupytercontainer_.startApp(time, x, y, width, height, id, sha, appid)
   }
 
-  closeApp(time) {
-    this.jupytercontainer.closeApp(time)
+  closeApp(time: Time) {
+    this.jupytercontainer_.closeApp(time)
   }
 
-  dataApp(time, buffer) {
-    this.jupytercontainer.dataApp(time, buffer)
+  dataApp(time: Time, buffer: ArrayBuffer) {
+    this.jupytercontainer_.dataApp(time, buffer)
   }
 
-  moveApp(time, x, y, width, height, deactivate) {
-    this.jupytercontainer.moveApp(time, x, y, width, height, deactivate)
+  moveApp(
+    time: Time,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ) {
+    this.jupytercontainer_.moveApp(time, x, y, width, height, deactivate)
   }
 
-  suggestRedraw(minareadrawn, maxareadrawn, curpostop, curposbottom) {
+  clearContainers() {
+    this.containers_ = []
+    this.contdirty_ = []
+    this.dirty = false
+    if (this.ondirty) this.ondirty(false)
+    this.lasttime = 0
+
+    this.lastcontainer = {}
+    this.commandcontainer_ = this.containertype('command', this.containerconfig)
+    this.jupytercontainer_ = this.containertype('jupyter', this.containerconfig)
+  }
+
+  set dirty(ndirty: boolean) {
+    if (this.dirty_ !== ndirty) {
+      this.dirty_ = ndirty
+      this.ondirty(ndirty)
+    }
+  }
+
+  get dirty() {
+    return this.dirty_
+  }
+
+  get contdirty() {
+    return this.contdirty_
+  }
+
+  get containers() {
+    return this.containers_
+  }
+
+  get jupytercontainer() {
+    return this.jupytercontainer_
+  }
+
+  get commandcontainer() {
+    return this.commandcontainer_
+  }
+
+  set lasttime(time: Time) {
+    this.lasttime_ = time
+  }
+
+  get containertype() {
+    return this.containertype_
+  }
+
+  get containerconfig() {
+    return this.containerconfig_
+  }
+
+  private lasttime_: Time = 0
+
+  private lastcontainer: {
+    [key: number]: ContainerId
+  } = {}
+  private containers_: Container[] = []
+  private contdirty_: boolean[] = []
+  private containerconfig_: CollectionContainerConfig
+  private containertype_: CollectionContainerType
+  private commandcontainer_: Container
+  private jupytercontainer_: Container
+
+  private dirty_: boolean = false
+  private ondirty_: ((dirty: boolean) => void) | undefined = undefined
+}
+
+type RedrawCollectionContainerType = (
+  id: ContainerId,
+  config: CollectionContainerConfig
+) => MemContainer
+
+export class RedrawCollection extends Collection {
+  constructor(
+    containertype: RedrawCollectionContainerType,
+    containerconfig: CollectionContainerConfig
+  ) {
+    super(containertype, containerconfig)
+  }
+
+  // We need to type cast to make ts happy.
+  get containers(): MemContainer[] {
+    return super.containers as MemContainer[]
+  }
+
+  get jupytercontainer() {
+    return super.jupytercontainer as MemContainer
+  }
+
+  get commandcontainer() {
+    return super.commandcontainer as MemContainer
+  }
+
+  get containertype() {
+    return super.containertype as RedrawCollectionContainerType
+  }
+
+  suggestRedraw(
+    minareadrawn: number,
+    maxareadrawn: number,
+    curpostop: number,
+    curposbottom: number
+  ) {
     // console.log("sugredraw",minareadrawn,maxareadrawn,curpostop,curposbottom);
 
     const minareadrawni = Math.floor(minareadrawn)
@@ -1183,20 +1647,14 @@ export class Collection extends Sink {
     // console.log("sugredrawi",minareadrawni,maxareadrawni,curpostopi,curposbottomi);
 
     if (curpostopi - minareadrawni > 3) {
-      // console.log('sg1')
       return true
     } // make the drawn area smaller
-    //   console.log("sugredrawt1");
     if (maxareadrawni - curposbottomi > 3) {
-      // console.log('sg2')
       return true
     } // make the drawn area smaller
-    //    console.log("sugredrawt2");
     if (curpostopi - minareadrawni === 0 && curpostopi > 0) {
-      // console.log('sg3')
       return true
     }
-    //  console.log("sugredrawt3");
     // First step determine covered area
     let storedmin = 0
     let storedmax = 0
@@ -1214,7 +1672,7 @@ export class Collection extends Sink {
   }
   // var redrawcount=0;
 
-  redrawTo(datasink, mindraw, maxdraw) {
+  redrawTo(datasink: Sink, mindraw: number, maxdraw: number) {
     const contit = []
     const contpos = []
     const conttime = []
@@ -1256,7 +1714,7 @@ export class Collection extends Sink {
         contpos[target],
         conttime[target]
       )
-      // console.log("targettime",targettime,targetobjnum);
+      // console.log("targettime",targettime: number, targetobjnum);
       this.lasttime = targettime
       if (contpos[target] < 0) {
         // remove from array
@@ -1277,25 +1735,14 @@ export class Collection extends Sink {
     }
   }
 
-  reparseJupyter(datasink) {
+  reparseJupyter(datasink: Sink) {
     let pos = 0
     while (pos >= 0) {
       pos = this.jupytercontainer.reparseJupyter(datasink, pos)
     }
   }
 
-  clearContainers() {
-    this.containers = []
-    this.contdirty = []
-    this.dirty = false
-    if (this.ondirty) this.ondirty(false)
-    this.lasttime = 0
-
-    this.lastcontainer = {}
-    this.commandcontainer = this.containertype('command', this.containerconfig)
-  }
-
-  replaceStoredData(i, data) {
+  replaceStoredData(i: ContainerId, data: ArrayBuffer) {
     if (i === 'command') {
       this.commandcontainer.replaceStoredData(data)
     } else if (i === 'jupyter') {
@@ -1309,84 +1756,69 @@ export class Collection extends Sink {
       if (this.contdirty.some((el) => !!el)) {
         if (!this.dirty) {
           this.dirty = true
-          if (this.ondirty) this.ondirty(true)
+          this.ondirty(true)
         }
       } else {
         if (this.dirty) {
           this.dirty = false
-          if (this.ondirty) this.ondirty(false)
+          this.ondirty(false)
         }
       }
     }
   }
 }
 
-export class Dispatcher extends Sink {
-  constructor() {
-    super()
-    this.datasinklist = new Set()
-    // this.curobjectnumber=0;
-    this.curclientnum = 0
+type DisTimeType<T> = T extends Sink ? OptTime : Time
+type DisClientNum<T> = T extends Sink ? OptClientNum : ClientNum
 
-    this.blocked = false
-
-    this.scrollx = this.scrolly = 0
-
-    this.starttime = now()
-  }
-
-  getNewObjectNumber() {
-    const retnumber = this.curobjectnumber
-    this.curobjectnumber++
-    return retnumber
-  }
-
-  /*
-    fixObjNumber(objnum)
-    {
-        if (!objnum) return this.getNewObjectNumber();
-        if (objnum<=this.curobjectnumber) { // is probably broken or restarted
-            return this.getNewObjectNumber();
-        } else {
-            this.curobjectnumber=objnum+1;
-        }
-    } */
-
+export class Dispatcher<SinkType extends Sink | StrictSink> {
   getTime() {
     return now() - this.starttime
   }
 
-  addSink(sink) {
+  addSink(sink: SinkType) {
     this.datasinklist.add(sink)
   }
 
-  removeSink(sink) {
+  removeSink(sink: SinkType) {
     this.datasinklist.delete(sink)
   }
 
-  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
-    // console.log("FDD sP",this);
+  startPath(
+    time: DisTimeType<SinkType>,
+    objnum: number,
+    curclient: DisClientNum<SinkType>,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    w: number,
+    pressure: number
+  ) {
     if (this.blocked) return
-    // var object=this.fixObjNumber(objnum);
     const object = objnum
-    // console.log("FDD startPath",time,objnum,curclient,x,y,w,color);
 
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
     let client = curclient
     if (!client) client = this.curclientnum
-    // console.log("FDD startPath2",timeset,object,client,x,y,w,color);
     this.datasinklist.forEach((sink) =>
       sink.startPath(timeset, object, client, x, y, type, color, w, pressure)
     )
   }
 
-  addToPath(time, objnum, curclient, x, y, pressure) {
+  addToPath(
+    time: DisTimeType<SinkType>,
+    objnum: number,
+    curclient: DisClientNum<SinkType>,
+    x: number,
+    y: number,
+    pressure: number
+  ) {
     // console.log("FDD aTP",this);
     if (this.blocked) return
-    let client = curclient
-    if (!curclient) client = this.curclientnum
+    let client = curclient ?? this.curclientnum
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
@@ -1395,11 +1827,14 @@ export class Dispatcher extends Sink {
     )
   }
 
-  finishPath(time, objnum, curclient) {
+  finishPath(
+    time: DisTimeType<SinkType>,
+    objnum: number,
+    curclient: DisClientNum<SinkType>
+  ) {
     // console.log("FDD fP",this);
     if (this.blocked) return
-    let client = curclient
-    if (!curclient) client = this.curclientnum
+    let client = curclient ?? this.curclientnum
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
@@ -1408,7 +1843,12 @@ export class Dispatcher extends Sink {
     )
   }
 
-  scrollBoard(time, clientnum, x, y) {
+  scrollBoard(
+    time: DisTimeType<SinkType>,
+    clientnum: ClientType,
+    x: number,
+    y: number
+  ) {
     this.setTimeandScrollPos(time, x, y)
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
@@ -1417,12 +1857,20 @@ export class Dispatcher extends Sink {
     )
   }
 
-  addPicture(time, objnum, curclient, x, y, width, height, uuid) {
+  addPicture(
+    time: DisTimeType<SinkType>,
+    objnum: number,
+    curclient: DisClientNum<SinkType>,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string
+  ) {
     // console.log("addPicture in failsdata dispatcher before blocked");
     if (this.blocked) return
     // var object=this.fixObjNumber(objnum);
     const object = objnum
-    // console.log("FDD startPath",time,objnum,curclient,x,y,w,color);
 
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
@@ -1437,17 +1885,17 @@ export class Dispatcher extends Sink {
   }
 
   addForm(
-    time,
-    objnum,
-    curclient,
-    x,
-    y,
-    width,
-    height,
-    type,
-    bColor,
-    fColor,
-    lw
+    time: DisTimeType<SinkType>,
+    objnum: number,
+    curclient: DisClientNum<SinkType>,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: number,
+    fColor: number,
+    lw: number
   ) {
     if (this.blocked) return
     const object = objnum
@@ -1475,10 +1923,14 @@ export class Dispatcher extends Sink {
     )
   }
 
-  deleteObject(time, objnum, curclient, storagenum) {
+  deleteObject(
+    time: DisTimeType<SinkType>,
+    objnum: number,
+    curclient: DisClientNum<SinkType>,
+    storagenum: StorageType
+  ) {
     if (this.blocked) return
-    let client = curclient
-    if (!curclient) client = this.curclientnum
+    let client = curclient ?? this.curclientnum
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
@@ -1487,10 +1939,15 @@ export class Dispatcher extends Sink {
     )
   }
 
-  moveObject(time, objnum, curclient, x, y) {
+  moveObject(
+    time: DisTimeType<SinkType>,
+    objnum: number,
+    curclient: DisClientNum<SinkType>,
+    x: number,
+    y: number
+  ) {
     if (this.blocked) return
-    let client = curclient
-    if (!curclient) client = this.curclientnum
+    let client = curclient ?? this.curclientnum
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
@@ -1499,7 +1956,16 @@ export class Dispatcher extends Sink {
     )
   }
 
-  startApp(time, x, y, width, height, id, sha, appid) {
+  startApp(
+    time: DisTimeType<SinkType>,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ) {
     if (this.blocked) return
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
@@ -1508,159 +1974,363 @@ export class Dispatcher extends Sink {
     )
   }
 
-  closeApp(time) {
+  closeApp(time: DisTimeType<SinkType>) {
     if (this.blocked) return
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
     this.datasinklist.forEach((sink) => sink.closeApp(timeset))
   }
 
-  dataApp(time, buffer) {
+  dataApp(time: DisTimeType<SinkType>, buffer: ArrayBuffer | Uint8Array) {
     if (this.blocked) return
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
     this.datasinklist.forEach((sink) => sink.dataApp(timeset, buffer))
   }
 
-  moveApp(time, x, y, width, height, deactivate) {
+  moveApp(
+    time: DisTimeType<SinkType>,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ) {
     if (this.blocked) return
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
-    this.datasinklist.forEach((sink) =>
+    this.datasinklist.forEach((sink: SinkType) =>
       sink.moveApp(timeset, x, y, width, height, deactivate)
     )
   }
 
-  setTimeandScrollPos(time, scrollx, scrolly) {
+  setTimeandScrollPos(
+    time: DisTimeType<SinkType>,
+    scrollx: number,
+    scrolly: number
+  ) {
     if (time) {
       // time= now()-starttime
       // console.log("timeadjusted now",now(),time);
       this.starttime = now() - time // adjusttime
-      // console.log("timeadjusted",this.starttime,time);
+      // console.log("timeadjusted",this.starttime: number, time);
     }
     if (scrollx) this.scrollx = scrollx
     if (scrolly) this.scrolly = scrolly
   }
+
+  private datasinklist = new Set<SinkType>()
+
+  private curclientnum = 0
+
+  private blocked = false
+
+  private scrollx = 0
+  private scrolly = 0
+
+  private starttime = now()
 }
 
-export class NetworkSink extends Sink {
-  constructor(send) {
-    super()
+type NetStartPath = {
+  task: 'startPath'
+  time: OptTime
+  objnum: number
+  curclient: number
+  x: number
+  y: number
+  type: ToolType
+  color: ColorType
+  w: number
+  pressure: number
+}
+
+type NetAddToPath = {
+  task: 'addToPath'
+  time: OptTime
+  objnum: number
+  curclient: number
+  x: number
+  y: number
+  pressure: number
+}
+
+type NetFinishPath = {
+  task: 'finishPath'
+  time: OptTime
+  objnum: number
+  curclient: number
+}
+
+type NetAddPicture = {
+  task: 'addPicture'
+  time: OptTime
+  objnum: number
+  curclient: number
+  x: number
+  y: number
+  width: number
+  height: number
+  uuid: string
+}
+
+type NetAddForm = {
+  task: 'addForm'
+  time: OptTime
+  objnum: number
+  curclient: number
+  x: number
+  y: number
+  w: number
+  h: number
+  type: FormType
+  bColor: ColorType
+  fColor: ColorType
+  lw: number
+}
+
+type NetScrollBoard = {
+  task: 'scrollBoard'
+  time: OptTime
+  clientnum: ClientType
+  x: number
+  y: number
+}
+
+type NetDeleteObject = {
+  task: 'deleteObject'
+  time: OptTime
+  objnum: number
+  clientnum: number
+  storagenum: StorageType
+}
+
+type NetMoveObject = {
+  task: 'moveObject'
+  time: OptTime
+  objnum: number
+  clientnum: number
+  x: number
+  y: number
+}
+
+type NetStartApp = {
+  task: 'startApp'
+  time: OptTime
+  x: number
+  y: number
+  width: number
+  height: number
+  id: string
+  sha: string
+  appid: string
+}
+
+type NetCloseApp = {
+  task: 'closeApp'
+  time: OptTime
+}
+
+type NetDataApp = {
+  task: 'dataApp'
+  time: OptTime
+  buffer: Uint8Array | ArrayBuffer
+}
+
+type NetMoveApp = {
+  task: 'moveApp'
+  time: OptTime
+  x: number
+  y: number
+  width: number
+  height: number
+  deactivate: boolean
+}
+
+type NetCommands =
+  | NetStartPath
+  | NetAddToPath
+  | NetFinishPath
+  | NetAddPicture
+  | NetAddForm
+  | NetScrollBoard
+  | NetDeleteObject
+  | NetMoveObject
+  | NetStartApp
+  | NetCloseApp
+  | NetDataApp
+  | NetMoveApp
+
+export class NetworkSink implements Sink {
+  constructor(send: (command: NetCommands) => void) {
     this.sendfunc = send
   }
 
-  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
-    const outobj = {}
-    outobj.task = 'startPath'
-    outobj.time = time
-    outobj.objnum = objnum
-    outobj.curclient = curclient
-    outobj.x = x
-    outobj.y = y
-    outobj.type = type
-    outobj.color = color
-    outobj.w = w
-    outobj.pressure = pressure
+  startPath(
+    time: OptTime,
+    objnum: number,
+    curclient: number,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    w: number,
+    pressure: number
+  ) {
+    const outobj: NetStartPath = {
+      task: 'startPath',
+      time,
+      objnum,
+      curclient,
+      x,
+      y,
+      type,
+      color,
+      w,
+      pressure
+    }
     this.sendfunc(outobj)
   }
 
-  addToPath(time, objnum, curclient, x, y, pressure) {
-    const outobj = {}
-    outobj.task = 'addToPath'
-    outobj.time = time
-    outobj.objnum = objnum
-    outobj.curclient = curclient
-    outobj.x = x
-    outobj.y = y
-    outobj.pressure = pressure
+  addToPath(
+    time: OptTime,
+    objnum: number,
+    curclient: number,
+    x: number,
+    y: number,
+    pressure: number
+  ) {
+    const outobj: NetAddToPath = {
+      task: 'addToPath',
+      time,
+      objnum,
+      curclient,
+      x,
+      y,
+      pressure
+    }
     this.sendfunc(outobj)
   }
 
-  finishPath(time, objnum, curclient) {
-    const outobj = {}
-    outobj.task = 'finishPath'
-    outobj.time = time
-    outobj.objnum = objnum
-    outobj.curclient = curclient
+  finishPath(time: OptTime, objnum: number, curclient: number) {
+    const outobj: NetFinishPath = {
+      task: 'finishPath',
+      time,
+      objnum,
+      curclient
+    }
     this.sendfunc(outobj)
   }
 
-  addPicture(time, objnum, curclient, x, y, width, height, uuid) {
-    const outobj = {}
-    outobj.task = 'addPicture'
-    outobj.time = time
-    outobj.objnum = objnum
-    outobj.curclient = curclient
-    outobj.x = x
-    outobj.y = y
-    outobj.width = width
-    outobj.height = height
-    outobj.uuid = uuid
+  addPicture(
+    time: OptTime,
+    objnum: number,
+    curclient: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string
+  ) {
+    const outobj: NetAddPicture = {
+      task: 'addPicture',
+      time,
+      objnum,
+      curclient,
+      x,
+      y,
+      width,
+      height,
+      uuid
+    }
     this.sendfunc(outobj)
   }
 
   addForm(
-    time,
-    objnum,
-    curclient,
-    x,
-    y,
-    width,
-    height,
-    type,
-    bColor,
-    fColor,
-    lw
+    time: OptTime,
+    objnum: number,
+    curclient: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
   ) {
-    const outobj = {}
-    outobj.task = 'addForm'
-    outobj.time = time
-    outobj.objnum = objnum
-    outobj.curclient = curclient
-    outobj.x = x
-    outobj.y = y
-    outobj.w = width
-    outobj.h = height
-    outobj.type = type
-    outobj.bColor = bColor
-    outobj.fColor = fColor
-    outobj.lw = lw
+    const outobj: NetAddForm = {
+      task: 'addForm',
+      time,
+      objnum,
+      curclient,
+      x,
+      y,
+      w: width,
+      h: height,
+      type,
+      bColor,
+      fColor,
+      lw
+    }
     this.sendfunc(outobj)
   }
 
-  scrollBoard(time, clientnum, x, y) {
-    const outobj = {}
-    outobj.task = 'scrollBoard'
-    outobj.time = time
-    outobj.clientnum = clientnum
-    outobj.x = x
-    outobj.y = y
+  scrollBoard(time: OptTime, clientnum: ClientType, x: number, y: number) {
+    const outobj: NetScrollBoard = {
+      task: 'scrollBoard',
+      time,
+      clientnum,
+      x,
+      y
+    }
     this.sendfunc(outobj)
   }
 
-  deleteObject(time, objnum, curclient, storagenum) {
-    const outobj = {}
-    outobj.task = 'deleteObject'
-    outobj.time = time
-    outobj.objnum = objnum
-    outobj.clientnum = curclient
-    outobj.storagenum = storagenum
+  deleteObject(
+    time: OptTime,
+    objnum: number,
+    curclient: number,
+    storagenum: StorageType
+  ) {
+    const outobj: NetDeleteObject = {
+      task: 'deleteObject',
+      time,
+      objnum,
+      clientnum: curclient,
+      storagenum
+    }
     this.sendfunc(outobj)
   }
 
-  moveObject(time, objnum, curclient, x, y) {
-    const outobj = {}
-    outobj.task = 'moveObject'
-    outobj.time = time
-    outobj.objnum = objnum
-    outobj.clientnum = curclient
-    outobj.x = x
-    outobj.y = y
+  moveObject(
+    time: OptTime,
+    objnum: number,
+    curclient: number,
+    x: number,
+    y: number
+  ) {
+    const outobj: NetMoveObject = {
+      task: 'moveObject',
+      time,
+      objnum,
+      clientnum: curclient,
+      x,
+      y
+    }
     this.sendfunc(outobj)
   }
 
-  startApp(time, x, y, width, height, id, sha, appid) {
-    this.sendfunc({
+  startApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ) {
+    const obj: NetStartApp = {
       task: 'startApp',
       time,
       x,
@@ -1670,26 +2340,36 @@ export class NetworkSink extends Sink {
       id,
       sha,
       appid
-    })
+    }
+    this.sendfunc(obj)
   }
 
-  closeApp(time) {
-    this.sendfunc({
+  closeApp(time: OptTime) {
+    const obj: NetCloseApp = {
       task: 'closeApp',
       time
-    })
+    }
+    this.sendfunc(obj)
   }
 
-  dataApp(time, buffer) {
-    this.sendfunc({
+  dataApp(time: OptTime, buffer: Uint8Array | ArrayBuffer) {
+    const obj: NetDataApp = {
       task: 'dataApp',
       time,
       buffer
-    })
+    }
+    this.sendfunc(obj)
   }
 
-  moveApp(time, x, y, width, height, deactivate) {
-    this.sendfunc({
+  moveApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ) {
+    const obj: NetMoveApp = {
       task: 'moveApp',
       time,
       x,
@@ -1697,16 +2377,18 @@ export class NetworkSink extends Sink {
       width,
       height,
       deactivate
-    })
+    }
+    this.sendfunc(obj)
   }
+  private sendfunc: (command: NetCommands) => void
 }
 
 export class NetworkSource {
-  constructor(sink) {
+  constructor(sink: Sink) {
     this.sink = sink
   }
 
-  receiveData(data) {
+  receiveData(data: NetCommands) {
     const sink = this.sink
     switch (data.task) {
       case 'startPath':
@@ -1814,68 +2496,138 @@ export class NetworkSource {
         )
     }
   }
+  private sink: Sink
+}
+
+type PointType = {
+  x: number
+  y: number
+}
+
+type GlyphPointType = PointType & {
+  w: number
+  press: number
+}
+
+type DrawObjectShift = PointType
+
+type ShiftTarget = {
+  sink: Sink
+  deselect: () => void
+  newobjid: (objid: number) => number
+}
+
+type PointTest = {
+  pointTest: (testobj: { x: number; y: number }) => boolean
+}
+
+type RectType = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+type WeightSlice = {
+  weight: number
+  pos: number
+  min: number
+  max: number
 }
 
 export class DrawObject {
-  constructor(type, objid) {
+  constructor(type: string, objid: number) {
     this.type = type
-    this.version = 0
-    this.cacheversion = -1
-    this.cacheid = -1
-    this.objid = objid
-    this.preview = false
-    this.selected = false
-    this.preshift = null
-    this.uncommitted = false // used if the object is copied
+    this.objid_ = objid
   }
 
-  getRenderCache(id) {
+  getRenderCache(id: number) {
     if (this.cacheversion === this.version && this.cacheid === id)
       return this.rendercache
-    else this.rendercache = null
-    return null
+    else this.rendercache = undefined
+    return undefined
   }
 
-  setRenderCache(id, cache) {
+  setRenderCache(id: number, cache: ReactElement) {
     this.rendercache = cache
     this.cacheid = id
     this.cacheversion = this.version
   }
 
   clearRenderCache() {
-    this.rendercache = null
+    this.rendercache = undefined
   }
 
-  setPreshift(shift) {
-    if (shift && shift.x !== undefined && shift.y !== undefined) {
+  setPreshift(shift: DrawObjectShift | undefined) {
+    this.preshift = shift
+  }
+
+  moveObject(x: number, y: number): void {
+    throw new Error('moveObject not implemented')
+  }
+
+  getWeightSlices(numslicesheight: number): WeightSlice[] {
+    throw new Error('getWeightSlices not implemented')
+  }
+
+  set preshift(shift: DrawObjectShift | undefined) {
+    if (
+      typeof shift !== 'undefined' &&
+      shift.x !== undefined &&
+      shift.y !== undefined
+    ) {
       if (
-        !this.preshift ||
-        this.preshift.x !== shift.x ||
-        this.preshift.x !== shift.y
+        !this.preshift_ ||
+        this.preshift_.x !== shift.x ||
+        this.preshift_.x !== shift.y
       ) {
         this.clearRenderCache()
-        this.preshift = { x: shift.x, y: shift.y }
+        this.preshift_ = { x: shift.x, y: shift.y }
       }
     } else {
-      if (this.preshift) {
+      if (this.preshift_) {
         this.clearRenderCache()
-        this.preshift = null
+        this.preshift_ = undefined
       }
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
-  commitPreshift(target) {
-    // implement in derived class
+  get preshift() {
+    return this.preshift_
   }
 
-  // eslint-disable-next-line no-unused-vars
-  copyAndDeselect(target, shift) {
+  get uncommitted() {
+    return this.uncommitted_
+  }
+
+  set uncommitted(value: boolean) {
+    this.uncommitted_ = value
+  }
+
+  get objid() {
+    return this.objid_
+  }
+
+  get version() {
+    return this.version_
+  }
+
+  increaseVersion() {
+    this.version_++
+  }
+
+  commitPreshift(target: ShiftTarget) {
+    // implement in derived class
+    throw new Error('commitPreshift is not implemented')
+  }
+
+  copyAndDeselect(target: ShiftTarget, shift: DrawObjectShift) {
     // implement in derived class
     // return the copied object
+    throw new Error('copyAndDeselect is not implemented')
   }
 
-  setPreview(preview) {
+  setPreview(preview: boolean) {
     if (this.preview !== preview) {
       this.preview = preview
       this.clearRenderCache()
@@ -1886,8 +2638,8 @@ export class DrawObject {
     return this.preview
   }
 
-  getArea() {
-    return null
+  getArea(): RectType | undefined {
+    return undefined
   }
 
   select() {
@@ -1904,18 +2656,40 @@ export class DrawObject {
     this.clearRenderCache()
   }
 
-  storagenum() {
-    return null
+  doPointTest(pointTest: PointTest) {
+    throw new Error('doPointTest is not implemented')
   }
+
+  storagenum(): number | undefined {
+    return undefined
+  }
+  private type: string
+  private objid_: number
+  private rendercache: ReactElement | undefined
+  private version_: number = 0
+  private cacheversion = -1
+  private cacheid = -1
+  private preview = false
+  private selected = false
+  private preshift_: DrawObjectShift | undefined = undefined
+  private uncommitted_ = false // used if the object is copied
 }
 
 export class DrawObjectPicture extends DrawObject {
-  constructor(objid) {
+  constructor(objid: number) {
     super('image', objid)
-    this.svgscale = 2000 // should be kept constant
   }
 
-  addPicture(x, y, width, height, uuid, url, mimetype, urlthumb) {
+  addPicture(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string,
+    url: string | undefined,
+    mimetype: string | undefined,
+    urlthumb: string | undefined
+  ) {
     this.posx = x
     this.posy = y
     this.width = width
@@ -1924,10 +2698,12 @@ export class DrawObjectPicture extends DrawObject {
     this.url = url
     this.urlthumb = urlthumb
     this.mimetype = mimetype
+    this.inited = true
     this.clearRenderCache()
   }
 
-  getWeightSlices(numslicesheight) {
+  getWeightSlices(numslicesheight: number) {
+    if (!this.inited) throw new Error('DrawObjectPicture not inited')
     const toret = []
     const sliceposstart = Math.round(this.posy / numslicesheight)
     const sliceposend = Math.round((this.posy + this.height) / numslicesheight)
@@ -1944,14 +2720,16 @@ export class DrawObjectPicture extends DrawObject {
     return toret
   }
 
-  moveObject(x, y) {
+  moveObject(x: number, y: number) {
+    if (!this.inited) throw new Error('DrawObjectPicture not inited')
     this.posx = x
     this.posy = y
-    this.preshift = null
+    this.preshift = undefined
     this.clearRenderCache()
   }
 
-  doPointTest(testobj) {
+  doPointTest(testobj: PointTest) {
+    if (!this.inited) throw new Error('DrawObjectPicture not inited')
     // four corners
     if (
       !testobj.pointTest({
@@ -1998,6 +2776,7 @@ export class DrawObjectPicture extends DrawObject {
   }
 
   getArea() {
+    if (!this.inited) throw new Error('DrawObjectPicture not inited')
     return {
       left: Math.min(this.posx, this.posx + this.width),
       right: Math.max(this.posx, this.posx + this.width),
@@ -2006,7 +2785,8 @@ export class DrawObjectPicture extends DrawObject {
     }
   }
 
-  commitPreshift(target) {
+  commitPreshift(target: ShiftTarget) {
+    if (!this.inited) throw new Error('DrawObjectPicture not inited')
     if (!this.preshift && !this.uncommitted) return
     if (target) {
       const newstorage = Math.floor(this.posy + (this.preshift?.y ?? 0))
@@ -2014,15 +2794,20 @@ export class DrawObjectPicture extends DrawObject {
         // ok we have to delete the old obj and create a new one
         let newobjid
         if (!this.uncommitted) {
-          target.sink.deleteObject(null, this.objid, null, this.storagenum())
+          target.sink.deleteObject(
+            undefined,
+            this.objid,
+            undefined,
+            this.storagenum()
+          )
           newobjid = target.newobjid(this.objid)
         } else {
           newobjid = this.objid
         }
         target.sink.addPicture(
-          null,
+          undefined,
           newobjid,
-          null,
+          undefined,
           this.posx + (this.preshift?.x ?? 0),
           this.posy + (this.preshift?.y ?? 0),
           this.width,
@@ -2034,9 +2819,9 @@ export class DrawObjectPicture extends DrawObject {
       } else {
         // ok we just move
         target.sink.moveObject(
-          null,
+          undefined,
           this.objid,
-          null,
+          undefined,
           this.posx + (this.preshift?.x ?? 0),
           this.posy + (this.preshift?.y ?? 0)
         )
@@ -2045,7 +2830,8 @@ export class DrawObjectPicture extends DrawObject {
     this.clearRenderCache()
   }
 
-  copyAndDeselect(target, shift) {
+  copyAndDeselect(target: ShiftTarget, shift: DrawObjectShift) {
+    if (!this.inited) throw new Error('DrawObjectPicture not inited')
     const newobj = new DrawObjectPicture(target.newobjid(this.objid))
     newobj.uncommitted = true
     newobj.addPicture(
@@ -2066,15 +2852,37 @@ export class DrawObjectPicture extends DrawObject {
   storagenum() {
     return Math.floor(this.posy)
   }
+
+  private svgscale = 2000 // should be kept constant
+
+  private inited: boolean = false
+  private posx: number = 0
+  private posy: number = 0
+  private width: number = 0
+  private height: number = 0
+  private uuid: string = ''
+  private url: string | undefined = undefined
+  private urlthumb: string | undefined = undefined
+  private mimetype: string | undefined = undefined
 }
 
+type OptFormType = FormType | ''
+
 export class DrawObjectForm extends DrawObject {
-  constructor(objid) {
+  constructor(objid: number) {
     super('form', objid)
-    this.svgscale = 2000 // should be kept constant
   }
 
-  addForm(x, y, width, height, type, bColor, fColor, lw) {
+  addForm(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
+  ) {
     this.posx = x
     this.posy = y
     this.width = width
@@ -2083,17 +2891,19 @@ export class DrawObjectForm extends DrawObject {
     this.bColor = bColor
     this.fColor = fColor
     this.lw = lw
+    this.inited = true
     this.clearRenderCache()
   }
 
-  getWeightSlices(numslicesheight) {
+  getWeightSlices(numslicesheight: number) {
+    if (!this.inited) throw new Error('DrawObjectForm not inited')
     const toret = []
     const sliceposstart = Math.round(this.posy / numslicesheight)
     const sliceposend = Math.round((this.posy + this.height) / numslicesheight)
     let sliceweight
     let opague = false
     if ((this.fColor & 0xff000000) >>> 24 !== 0) opague = true
-    // const posx = Math.min(this.posx, this.posx + this.width)
+    // const posx = Math.min(this.posx: number, this.posx + this.width)
     const posy = Math.min(this.posy, this.posy + this.height)
     const width = Math.abs(this.width)
     const height = Math.abs(this.height)
@@ -2103,7 +2913,7 @@ export class DrawObjectForm extends DrawObject {
           sliceweight = () =>
             (width * numslicesheight) / this.svgscale / this.svgscale
         } else {
-          sliceweight = (slicepos) => {
+          sliceweight = (slicepos: number) => {
             let weigth =
               (this.lw * numslicesheight) / this.svgscale / this.svgscale
             if (
@@ -2120,7 +2930,7 @@ export class DrawObjectForm extends DrawObject {
       case 3: // circle, actually the same except for manipulation
       case 4: // ellipse
         if (opague) {
-          sliceweight = (slicepos) => {
+          sliceweight = (slicepos: number) => {
             const yunitcircle =
               ((slicepos + 0.5) * numslicesheight - posy) / (height * 0.5) - 1
             const xunitcircle = Math.sqrt(1 - yunitcircle * yunitcircle)
@@ -2131,7 +2941,7 @@ export class DrawObjectForm extends DrawObject {
             )
           }
         } else {
-          sliceweight = (slicepos) => {
+          sliceweight = (slicepos: number) => {
             const yunitcircle =
               ((slicepos + 0.5) * numslicesheight - posy) / (height * 0.5) - 1
             const liney = numslicesheight
@@ -2170,14 +2980,16 @@ export class DrawObjectForm extends DrawObject {
     return toret
   }
 
-  moveObject(x, y) {
+  moveObject(x: number, y: number) {
+    if (!this.inited) throw new Error('DrawObjectForm not inited')
     this.posx = x
     this.posy = y
-    this.preshift = null
+    this.preshift = undefined
     this.clearRenderCache()
   }
 
-  doPointTest(testobj) {
+  doPointTest(testobj: PointTest) {
+    if (!this.inited) throw new Error('DrawObjectForm not inited')
     switch (this.formtype) {
       case 2: // line
         return this.doPointTestRect(testobj)
@@ -2190,7 +3002,7 @@ export class DrawObjectForm extends DrawObject {
     }
   }
 
-  doPointTestEllipseCircle(testobj) {
+  doPointTestEllipseCircle(testobj: PointTest) {
     const radiusx = Math.abs(this.width) * 0.5
     const radiusy = Math.abs(this.height) * 0.5
     const px = this.posx + this.width * 0.5
@@ -2229,7 +3041,7 @@ export class DrawObjectForm extends DrawObject {
     return true
   }
 
-  doPointTestLine(testobj) {
+  doPointTestLine(testobj: PointTest) {
     const dscan = 0.05 // 20 tests
 
     for (let scan = 0; scan <= 1.0; scan += dscan) {
@@ -2245,7 +3057,7 @@ export class DrawObjectForm extends DrawObject {
     return true
   }
 
-  doPointTestRect(testobj) {
+  doPointTestRect(testobj: PointTest) {
     let opague = false
     if ((this.fColor & 0xff000000) >>> 24 !== 0) opague = true
     // four corners
@@ -2336,6 +3148,7 @@ export class DrawObjectForm extends DrawObject {
   }
 
   getArea() {
+    if (!this.inited) throw new Error('DrawObjectForm not inited')
     return {
       left: Math.min(this.posx, this.posx + this.width),
       right: Math.max(this.posx, this.posx + this.width),
@@ -2344,7 +3157,9 @@ export class DrawObjectForm extends DrawObject {
     }
   }
 
-  commitPreshift(target) {
+  commitPreshift(target: ShiftTarget) {
+    if (!this.inited || this.formtype === '')
+      throw new Error('DrawObjectForm not inited')
     if (!this.preshift && !this.uncommitted) return
     if (target) {
       const newstorage = Math.floor(this.posy + (this.preshift?.y ?? 0))
@@ -2352,15 +3167,20 @@ export class DrawObjectForm extends DrawObject {
         // ok we have to delete the old obj and create a new one
         let newobjid
         if (!this.uncommitted) {
-          target.sink.deleteObject(null, this.objid, null, this.storagenum())
+          target.sink.deleteObject(
+            undefined,
+            this.objid,
+            undefined,
+            this.storagenum()
+          )
           newobjid = target.newobjid(this.objid)
         } else {
           newobjid = this.objid
         }
         target.sink.addForm(
-          null,
+          undefined,
           newobjid,
-          null,
+          undefined,
           this.posx + (this.preshift?.x ?? 0),
           this.posy + (this.preshift?.y ?? 0),
           this.width,
@@ -2375,9 +3195,9 @@ export class DrawObjectForm extends DrawObject {
       } else {
         // ok we just move
         target.sink.moveObject(
-          null,
+          undefined,
           this.objid,
-          null,
+          undefined,
           this.posx + (this.preshift?.x ?? 0),
           this.posy + (this.preshift?.y ?? 0)
         )
@@ -2386,7 +3206,9 @@ export class DrawObjectForm extends DrawObject {
     this.clearRenderCache()
   }
 
-  copyAndDeselect(target, shift) {
+  copyAndDeselect(target: ShiftTarget, shift: DrawObjectShift) {
+    if (!this.inited || this.formtype === '')
+      throw new Error('DrawObjectForm not inited')
     const newobj = new DrawObjectForm(target.newobjid(this.objid))
     newobj.uncommitted = true
     newobj.addForm(
@@ -2407,30 +3229,44 @@ export class DrawObjectForm extends DrawObject {
   storagenum() {
     return Math.floor(this.posy)
   }
+
+  private svgscale = 2000 // should be kept constant
+
+  private inited: boolean = false
+
+  private posx: number = 0
+  private posy: number = 0
+  private width: number = 0
+  private height: number = 0
+  private formtype: OptFormType = ''
+  private bColor: ColorType = 0
+  private fColor: ColorType = 0
+  private lw: number = 0
 }
 
 export class DrawObjectGlyph extends DrawObject {
-  constructor(objid) {
+  constructor(objid: number) {
     super('glyph', objid)
-    this.svgscale = 2000 // should be kept constant
-    this.isvgscale = 1 / this.svgscale
-    this.svgpathversion = -1
-    this.svgpathstring = null
-    this.stornum = null
   }
 
   storagenum() {
     return this.stornum
   }
 
-  startPath(x, y, type, color, width, pressure, iscopy) {
+  startPath(
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    width: number,
+    pressure: number
+  ) {
     const scolor = Color(color).hex()
 
     const penwidth = this.svgscale * width
 
     let penw = penwidth
-    let curpress = 0.5
-    if (pressure) curpress = pressure
+    let curpress = pressure ?? 0.5
     penw *= curpress * 0.5 * 2 + 0.5
 
     const px = x * this.svgscale
@@ -2440,13 +3276,12 @@ export class DrawObjectGlyph extends DrawObject {
 
     this.startpoint = { x: px, y: py }
     this.lastpoint = { x: px, y: py }
-    this.endpoint = null
     this.gtype = type
     /*  workpathstart: "",
             workpathend:"Z", */
     this.pressure = curpress
     this.pathpoints = [
-      { x: px, y: py, w: penw, press: iscopy ? this.pressure : pressure }
+      { x: px, y: py, w: penw, press: pressure ?? this.pressure }
     ]
     this.startradius = penw * 0.5
     this.penwidth = penwidth
@@ -2458,13 +3293,17 @@ export class DrawObjectGlyph extends DrawObject {
       bottom: 2 * penw
     }
 
-    this.version++ // increment version
+    this.increaseVersion() // increment version
     this.clearRenderCache()
   }
 
-  addToPath(x, y, pressure, iscopy) {
+  addToPath(x: number, y: number, pressure: number) {
     const px = x * this.svgscale
     const py = y * this.svgscale
+    if (typeof this.lastpoint === 'undefined')
+      throw new Error('lastpoint not set')
+    if (typeof this.startpoint === 'undefined')
+      throw new Error('startpoint not set')
 
     const wx = this.lastpoint.x
     const wy = this.lastpoint.y
@@ -2473,15 +3312,14 @@ export class DrawObjectGlyph extends DrawObject {
     let dx = px - wx
     let dy = py - wy
     let wpenw = this.penwidth
-    // console.log("status pressure", pressure,wpenw);
-    // console.log("atopath",wx,px,wy,py);
+    // console.log("status pressure", pressure: number,wpenw);
+    // console.log("atopath",wx: number,px: number,wy: number,py);
     const norm = Math.sqrt(dx * dx + dy * dy)
     if (norm < this.penwidth * 0.05) {
       return // ok folks filter the nonsense out
     }
 
-    let curpress = 0.5
-    if (pressure) curpress = pressure
+    let curpress = pressure ?? 0.5
 
     const fac = 0.1
     curpress = curpress * fac + (1 - fac) * this.pressure
@@ -2498,7 +3336,7 @@ export class DrawObjectGlyph extends DrawObject {
       x: px,
       y: py,
       w: pw,
-      press: iscopy ? pressure : this.pressure
+      press: pressure ?? this.pressure
     })
     this.area = {
       left: Math.min(px - sx - 2 * pw, ws.left),
@@ -2507,17 +3345,17 @@ export class DrawObjectGlyph extends DrawObject {
       bottom: Math.max(py - sy + 2 * pw, ws.bottom)
     }
     this.pressure = curpress
-    this.version++ // increment version
+    this.increaseVersion()
     this.clearRenderCache()
   }
 
   finishPath() {
     // so far a nop
-    this.version++ // increment version
+    this.increaseVersion()
     this.clearRenderCache()
   }
 
-  moveObject(x, y) {
+  moveObject(x: number, y: number) {
     if (this.pathpoints && this.pathpoints.length > 0) {
       const rx = x * this.svgscale - this.pathpoints[0].x
       const ry = y * this.svgscale - this.pathpoints[0].y
@@ -2533,13 +3371,13 @@ export class DrawObjectGlyph extends DrawObject {
         this.lastpoint.x += rx
         this.lastpoint.y += ry
       }
-      this.version++ // increment version
+      this.increaseVersion()
       this.clearRenderCache()
-      this.preshift = null
+      this.preshift = undefined
     }
   }
 
-  doPointTest(testobj) {
+  doPointTest(testobj: PointTest) {
     if (!this.pathpoints || this.pathpoints.length === 0) return false
     if (!testobj.pointTest(this.pathpoints[0])) return false
     if (this.pathpoints.length === 1) return true
@@ -2549,7 +3387,12 @@ export class DrawObjectGlyph extends DrawObject {
     return this.intDoPointTest(testobj, 0, this.pathpoints.length, 8)
   }
 
-  intDoPointTest(testobj, lower, upper, stack) {
+  intDoPointTest(
+    testobj: PointTest,
+    lower: number,
+    upper: number,
+    stack: number
+  ) {
     const middle = lower + Math.floor((upper - lower) * 0.5)
     if (middle === lower) return true // none left
     if (!testobj.pointTest(this.pathpoints[middle])) return false
@@ -2561,7 +3404,7 @@ export class DrawObjectGlyph extends DrawObject {
     return true
   }
 
-  commitPreshift(target) {
+  commitPreshift(target: ShiftTarget) {
     if (!this.preshift && !this.uncommitted) return
     if (target && this.pathpoints.length > 0) {
       const newstorage = Math.floor(
@@ -2578,39 +3421,37 @@ export class DrawObjectGlyph extends DrawObject {
           newobjid = this.objid
         }
         target.sink.startPath(
-          null,
+          undefined,
           newobjid,
-          null,
+          undefined,
           this.pathpoints[0].x * this.isvgscale + (this.preshift?.x ?? 0),
           this.pathpoints[0].y * this.isvgscale + (this.preshift?.y ?? 0),
           this.gtype,
           Color(this.color).rgbNumber(),
           this.penwidth * this.isvgscale,
-          this.pathpoints[0].press,
-          true /* iscopy */
+          this.pathpoints[0].press
         )
         for (let i = 1; i < this.pathpoints.length; i++) {
           target.sink.addToPath(
-            null,
+            undefined,
             newobjid,
-            null,
+            undefined,
             this.pathpoints[i].x * this.isvgscale + (this.preshift?.x ?? 0),
             this.pathpoints[i].y * this.isvgscale + (this.preshift?.y ?? 0),
-            this.pathpoints[i].press,
-            true /* iscopy */
+            this.pathpoints[i].press
           )
         }
-        target.sink.finishPath(null, newobjid, target.clientnum)
+        target.sink.finishPath(undefined, newobjid, undefined)
         if (!this.uncommitted)
-          target.sink.deleteObject(null, this.objid, null, oldstorage)
+          target.sink.deleteObject(undefined, this.objid, undefined, oldstorage)
         target.deselect() // signals that the selection should be removed
         this.uncommitted = false
       } else {
         // ok we just move
         target.sink.moveObject(
-          null,
+          undefined,
           this.objid,
-          null,
+          undefined,
           this.pathpoints[0].x * this.isvgscale + (this.preshift?.x ?? 0),
           this.pathpoints[0].y * this.isvgscale + (this.preshift?.y ?? 0)
         )
@@ -2619,7 +3460,7 @@ export class DrawObjectGlyph extends DrawObject {
     this.clearRenderCache()
   }
 
-  copyAndDeselect(target, shift) {
+  copyAndDeselect(target: ShiftTarget, shift: DrawObjectShift) {
     const newobj = new DrawObjectGlyph(target.newobjid(this.objid))
     newobj.uncommitted = true
     newobj.startPath(
@@ -2628,8 +3469,7 @@ export class DrawObjectGlyph extends DrawObject {
       this.gtype,
       Color(this.color).rgbNumber(),
       this.penwidth * this.isvgscale,
-      this.pathpoints[0].press,
-      true /* iscopy */
+      this.pathpoints[0].press
     )
     for (let i = 1; i < this.pathpoints.length; i++) {
       newobj.addToPath(
@@ -2639,8 +3479,7 @@ export class DrawObjectGlyph extends DrawObject {
         this.pathpoints[i].y * this.isvgscale +
           (this.preshift?.y ?? 0) +
           shift.y,
-        this.pathpoints[i].press,
-        true /* iscopy */
+        this.pathpoints[i].press
       )
     }
     newobj.finishPath()
@@ -2800,7 +3639,7 @@ export class DrawObjectGlyph extends DrawObject {
     } else return null
   }
 
-  getWeightSlices(numslicesheight) {
+  getWeightSlices(numslicesheight: number) {
     const glyph = this
     const toret = []
     const lastpoint = glyph.pathpoints[0]
@@ -2830,6 +3669,7 @@ export class DrawObjectGlyph extends DrawObject {
   }
 
   getArea() {
+    if (typeof this.startpoint === 'undefined') return undefined
     const sx = this.startpoint.x
     const sy = this.startpoint.y
     return {
@@ -2839,59 +3679,98 @@ export class DrawObjectGlyph extends DrawObject {
       bottom: (this.area.bottom + sy) * this.isvgscale
     }
   }
+
+  private svgscale = 2000 // should be kept constant
+  private isvgscale = 1 / this.svgscale
+  private svgpathversion = -1
+  private svgpathstring: string | undefined = undefined
+  private stornum: number | undefined = undefined
+
+  private startpoint: PointType | undefined = undefined
+  private lastpoint: PointType | undefined = undefined
+  private gtype: ToolType = 0
+  private pressure: number = 0
+  private pathpoints: GlyphPointType[] = []
+  private startradius: number = 0
+  private penwidth: number = 0
+  private color: string = ''
+  private area: RectType = {
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0
+  }
 }
 
-export class DrawObjectContainer extends Sink {
-  constructor(args) {
-    super()
-    if (args && args.info && args.info.usedpictures)
-      this.pictures = args.info.usedpictures
+type PictureInfo = {
+  sha: string
+  url: string
+  urlthumb: string
+  mimetype: string
+}
+
+type PicturesInfo = {
+  usedpictures: PictureInfo[]
+}
+
+export class DrawObjectContainer implements Sink {
+  constructor(args?: { info: PicturesInfo }) {
+    if (args?.info?.usedpictures) this.pictures = args.info.usedpictures
     else this.pictures = []
     this.resetDrawing()
   }
 
   resetDrawing() {
-    this.objects = []
+    this.objects_ = []
     this.workobj = {}
   }
 
-  addPicture(_time, objnum, _curclient, x, y, width, height, uuid) {
+  addPicture(
+    _time: OptTime,
+    objnum: number,
+    _curclient: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    uuid: string
+  ) {
     const pictinfo = this.pictures.find((el) => el.sha === uuid)
 
     const addpict = new DrawObjectPicture(objnum)
 
     addpict.addPicture(
       x,
-      this.yoffset ? y - this.yoffset : y,
+      y - this.yoffset_,
       width,
       height,
       uuid,
-      pictinfo ? pictinfo.url : null,
-      pictinfo ? pictinfo.mimetype : null,
-      pictinfo ? pictinfo.urlthumb : null
+      pictinfo ? pictinfo.url : undefined,
+      pictinfo ? pictinfo.mimetype : undefined,
+      pictinfo ? pictinfo.urlthumb : undefined
     )
 
-    this.objects.push(addpict)
+    this.objects_.push(addpict)
   }
 
   addForm(
-    _time,
-    objnum,
-    _curclient,
-    x,
-    y,
-    width,
-    height,
-    type,
-    bColor,
-    fColor,
-    lw
+    _time: OptTime,
+    objnum: number,
+    _curclient: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    type: FormType,
+    bColor: ColorType,
+    fColor: ColorType,
+    lw: number
   ) {
     const addform = new DrawObjectForm(objnum)
 
     addform.addForm(
       x,
-      this.yoffset ? y - this.yoffset : y,
+      y - this.yoffset_,
       width,
       height,
       type,
@@ -2900,87 +3779,133 @@ export class DrawObjectContainer extends Sink {
       lw
     )
 
-    this.objects.push(addform)
+    this.objects_.push(addform)
   }
 
-  startPath(_time, objnum, _curclient, x, y, type, color, w, pressure) {
-    this.workobj[objnum] = new DrawObjectGlyph(objnum)
-    this.objects.push(this.workobj[objnum])
-    this.workobj[objnum].startPath(
-      x,
-      this.yoffset ? y - this.yoffset : y,
-      type,
-      color,
-      w,
-      pressure
-    )
+  startPath(
+    _time: OptTime,
+    objnum: number,
+    _curclient: number,
+    x: number,
+    y: number,
+    type: ToolType,
+    color: ColorType,
+    w: number,
+    pressure: number
+  ) {
+    const newobj = new DrawObjectGlyph(objnum)
+    this.workobj[objnum] = newobj
+    this.objects_.push(this.workobj[objnum])
+    newobj.startPath(x, y - this.yoffset_, type, color, w, pressure)
   }
 
-  addToPath(_time, objid, _curclient, x, y, pressure) {
+  addToPath(
+    _time: OptTime,
+    objid: number,
+    _curclient: number,
+    x: number,
+    y: number,
+    pressure: number
+  ) {
     if (this.workobj[objid]) {
+      const curobj = this.workobj[objid] as DrawObjectGlyph
       // TODO handle objid
-      this.workobj[objid].addToPath(
-        x,
-        this.yoffset ? y - this.yoffset : y,
-        pressure
-      )
+      curobj.addToPath(x, y - this.yoffset_, pressure)
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
-  finishPath(_time, objid, curclient) {
+  finishPath(_time: OptTime, objid: number, curclient: number) {
     if (this.workobj[objid]) {
-      this.workobj[objid].finishPath()
+      const curobj = this.workobj[objid] as DrawObjectGlyph
+      curobj.finishPath()
       delete this.workobj[objid]
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
-  scrollBoard(time, x, y) {
+  scrollBoard(time: OptTime, clientnum: string, x: number, y: number) {
     // do ... nothing....
   }
 
-  // eslint-disable-next-line no-unused-vars
-  deleteObject(time, objnum, curclient, storagenum) {
+  deleteObject(
+    time: OptTime,
+    objnum: number,
+    curclient: number,
+    storagenum: number
+  ) {
     if (this.workobj[objnum]) {
       delete this.workobj[objnum]
     }
-    this.objects = this.objects.filter((el) => el.objid !== objnum)
+    this.objects_ = this.objects_.filter((el) => el.objid !== objnum)
   }
 
-  moveObject(_time, objnum, _curclient, x, y) {
-    if (!this.objects) return
-    this.objects.forEach((el) => {
+  moveObject(
+    _time: OptTime,
+    objnum: number,
+    _curclient: number,
+    x: number,
+    y: number
+  ) {
+    if (!this.objects_) return
+    this.objects_.forEach((el) => {
       if (el.objid === objnum) {
-        el.moveObject(x, this.yoffset ? y - this.yoffset : y)
+        el.moveObject(x, y - this.yoffset_)
       }
     })
   }
+
+  startApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: string,
+    sha: string,
+    appid: string
+  ): void {}
+
+  moveApp(
+    time: OptTime,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    deactivate: boolean
+  ): void {}
+
+  closeApp(time: OptTime): void {}
+
+  dataApp(time: OptTime, buffer: Uint8Array | ArrayBuffer): void {}
+
+  set yoffset(val: number | undefined) {
+    if (typeof val === 'number') {
+      this.yoffset_ = val
+    } else {
+      this.yoffset_ = 0
+    }
+  }
+
+  get objects() {
+    return this.objects_
+  }
+
+  private yoffset_: number = 0
+  private pictures: PictureInfo[]
+  private objects_: DrawObject[] = []
+  private workobj: { [key: number]: DrawObject } = {}
 }
 
 // this object determines the area covered with drawings, New Implementation
 // it is used for finding the best position for a pagebreak in a pdf
 // TODO rewrite using objects
 export class DrawArea3 extends DrawObjectContainer {
-  constructor(args) {
+  constructor(args?: { info: PicturesInfo }) {
     super(args)
-    this.numslicesheight = (1.41 * 3) / 297 // the slice height to be roughly 3 mm
-    this.slices = []
-
-    this.newx = 0
-    this.newy = 0
-    this.curw = 0
-    this.intervals = []
-
-    this.glomin = 0
-    this.glomax = 0
-
     this.addSlice = this.addSlice.bind(this)
   }
 
-  addSlice(slice) {
-    this.weightscalculated = false
-    if (typeof this.slices[slice.spos] === 'undefined')
+  addSlice(slice: WeightSlice) {
+    if (typeof this.slices[slice.pos] === 'undefined')
       this.slices[slice.pos] = slice.weight
     else this.slices[slice.pos] += slice.weight
     this.glomin = Math.min(this.glomin, slice.min)
@@ -2996,13 +3921,12 @@ export class DrawArea3 extends DrawObjectContainer {
     }
   }
 
-  findPagebreak(pagemin, pagemax) {
+  findPagebreak(pagemin: number, pagemax: number) {
     let lastquality = 1000
     let selpagebreak = pagemax
 
     const maxslicepos = Math.round(pagemax / this.numslicesheight)
     const minslicepos = Math.round(pagemin / this.numslicesheight)
-    // console.log("findPageBreak",maxslicepos,minslicepos);
 
     for (let index = maxslicepos; index >= minslicepos; index--) {
       const pagebreak = (index + 0.5) * this.numslicesheight
@@ -3012,11 +3936,9 @@ export class DrawArea3 extends DrawObjectContainer {
       if (typeof this.slices[index] !== 'undefined') {
         density += this.slices[index]
       }
-      // console.log("Test slice",density,index,pagebreak,this.slices[index]);
 
       const quality =
         density * (1 + 4 * (pagemax - pagebreak) * (pagemax - pagebreak))
-      // console.log("qua,lqual",quality,lastquality);
 
       if (quality < lastquality) {
         selpagebreak = pagebreak
@@ -3025,4 +3947,10 @@ export class DrawArea3 extends DrawObjectContainer {
     }
     return selpagebreak
   }
+
+  private numslicesheight = (1.41 * 3) / 297 // the slice height to be roughly 3 mm
+  private slices: number[] = []
+
+  private glomin = 0
+  private glomax = 0
 }
