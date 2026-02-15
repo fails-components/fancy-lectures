@@ -25,6 +25,10 @@ export default defineConfig(() => {
         ),
         '@fails-components/avcore': path.resolve(dirname, '../avcore/'),
         '@fails-components/avkeystore': path.resolve(dirname, '../avkeystore/'),
+        '@fails-components/avreactwidgets': path.resolve(
+          dirname,
+          '../avreactwidgets/'
+        ),
         '@fails-components/data': path.resolve(dirname, '../data/src/data.ts'),
         '@fails-components/drawobjects': path.resolve(
           dirname,
@@ -73,6 +77,7 @@ export default defineConfig(() => {
           '!**/node_modules/@fails-components/avcomponents/**',
           '!**/node_modules/@fails-components/avcore/**',
           '!**/node_modules/@fails-components/avkeystore/**',
+          '!**/node_modules/@fails-components/avreactwidgets/**',
           '!**/node_modules/@fails-components/data/**',
           '!**/node_modules/@fails-components/drawobjects/**'
         ]
@@ -86,6 +91,7 @@ export default defineConfig(() => {
         '@fails-components/avcomponents',
         '@fails-components/avcore',
         '@fails-components/avkeystore',
+        '@fails-components/avreactwidgets',
         '@fails-components/data',
         '@fails-components/drawobjects'
       ],
