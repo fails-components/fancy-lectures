@@ -19,6 +19,7 @@
 
 const now = () => performance.now()
 
+/*
 export enum ToolType {
   TTPen = 0,
   TTMarker = 1,
@@ -31,6 +32,9 @@ export enum FormType {
   FTCircle = 3,
   FTEllipse = 4
 }
+*/
+export type ToolType = number
+export type FormType = number
 
 export type StorageType = number
 export type ClientType = string
