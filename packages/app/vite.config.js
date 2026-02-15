@@ -15,6 +15,15 @@ export default defineConfig(() => {
     build: {
       outDir: 'build'
     },
+    resolve: {
+      alias: {
+        '@fails-components/data': path.resolve(dirname, '../data/src/data.ts'),
+        '@fails-components/drawobjects': path.resolve(
+          dirname,
+          '../drawobjects/src/drawobjects.ts'
+        )
+      }
+    },
     plugins: [
       react(),
       eslint({
@@ -22,7 +31,7 @@ export default defineConfig(() => {
         cwd: path.resolve(dirname, '../../'),
         // Disable caching while you are debugging config issues
         cache: false,
-        include: ['src/**/*.js', 'src/**/*.jsx']
+        include: ['src/**/*.js', 'src/**/*.jsx', 'src/**/*.ts', 'src/**/*.tsx']
       }),
       topLevelAwait() /*,
       visualizer({
@@ -42,10 +51,18 @@ export default defineConfig(() => {
         port: 1001,
         host: 'localhost'
       },
-      allowedHosts: ['.ngrok.app']
+      allowedHosts: ['.ngrok.app'],
+      watch: {
+        ignored: [
+          '!**/node_modules/@fails-components/data/**',
+          '!**/node_modules/@fails-components/drawobjects/**'
+        ]
+      }
     },
     base: process?.env?.PUBLIC_URL ? process.env.PUBLIC_URL : '/static/app/',
-    optimizeDeps: {},
+    optimizeDeps: {
+      exclude: ['@fails-components/data', '@fails-components/drawobjects']
+    },
     envPrefix: ENV_PREFIX
   }
 })

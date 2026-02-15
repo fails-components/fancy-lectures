@@ -17,6 +17,21 @@ export default defineConfig(() => {
     build: {
       outDir: 'build'
     },
+    resolve: {
+      alias: {
+        '@fails-components/avcomponents': path.resolve(
+          dirname,
+          '../avcomponents/'
+        ),
+        '@fails-components/avcore': path.resolve(dirname, '../avcore/'),
+        '@fails-components/avkeystore': path.resolve(dirname, '../avkeystore/'),
+        '@fails-components/data': path.resolve(dirname, '../data/src/data.ts'),
+        '@fails-components/drawobjects': path.resolve(
+          dirname,
+          '../drawobjects/src/drawobjects.ts'
+        )
+      }
+    },
     plugins: [
       react(),
       eslint({
@@ -24,7 +39,7 @@ export default defineConfig(() => {
         cwd: path.resolve(dirname, '../../'),
         // Disable caching while you are debugging config issues
         cache: false,
-        include: ['src/**/*.js', 'src/**/*.jsx']
+        include: ['src/**/*.js', 'src/**/*.jsx', 'src/**/*.ts', 'src/**/*.tsx']
       }),
       wasm(),
       topLevelAwait(),
@@ -52,12 +67,28 @@ export default defineConfig(() => {
         port: 3000,
         host: 'localhost'
       },
-      allowedHosts: ['.ngrok.app']
+      allowedHosts: ['.ngrok.app'],
+      watch: {
+        ignored: [
+          '!**/node_modules/@fails-components/avcomponents/**',
+          '!**/node_modules/@fails-components/avcore/**',
+          '!**/node_modules/@fails-components/avkeystore/**',
+          '!**/node_modules/@fails-components/data/**',
+          '!**/node_modules/@fails-components/drawobjects/**'
+        ]
+      }
     },
     base: process?.env?.PUBLIC_URL
       ? process.env.PUBLIC_URL
       : '/static/lecture/',
     optimizeDeps: {
+      exclude: [
+        '@fails-components/avcomponents',
+        '@fails-components/avcore',
+        '@fails-components/avkeystore',
+        '@fails-components/data',
+        '@fails-components/drawobjects'
+      ],
       include: ['pdfjs-dist', 'libav.js']
     },
     envPrefix: ENV_PREFIX
