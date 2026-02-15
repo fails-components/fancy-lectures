@@ -7,4 +7,5 @@ packages/*/dist
 /.npmrc
 .env
 daemons/staticserver/oss-attribution/*
+tsconfig.tsbuildinfo
 

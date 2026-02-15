@@ -1,0 +1,40 @@
+{
+  "name": "@fails-components/drawobjects",
+  "version": "1.4.3",
+  "description": "Supplies DrawObjects classes for use within the fails ecosystem",
+  "author": "Marten Richter",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fails-components/data.git"
+  },
+  "main": "dist/drawobjects.js",
+  "types": "dist/drawobjects.d.ts",
+  "files": [
+    "dist",
+    "failslogo.svg",
+    "failslogolicensereadme.txt"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "run-s  test:lint",
+    "test:lint": "eslint ."
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "classnames": "^2.2.6",
+    "cross-env": "^7.0.3"
+  },
+  "dependencies": {
+    "@fails-components/data": "1.4.3",
+    "color": "^5.0.3"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

@@ -37,6 +37,7 @@ jobs:
           - name: 'commonhandler'
           - name: 'config'
           - name: 'data'
+          - name: 'drawobjects'
           - name: 'security'
     steps:
       - name: Checkout code

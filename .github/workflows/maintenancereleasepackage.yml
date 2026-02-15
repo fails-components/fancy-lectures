@@ -17,6 +17,7 @@ on:
           - commonhandler
           - config
           - data
+          - drawobjects
           - security
       logLevel:
         description: 'Log level'     

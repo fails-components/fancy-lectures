@@ -108,7 +108,7 @@ export default [
     }
   },
   {
-    files: ['packages/data/**'],
+    files: ['packages/data/**', 'packages/drawobjects/**'],
     languageOptions: {
       globals: {
         ...globals.browser,

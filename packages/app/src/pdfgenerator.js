@@ -17,13 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import {
-  Collection,
-  DrawObjectContainer,
-  MemContainer,
-  DrawArea3,
-  Dispatcher
-} from '@fails-components/data'
+import { Collection, MemContainer, Dispatcher } from '@fails-components/data'
+import { DrawObjectContainer, DrawArea3 } from '@fails-components/drawobjects'
 import {
   PDFDocument,
   StandardFonts,

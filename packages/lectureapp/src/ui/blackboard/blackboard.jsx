@@ -22,7 +22,7 @@ import {
   DrawObjectGlyph,
   DrawObjectPicture,
   DrawObjectForm
-} from '@fails-components/data'
+} from '@fails-components/drawobjects'
 
 import Color from 'color'
 import { MagicObject } from './magicobject'

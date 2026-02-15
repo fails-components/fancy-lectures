@@ -15,6 +15,7 @@
   },
   "exclude": ["**/node_modules", "**/dist"],
   "references": [
-    { "path": "./packages/data" }
+    { "path": "./packages/data" },
+    { "path": "./packages/drawobjects" }
   ]
 }
