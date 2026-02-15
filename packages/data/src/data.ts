@@ -1540,7 +1540,6 @@ export class Collection implements StrictSink {
     this.contdirty_ = []
     this.dirty = false
     if (this.ondirty) this.ondirty(false)
-    this.lasttime = 0
 
     this.lastcontainer = {}
     this.commandcontainer_ = this.containertype('command', this.containerconfig)
@@ -1574,10 +1573,6 @@ export class Collection implements StrictSink {
     return this.commandcontainer_
   }
 
-  set lasttime(time: Time) {
-    this.lasttime_ = time
-  }
-
   get containertype() {
     return this.containertype_
   }
@@ -1585,8 +1580,6 @@ export class Collection implements StrictSink {
   get containerconfig() {
     return this.containerconfig_
   }
-
-  private lasttime_: Time = 0
 
   private lastcontainer: {
     [key: number]: ContainerId
@@ -1715,7 +1708,6 @@ export class RedrawCollection extends Collection {
         conttime[target]
       )
       // console.log("targettime",targettime: number, targetobjnum);
-      this.lasttime = targettime
       if (contpos[target] < 0) {
         // remove from array
         contpos.splice(target, 1)
