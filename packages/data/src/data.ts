@@ -747,7 +747,7 @@ export class Container implements StrictSink {
     throw new Error('pushArrayToStorage is not implemented')
   }
 
-  private lasttime: { [key: number]: number } = {}
+  protected lasttime: { [key: number]: number } = {}
 }
 
 export class MemContainer extends Container {
@@ -1249,10 +1249,10 @@ export class MemContainer extends Container {
     return pos + length
   }
 
-  private storage: ArrayBuffer = new ArrayBuffer(6400)
-  private storageAllocSize: number = 6400
-  private storageSize: number = 0
-  private number: number
+  protected storage: ArrayBuffer = new ArrayBuffer(6400)
+  protected storageAllocSize: number = 6400
+  protected storageSize: number = 0
+  protected number: number
 }
 
 type CallbackContainerConfig = {
@@ -1283,9 +1283,9 @@ export class CallbackContainer extends Container {
     this.writeData(this.obj, this.number, data, false)
   }
 
-  private writeData: WriteData
-  private obj: {}
-  private number: StorageType
+  protected writeData: WriteData
+  protected obj: {}
+  protected number: StorageType
 }
 
 type SpecialContainerId = 'command' | 'jupyter'
@@ -1308,8 +1308,8 @@ export class Collection implements StrictSink {
   ) {
     this.containertype_ = containertype
     this.containerconfig_ = containerconfig
-    this.commandcontainer_ = this.containertype('command', containerconfig)
-    this.jupytercontainer_ = this.containertype('jupyter', containerconfig)
+    this.commandcontainer_ = this.containertype_('command', containerconfig)
+    this.jupytercontainer_ = this.containertype_('jupyter', containerconfig)
   }
 
   setOnDirty(cb: (dirty: boolean) => void) {
@@ -1324,22 +1324,22 @@ export class Collection implements StrictSink {
   }
 
   unDirty(cont: number) {
-    this.contdirty[cont] = false
-    if (!this.contdirty.some((el) => !!el)) {
+    this.contdirty_[cont] = false
+    if (!this.contdirty_.some((el) => !!el)) {
       this.dirty = false
     }
   }
 
   checkContainerExistsAndDirty(storagenum: StorageType) {
-    if (!(storagenum in this.containers)) {
+    if (!(storagenum in this.containers_)) {
       // TODO for the network case sync with server
-      this.containers[storagenum] = this.containertype(
+      this.containers_[storagenum] = this.containertype_(
         storagenum,
-        this.containerconfig
+        this.containerconfig_
       )
     }
-    if (!this.contdirty[storagenum]) {
-      this.contdirty[storagenum] = true
+    if (!this.contdirty_[storagenum]) {
+      this.contdirty_[storagenum] = true
       this.dirty = true
     }
   }
@@ -1360,7 +1360,7 @@ export class Collection implements StrictSink {
     this.checkContainerExistsAndDirty(storagenum)
     this.lastcontainer[objnum] = storagenum
 
-    this.containers[storagenum].startPath(
+    this.containers_[storagenum].startPath(
       time,
       objnum,
       curclient,
@@ -1390,7 +1390,7 @@ export class Collection implements StrictSink {
       throw new Error('Wrong Type of storage number')
     this.checkContainerExistsAndDirty(storagenum)
 
-    this.containers[storagenum].addToPath(
+    this.containers_[storagenum].addToPath(
       time,
       objnum,
       curclient,
@@ -1412,7 +1412,7 @@ export class Collection implements StrictSink {
     this.checkContainerExistsAndDirty(storagenum)
     delete this.lastcontainer[objnum]
 
-    this.containers[storagenum].finishPath(time, objnum, curclient)
+    this.containers_[storagenum].finishPath(time, objnum, curclient)
   }
 
   addPicture(
@@ -1429,7 +1429,7 @@ export class Collection implements StrictSink {
     this.checkContainerExistsAndDirty(storagenum)
     // console.log("addPicture in failsdata collection",storagenum);
 
-    this.containers[storagenum].addPicture(
+    this.containers_[storagenum].addPicture(
       time,
       objnum,
       curclient,
@@ -1457,7 +1457,7 @@ export class Collection implements StrictSink {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
     this.checkContainerExistsAndDirty(storagenum)
 
-    this.containers[storagenum].addForm(
+    this.containers_[storagenum].addForm(
       time,
       objnum,
       curclient,
@@ -1480,7 +1480,7 @@ export class Collection implements StrictSink {
   ) {
     if (!Number.isInteger(storagenum)) return
     this.checkContainerExistsAndDirty(storagenum)
-    this.containers[storagenum].deleteObject(
+    this.containers_[storagenum].deleteObject(
       time,
       objnum,
       curclient,
@@ -1497,7 +1497,7 @@ export class Collection implements StrictSink {
   ) {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
     this.checkContainerExistsAndDirty(storagenum)
-    this.containers[storagenum].moveObject(time, objnum, curclient, x, y)
+    this.containers_[storagenum].moveObject(time, objnum, curclient, x, y)
   }
 
   scrollBoard(time: Time, clientnum: ClientType, x: number, y: number) {
@@ -1543,8 +1543,14 @@ export class Collection implements StrictSink {
     if (this.ondirty) this.ondirty(false)
 
     this.lastcontainer = {}
-    this.commandcontainer_ = this.containertype('command', this.containerconfig)
-    this.jupytercontainer_ = this.containertype('jupyter', this.containerconfig)
+    this.commandcontainer_ = this.containertype_(
+      'command',
+      this.containerconfig_
+    )
+    this.jupytercontainer_ = this.containertype_(
+      'jupyter',
+      this.containerconfig_
+    )
   }
 
   set dirty(ndirty: boolean) {
@@ -1558,42 +1564,18 @@ export class Collection implements StrictSink {
     return this.dirty_
   }
 
-  get contdirty() {
-    return this.contdirty_
-  }
-
-  get containers() {
-    return this.containers_
-  }
-
-  get jupytercontainer() {
-    return this.jupytercontainer_
-  }
-
-  get commandcontainer() {
-    return this.commandcontainer_
-  }
-
-  get containertype() {
-    return this.containertype_
-  }
-
-  get containerconfig() {
-    return this.containerconfig_
-  }
-
-  private lastcontainer: {
+  protected lastcontainer: {
     [key: number]: ContainerId
   } = {}
-  private containers_: Container[] = []
-  private contdirty_: boolean[] = []
-  private containerconfig_: CollectionContainerConfig
-  private containertype_: CollectionContainerType
-  private commandcontainer_: Container
-  private jupytercontainer_: Container
+  protected containers_: Container[] = []
+  protected contdirty_: boolean[] = []
+  protected containerconfig_: CollectionContainerConfig
+  protected containertype_: CollectionContainerType
+  protected commandcontainer_: Container
+  protected jupytercontainer_: Container
 
-  private dirty_: boolean = false
-  private ondirty_: ((dirty: boolean) => void) | undefined = undefined
+  protected dirty_: boolean = false
+  protected ondirty_: ((dirty: boolean) => void) | undefined = undefined
 }
 
 type RedrawCollectionContainerType = (
@@ -1607,23 +1589,6 @@ export class RedrawCollection extends Collection {
     containerconfig: CollectionContainerConfig
   ) {
     super(containertype, containerconfig)
-  }
-
-  // We need to type cast to make ts happy.
-  get containers(): MemContainer[] {
-    return super.containers as MemContainer[]
-  }
-
-  get jupytercontainer() {
-    return super.jupytercontainer as MemContainer
-  }
-
-  get commandcontainer() {
-    return super.commandcontainer as MemContainer
-  }
-
-  get containertype() {
-    return super.containertype as RedrawCollectionContainerType
   }
 
   suggestRedraw(
@@ -1652,7 +1617,7 @@ export class RedrawCollection extends Collection {
     // First step determine covered area
     let storedmin = 0
     let storedmax = 0
-    this.containers.forEach(function (_obj, num) {
+    this.containers_.forEach(function (_obj, num) {
       storedmin = Math.min(storedmin, num)
       storedmax = Math.max(storedmax, num)
     })
@@ -1673,23 +1638,23 @@ export class RedrawCollection extends Collection {
     const contobjnum = []
 
     let istart = 0
-    let iend = this.containers.length
+    let iend = this.containers_.length
 
     if (mindraw) istart = Math.floor(mindraw)
     if (maxdraw) iend = Math.ceil(maxdraw)
     if (istart < 0) istart = 0
 
     // console.log("Redraw from to",istart,iend,redrawcount); redrawcount++;
-    console.log('Dataavail from to', 0, this.containers.length)
+    console.log('Dataavail from to', 0, this.containers_.length)
     // istart=0;
-    // iend=this.containers.length;
+    // iend=this.containers_.length;
 
     for (let i = istart; i !== iend; i++) {
-      if (this.containers[i] === undefined) continue
-      contit.push(this.containers[i])
+      if (this.containers_[i] === undefined) continue
+      contit.push(this.containers_[i])
       contpos.push(0)
-      conttime.push(this.containers[i].getElementTime(0, 0))
-      contobjnum.push(this.containers[i].getElementObjnum(0, 0))
+      conttime.push(this.containers_[i].getElementTime(0, 0))
+      contobjnum.push(this.containers_[i].getElementObjnum(0, 0))
     }
     while (contit.length) {
       let targettime = 0
@@ -1731,22 +1696,22 @@ export class RedrawCollection extends Collection {
   reparseJupyter(datasink: Sink) {
     let pos = 0
     while (pos >= 0) {
-      pos = this.jupytercontainer.reparseJupyter(datasink, pos)
+      pos = this.jupytercontainer_.reparseJupyter(datasink, pos)
     }
   }
 
   replaceStoredData(i: ContainerId, data: ArrayBuffer) {
     if (i === 'command') {
-      this.commandcontainer.replaceStoredData(data)
+      this.commandcontainer_.replaceStoredData(data)
     } else if (i === 'jupyter') {
-      this.jupytercontainer.replaceStoredData(data)
+      this.jupytercontainer_.replaceStoredData(data)
     } else {
-      if (!(i in this.containers)) {
-        this.containers[i] = this.containertype(i, this.containerconfig)
+      if (!(i in this.containers_)) {
+        this.containers_[i] = this.containertype_(i, this.containerconfig_)
       }
-      this.contdirty[i] = false
-      this.containers[i].replaceStoredData(data)
-      if (this.contdirty.some((el) => !!el)) {
+      this.contdirty_[i] = false
+      this.containers_[i].replaceStoredData(data)
+      if (this.contdirty_.some((el) => !!el)) {
         if (!this.dirty) {
           this.dirty = true
           this.ondirty(true)
@@ -1759,6 +1724,10 @@ export class RedrawCollection extends Collection {
       }
     }
   }
+  declare protected containers_: MemContainer[]
+  declare protected jupytercontainer_: MemContainer
+  declare protected commandcontainer_: MemContainer
+  declare protected containertype_: RedrawCollectionContainerType
 }
 
 type DisTimeType<T> = T extends Sink ? OptTime : Time
@@ -2012,16 +1981,16 @@ export class Dispatcher<SinkType extends Sink | StrictSink> {
     if (scrolly) this.scrolly = scrolly
   }
 
-  private datasinklist = new Set<SinkType>()
+  protected datasinklist = new Set<SinkType>()
 
-  private curclientnum = 0
+  protected curclientnum = 0
 
-  private blocked = false
+  protected blocked = false
 
-  private scrollx = 0
-  private scrolly = 0
+  protected scrollx = 0
+  protected scrolly = 0
 
-  private starttime = now()
+  protected starttime = now()
 }
 
 type NetStartPath = {
@@ -2373,7 +2342,7 @@ export class NetworkSink implements Sink {
     }
     this.sendfunc(obj)
   }
-  private sendfunc: (command: NetCommands) => void
+  protected sendfunc: (command: NetCommands) => void
 }
 
 export class NetworkSource {
@@ -2489,5 +2458,5 @@ export class NetworkSource {
         )
     }
   }
-  private sink: Sink
+  protected sink: Sink
 }
