@@ -8,10 +8,18 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/config.git"
   },
-  "main": "src/config.js",
-  "module": "src/config.js",
+  "main": "dist/config.ts",
+  "module": "dist/config.ts",
+  "types": "dist/config.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/config.d.js",
+      "import": "./dist/config.js",
+      "default": "./dist/config.js"
+    }
+  },
   "files": [
-    "src/config.js",
+    "dist",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
@@ -20,6 +28,8 @@
     "node": ">=16"
   },
   "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
   },
