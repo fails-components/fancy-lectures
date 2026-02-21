@@ -17,41 +17,33 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { type RedisClusterType, type RedisClientType } from 'redis'
+import type { ExtendedError, Socket } from 'socket.io'
+import type { Request } from 'express'
+
 import jwt from 'jsonwebtoken'
-import Redlock from 'redlock'
+import { NodeRedisAdapter, createLock } from 'redlock-universal'
 import { expressjwt as jwtexpress } from 'express-jwt'
 import { promisify } from 'util'
 import { generateKeyPair } from 'node:crypto'
 
-// this function converts a new redis object to an old one usable with redlock
-
-export function RedisRedlockProxy(server) {
-  const retobj = {
-    _failsredisserver: server, // we do not need this but...
-    evalsha: async (hash, args, callback) => {
-      try {
-        const targs = args.map((el) => el.toString())
-        const result = await server.sendCommand(['EVALSHA', hash, ...targs])
-        callback(null, result)
-      } catch (error) {
-        callback(error)
-      }
-    },
-    eval: async (args, callback) => {
-      try {
-        const targs = args.map((el) => el.toString())
-        const result = await server.sendCommand(['EVAL', ...targs])
-        callback(null, result)
-      } catch (error) {
-        callback(error)
-      }
-    }
+type FailsJwt = jwt.Jwt & {
+  payload: {
+    kid?: string
   }
-  return retobj
+}
+
+export interface AuthenticatedSocket extends Socket {
+  decoded_token?: Record<string, any>
 }
 
 export class FailsJWTSigner {
-  constructor(args) {
+  constructor(args: {
+    redis: RedisClusterType | RedisClientType
+    type: string
+    expiresIn: number
+    secret: string
+  }) {
     this.redis = args.redis // redis database holding the keys
     this.type = args.type // e.g. screen, notepad, screen etc.
     this.expiresIn = args.expiresIn // the lifetime of the generated JWT
@@ -60,19 +52,22 @@ export class FailsJWTSigner {
 
     this.secret = args.secret
 
-    this.redlock = new Redlock([RedisRedlockProxy(this.redis)], {
-      driftFactor: 0.01, // multiplied by lock ttl to determine drift time
-
-      retryCount: 10,
-
-      retryDelay: 200, // time in ms
-      retryJitter: 200 // time in ms
-    })
+    this.redlock = new NodeRedisAdapter(this.redis)
 
     this.signToken = this.signToken.bind(this)
   }
 
-  async signToken(token) {
+  async createLock(key: string, ttl: number) {
+    return createLock({
+      adapter: this.redlock,
+      key,
+      ttl,
+      retryAttempts: 10,
+      retryDelay: 200
+    })
+  }
+
+  async signToken(token: object) {
     const time = Date.now()
     if (
       this.keys.length === 0 ||
@@ -95,14 +90,16 @@ export class FailsJWTSigner {
   async recheckKeys() {
     await this.keysUpdateInt()
     let lock = null
+    let lockhandle = null
     if (this.keys.length === 0) {
       // ok again, but this time with locking to make sure no other process is generating keys, while we do
-      lock = await this.redlock.lock('keys:' + this.type + ':loadlock', 2000)
+      lock = await this.createLock('keys:' + this.type + ':loadlock', 2000)
+      lockhandle = await lock.acquire()
       await this.keysUpdateInt()
       // do we still need a new key
       if (this.keys.length === 0) {
         console.log('Generate private public key pair for ' + this.type)
-        const id = Math.random().toString(36).substr(2, 9) // not the best for crypto, but does not matter
+        const id = Math.random().toString(36).slice(2, 11) // not the best for crypto, but does not matter
         const pgenerateKeyPair = promisify(generateKeyPair)
         console.log('new key id:', id)
 
@@ -138,7 +135,7 @@ export class FailsJWTSigner {
         }
       }
 
-      if (lock) lock.unlock()
+      if (lock) lock.release(lockhandle)
       await this.keysUpdateInt()
     }
     this.keychecktime = Date.now()
@@ -152,48 +149,93 @@ export class FailsJWTSigner {
 
     try {
       const promstore = []
-      do {
-        const scanret = await this.redis.scan(cursor, {
-          MATCH: 'JWTKEY:' + this.type + ':private:*',
-          COUNT: 1000
-        }) // keys are seldom
 
-        const myprom = scanret.keys.map((el2) => {
-          return Promise.all([el2, this.redis.get(el2)])
-        })
-        promstore.push(...myprom)
+      const nodes =
+        'masters' in this.redis
+          ? await Promise.all(this.redis.masters.map((node) => node.client))
+          : [this.redis as RedisClientType]
 
-        cursor = scanret.cursor
-      } while (cursor !== 0)
+      for (const node of nodes) {
+        if (!node) continue
+
+        do {
+          const scanret = await node.scan(cursor, {
+            MATCH: 'JWTKEY:' + this.type + ':private:*',
+            COUNT: 1000
+          }) // keys are seldom
+
+          const myprom = scanret.keys.map((el2) => {
+            return Promise.all([
+              el2,
+              this.redis.multi().get(el2).expireTime(el2).exec() as Promise<
+                [string | null, number]
+              >
+            ])
+          })
+          promstore.push(...myprom)
+
+          cursor = scanret.cursor
+        } while (cursor !== 0)
+      }
       const keyres = await Promise.all(promstore)
       const idoffset = ('JWTKEY:' + this.type + ':private:').length
       this.keys = keyres
-        .filter((el) => el.length === 2)
-        .map((el) => ({ id: el[0].substr(idoffset), privatekey: el[1] }))
+        .filter(
+          (el): el is [string, [string, number]] =>
+            el.length === 2 && el[1].length === 2 && el[1][0] !== null
+        )
+        .map((el) => ({
+          id: el[0].slice(idoffset),
+          privatekey: el[1][0],
+          expire: el[1][1]
+        }))
     } catch (error) {
       console.log('keysUpdateInt error', error)
     }
   }
+  private redis: RedisClusterType | RedisClientType
+  private type: string
+  private expiresIn: number
+  private secret: string
+  private redlock: NodeRedisAdapter
+  private keychecktime: number
+  private keys: {
+    id: string
+    privatekey: string
+    expire: number
+  }[]
 }
 
 export class FailsJWTVerifier {
-  constructor(args) {
+  private redis: RedisClusterType | RedisClientType
+  private type: string
+  private keys: Record<string, { fetched: number; publicKey: string }>
+
+  constructor(args: {
+    redis: RedisClusterType | RedisClientType
+    type: string
+  }) {
     this.redis = args.redis // redis database holding the keys
     this.type = args.type // e.g. screen, notepad, screen etc.
     this.keys = {}
-    this.keyschecktime = 0
 
     this.socketauthorize = this.socketauthorize.bind(this)
     this.fetchKey = this.fetchKey.bind(this)
   }
 
   socketauthorize() {
-    return async (socket, next) => {
+    return async (socket: Socket, next: (err?: ExtendedError) => void) => {
       // console.log("auth attempt");
       if (socket.handshake.auth && socket.handshake.auth.token) {
-        const decoded = jwt.decode(socket.handshake.auth.token)
+        const decoded = jwt.decode(socket.handshake.auth.token) as
+          | FailsJwt
+          | null
+          | string
         if (!decoded) return next(new Error('Authentification Error'))
-        const keyid = decoded.kid
+        const sdecoded =
+          typeof decoded === 'string' ? JSON.parse(decoded) : decoded
+        if (!sdecoded.kid) throw new Error('token without keyid')
+        const keyid = sdecoded.kid
         const time = Date.now()
         if (
           !this.keys[keyid] ||
@@ -216,8 +258,11 @@ export class FailsJWTVerifier {
             if (err) {
               return next(new Error('Authentification Error'))
             }
-            // eslint-disable-next-line camelcase
-            socket.decoded_token = decoded
+            if (typeof decoded !== 'undefined') {
+              // eslint-disable-next-line camelcase
+              ;(socket as AuthenticatedSocket).decoded_token =
+                typeof decoded === 'string' ? JSON.parse(decoded) : decoded
+            }
             console.log('socket authorize worked!')
             next()
           }
@@ -228,23 +273,24 @@ export class FailsJWTVerifier {
     }
   }
 
-  async fetchKey(key) {
+  async fetchKey(key: string) {
     delete this.keys[key] // delete, important for key expiry
     const name = 'JWTKEY:' + this.type + ':public:' + key
     try {
       let publick = this.redis.get(name)
-      publick = await publick
+      const publickr = await publick
       // console.log('public', publick, name)
-      if (!publick) return // not found
-      this.keys[key] = {}
-      this.keys[key].publicKey = publick
-      this.keys[key].fetch = Date.now()
+      if (!publickr) return // not found
+      this.keys[key] = {
+        publicKey: publickr,
+        fetched: Date.now()
+      }
     } catch (err) {
       console.log('Error fetchKey', err)
     }
   }
 
-  async getPublicKey(keyid) {
+  async getPublicKey(keyid: string) {
     const time = Date.now()
 
     if (!this.keys[keyid] || this.keys[keyid].fetched + 60 * 1000 * 10 < time) {
@@ -255,9 +301,14 @@ export class FailsJWTVerifier {
   }
 
   express() {
-    // eslint-disable-next-line no-unused-vars
-    const secretCallback = async (req, { header, payload }) => {
+    const secretCallback = async (
+      req: Request,
+      token: FailsJwt | undefined
+    ) => {
+      if (!token) throw new Error('no token passed')
+      const { payload } = token
       const keyid = payload.kid
+      if (!keyid) throw new Error('token without keyid')
       const time = Date.now()
 
       if (
