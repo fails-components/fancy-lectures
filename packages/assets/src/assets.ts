@@ -17,19 +17,97 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Busboy from '@fastify/busboy'
+import { Busboy } from '@fastify/busboy'
 import { createHash, createHmac } from 'node:crypto'
-import { Transform } from 'node:stream'
+import { Transform, Readable } from 'node:stream'
 import { writeFile, mkdir, rm, stat, readdir, open, rename } from 'fs/promises'
-import axios from 'axios'
+import axios, { type ResponseType } from 'axios'
 import { XMLParser } from 'fast-xml-parser'
 import { randomUUID } from 'crypto'
 import { finished } from 'stream/promises'
+import type { PathLike } from 'node:fs'
+import type { Request } from 'express'
 
-// this function converts a new redis object to an old one usable with redlock
+type AssstesOptions = {
+  datadir: string
+  dataurl: string
+  webservertype: 'local' | 'nginx' | 'openstackswift' | 's3'
+  savefile: 'fs' | 'openstackswift' | 's3'
+  privateKey: string
+  swift?: {
+    account: string
+    container: string
+    key: string
+    baseurl: string
+    authbaseurl?: string
+    username?: string
+    password?: string
+    domain: string | undefined
+    project: string | undefined
+  }
+  s3?: {
+    AK: string
+    SK: string
+    region: string
+    bucket: string
+    host: string
+    alturl?: string | undefined
+  }
+}
+
+type OpenstackToken = {
+  token: string
+  tokeninfo: Record<string, any>
+  expire: number
+}
+
+interface S3Headers {
+  Date: string
+  Host: string
+  'x-amz-content-sha256': string
+  Authorization?: string
+}
+
+interface BusBoyFile {
+  filename: string
+  stream: Readable
+  fieldname: string
+  transferEncoding: string
+  mimeType: string
+  size: number
+}
 
 export class FailsAssets {
-  constructor(args) {
+  private datadir: string
+  private dataurl: string
+  private webservertype: 'local' | 'nginx' | 'openstackswift' | 's3'
+  private savefile: 'fs' | 'openstackswift' | 's3'
+  private privateKey: string
+  // swift webserver
+  private swiftaccount?: string
+  private swiftcontainer?: string
+  private swiftkey?: string
+  private swiftbaseurl?: string
+  private swiftauthbaseurl?: string
+  // swift save
+  private swiftusername?: string
+  private swiftpassword?: string
+  private swiftdomain?: string
+  private swiftproject?: string
+
+  private ostoken?: Promise<OpenstackToken>
+  // s3 config
+  private s3AK?: string
+  private s3SK?: string
+  private s3region?: string
+  private s3bucket?: string
+  private s3host?: string
+  private s3alturl?: string
+
+  private xmlparser: XMLParser
+  private emptyhash: string
+
+  constructor(args: AssstesOptions) {
     this.datadir = args.datadir ? args.datadir : 'files'
     this.dataurl = args.dataurl
     this.webservertype = args.webservertype
@@ -145,13 +223,13 @@ export class FailsAssets {
         const uri = '/'
         let path = 'https://' + host + uri
         const date = new Date()
-        const headers = {
+        const headers: S3Headers = {
           Date: date.toUTCString(),
           Host: host,
           'x-amz-content-sha256': this.emptyhash
         }
         let response
-        let query
+        let query = ''
         if (marker) {
           query = 'marker=' + marker
           path += '?' + query
@@ -166,7 +244,7 @@ export class FailsAssets {
             date
           })
           response = await axios.get(path, {
-            headers
+            headers: headers as Record<string, any>
           })
           if (response?.status !== 200) {
             console.log('axios response', response)
@@ -178,7 +256,7 @@ export class FailsAssets {
               ?.ListBucketResult?.Contents
             if (contents) {
               fslist.push(
-                ...contents.map((el) => ({
+                ...contents.map((el: { Key: any; Size: any }) => ({
                   id: el.Key,
                   size: el.Size
                 }))
@@ -199,7 +277,7 @@ export class FailsAssets {
       while (true) {
         let response
         try {
-          const path =
+          const path: string =
             '/v1/' +
             this.swiftaccount +
             '/' +
@@ -215,11 +293,13 @@ export class FailsAssets {
           }
           if (response.data?.length) {
             fslist.push(
-              ...response.data.map((el) => ({
-                id: el.name,
-                size: el.bytes,
-                mime: el.content_type
-              }))
+              ...response.data.map(
+                (el: { name: any; bytes: any; content_type: any }) => ({
+                  id: el.name,
+                  size: el.bytes,
+                  mime: el.content_type
+                })
+              )
             )
             marker = response.data[response.data.length - 1].name
           } else break // no further data
@@ -233,8 +313,9 @@ export class FailsAssets {
     } else if (this.savefile === 'fs') {
       console.log('datadir', this.datadir)
       const startsearch = this.datadir + '/'
-      const fslist = []
-      const searchdir = async (path) => {
+      const fslist: { id: string; size: number; mime: string | undefined }[] =
+        []
+      const searchdir = async (path: PathLike) => {
         const dirfiles = await readdir(path)
         for await (const file of dirfiles) {
           const curstat = await stat(path + file)
@@ -268,7 +349,18 @@ export class FailsAssets {
     query = '',
     scope,
     hashedpayload
+  }: {
+    iso8601date: string
+    sdate: string
+    verb: string
+    headers: Record<string, string>
+    signedheaders: string
+    uri: string
+    query?: string
+    scope: string
+    hashedpayload: string
   }) {
+    if (!this.s3region) throw new Error('S3 Region not set')
     const cheaders = Object.entries(headers)
       .map(([key, value]) => key.toLowerCase() + ':' + value.trim() + '\n')
       .join('')
@@ -315,9 +407,9 @@ export class FailsAssets {
       .digest('hex')
   }
 
-  s3Dates(date) {
+  s3Dates(date: Date | undefined) {
     const wdate = date || new Date()
-    const twodigits = (inp) => ('0' + inp).slice(-2)
+    const twodigits = (inp: number) => ('0' + inp).slice(-2)
     const sdate =
       wdate.getUTCFullYear() +
       twodigits(wdate.getUTCMonth() + 1) +
@@ -333,7 +425,18 @@ export class FailsAssets {
     return { sdate, iso8601date }
   }
 
-  s3AuthHeader(args) {
+  s3AuthHeader(args: {
+    headers?: any
+    uri: string
+    verb: string
+    query?: string
+    hashedpayload: string
+    date?: any
+    iso8601date?: string
+    sdate?: string
+    signedheaders?: string
+    scope?: string
+  }) {
     const { headers } = args
     const signedheaders = Object.keys(headers)
       .map((el) => el.toLowerCase())
@@ -365,14 +468,16 @@ export class FailsAssets {
   }
 
   // may be should go to security
-  async openstackToken() {
+  async openstackToken(): Promise<string> {
     let token = await this.ostoken
     if (!token || token.expire < Date.now() - 60 * 60 * 1000) {
-      let myres, myrej
-      this.ostoken = new Promise((resolve, reject) => {
-        myres = resolve
-        myrej = reject
-      })
+      const {
+        promise,
+        resolve: myres,
+        reject: myrej
+      } = Promise.withResolvers<OpenstackToken>()
+
+      this.ostoken = promise
       try {
         const ret = await axios.post(
           this.swiftauthbaseurl + '/v3/auth/tokens',
@@ -399,7 +504,7 @@ export class FailsAssets {
             }
           },
           {
-            header: {
+            headers: {
               'Content-Type': 'application/json;charset=utf8'
             }
           }
@@ -424,10 +529,12 @@ export class FailsAssets {
         myrej(error)
       }
     }
+    if (typeof token === 'undefined')
+      throw new Error('Internal problem in token retrieval')
     return token?.token
   }
 
-  getFileURL(sha, mimetype) {
+  getFileURL(sha: { toString(p: 'hex'): string }, mimetype: string) {
     if (this.webservertype === 's3') {
       const host = this.s3bucket + '.' + this.s3host
       const shahex = sha.toString('hex')
@@ -439,7 +546,7 @@ export class FailsAssets {
       const signedheaders = Object.keys(headers)
         .map((el) => el.toLowerCase())
         .join(';')
-      const { sdate, iso8601date } = this.s3Dates()
+      const { sdate, iso8601date } = this.s3Dates(undefined)
       const scope = sdate + '/' + this.s3region + '/s3/aws4_request'
       const scopeurl = sdate + '%2F' + this.s3region + '%2Fs3%2Faws4_request'
       const query =
@@ -485,6 +592,12 @@ export class FailsAssets {
     } else if (this.webservertype === 'openstackswift') {
       const expires = Math.floor(Date.now() / 1000) + 60 * 60 * 24
       const shahex = sha.toString('hex')
+      if (
+        typeof this.swiftaccount === 'undefined' ||
+        typeof this.swiftcontainer === 'undefined' ||
+        typeof this.swiftkey === 'undefined'
+      )
+        throw new Error('Swift credentials not set')
       const path =
         '/v1/' + this.swiftaccount + '/' + this.swiftcontainer + '/' + shahex
       const key = this.swiftkey
@@ -508,7 +621,7 @@ export class FailsAssets {
       throw new Error('unsupported webservertype assets:' + this.webservertype)
   }
 
-  shatofilenameLocal(sha, mime) {
+  shatofilenameLocal(sha: { toString: (arg0: 'hex') => string }, mime: string) {
     const shahex = sha.toString('hex')
     const dir =
       this.datadir + '/' + shahex.substr(0, 2) + '/' + shahex.substr(2, 4)
@@ -524,7 +637,7 @@ export class FailsAssets {
     return dir
   }
 
-  async shadelete(shahex, ext) {
+  async shadelete(shahex: string, ext: string) {
     if (this.savefile === 'fs') {
       const dir =
         this.datadir + '/' + shahex.substr(0, 2) + '/' + shahex.substr(2, 4)
@@ -534,7 +647,7 @@ export class FailsAssets {
       const uri = '/' + shahex
       const path = 'https://' + host + uri
       const date = new Date()
-      const headers = {
+      const headers: S3Headers = {
         Date: date.toUTCString(),
         Host: host,
         'x-amz-content-sha256': this.emptyhash
@@ -549,7 +662,7 @@ export class FailsAssets {
           hashedpayload: this.emptyhash
         })
         response = await axios.delete(path, {
-          headers
+          headers: headers as Record<string, any>
         })
         if (response?.status !== 204) {
           console.log('axios response', response)
@@ -582,26 +695,33 @@ export class FailsAssets {
     }
   }
 
-  async shamkdirLocal(sha) {
+  async shamkdirLocal(sha: { toString: (arg0: 'hex') => string }) {
     const shahex = sha.toString('hex')
     const dir =
       this.datadir + '/' + shahex.substr(0, 2) + '/' + shahex.substr(2, 4)
     await mkdir(dir, { recursive: true })
   }
 
-  async readFileStream(sha, mime) {
+  async readFileStream(
+    sha: { toString: (arg0: string) => any },
+    mime: string | ((p: string) => void)
+  ) {
     if (this.savefile === 'fs') {
+      if (typeof mime !== 'string')
+        throw new Error('Passed mime callback in fs case')
       const filename = this.shatofilenameLocal(sha, mime)
       const fd = await open(filename)
       const stream = fd.createReadStream()
       return stream
     } else if (this.savefile === 's3') {
+      if (typeof mime === 'string')
+        throw new Error('Passed mime string in S3 case')
       const host = this.s3bucket + '.' + this.s3host
       const shahex = sha.toString('hex')
       const uri = '/' + shahex
       const path = 'https://' + host + uri
       const date = new Date()
-      const headers = {
+      const headers: S3Headers = {
         Date: date.toUTCString(),
         Host: host,
         'x-amz-content-sha256': this.emptyhash
@@ -616,7 +736,7 @@ export class FailsAssets {
           hashedpayload: this.emptyhash
         })
         response = await axios.get(path, {
-          headers,
+          headers: headers as Record<string, any>,
           responseType: 'stream'
         })
         if (response?.status !== 200) {
@@ -634,12 +754,17 @@ export class FailsAssets {
       }
       return response?.data
     } else if (this.savefile === 'openstackswift') {
+      if (typeof mime !== 'string')
+        throw new Error('Passed mime callback in openstack case')
       let response
       try {
         const shahex = sha.toString('hex')
         const path =
           '/v1/' + this.swiftaccount + '/' + this.swiftcontainer + '/' + shahex
-        const config = {
+        const config: {
+          headers: Record<string, any>
+          responseType: ResponseType
+        } = {
           headers: {
             'X-Auth-Token': await this.openstackToken(),
             'Content-Type': mime
@@ -660,7 +785,12 @@ export class FailsAssets {
     }
   }
 
-  async saveFile(input, sha, mime, size) {
+  async saveFile(
+    input: Buffer | Uint8Array,
+    sha: { toString: (arg0: string) => any },
+    mime: string,
+    size: any
+  ) {
     // size is optional
     if (this.savefile === 'fs') {
       await this.shamkdirLocal(sha)
@@ -674,7 +804,11 @@ export class FailsAssets {
       const path = 'https://' + host + uri
       const date = new Date()
       const length = input?.length || size
-      let headers = {
+      let headers: S3Headers & {
+        'Content-Length': string
+        'Content-Type': string
+        'Content-Disposition'?: string
+      } = {
         'Content-Length': String(length),
         'Content-Type': mime,
         Date: date.toUTCString(),
@@ -695,7 +829,7 @@ export class FailsAssets {
           hashedpayload: shahex
         })
         response = await axios.put(path, input, {
-          headers
+          headers: headers as Record<string, any>
         })
         if (response?.status !== 200) {
           console.log('axios response', response)
@@ -712,7 +846,13 @@ export class FailsAssets {
         const shahex = sha.toString('hex')
         const path =
           '/v1/' + this.swiftaccount + '/' + this.swiftcontainer + '/' + shahex
-        const config = {
+        const config: {
+          headers: {
+            'X-Auth-Token': string
+            'Content-Type': string
+            'Content-Disposition'?: string
+          }
+        } = {
           headers: {
             'X-Auth-Token': await this.openstackToken(),
             'Content-Type': mime
@@ -734,14 +874,10 @@ export class FailsAssets {
     } else throw new Error('unsupported savefile method ' + this.savefile)
   }
 
-  async saveFileStream(inputStream, mime, size) {
+  async saveFileStream(inputStream: Readable, mime: string, size: number) {
     const filehash = createHash('sha256')
 
-    const digest = {}
-    digest.promise = new Promise((resolve, reject) => {
-      digest.resolve = resolve
-      digest.reject = reject
-    })
+    const digest = Promise.withResolvers<Buffer>()
     let lengthCount = 0
     const hashstream = new Transform({
       transform(data, encoding, callback) {
@@ -793,7 +929,11 @@ export class FailsAssets {
         const date = new Date()
         const length = size
         const unsignedHash = 'UNSIGNED-PAYLOAD'
-        let headers = {
+        let headers: S3Headers & {
+          'Content-Length': string
+          'Content-Type': string
+          'Content-Disposition'?: string
+        } = {
           'Content-Length': String(length),
           'Content-Type': mime,
           Date: date.toUTCString(),
@@ -813,7 +953,7 @@ export class FailsAssets {
           hashedpayload: unsignedHash
         })
         response = await axios.put(tempPath, outputstream, {
-          headers
+          headers: headers as Record<string, any>
         })
         if (response?.status !== 200) {
           console.log('axios response', response)
@@ -832,7 +972,10 @@ export class FailsAssets {
       const shaPath = 'https://' + host + shaUri
       try {
         const date = new Date()
-        const headers = {
+        const headers: S3Headers & {
+          'Content-Type': string
+          'x-amz-copy-source': string
+        } = {
           /* 'Content-Length': String(length), */
           'Content-Type': mime,
           Date: date.toUTCString(),
@@ -840,7 +983,6 @@ export class FailsAssets {
           'x-amz-content-sha256': this.emptyhash,
           'x-amz-copy-source': '/' + this.s3bucket + tempUri
         }
-
         headers.Authorization = this.s3AuthHeader({
           headers,
           uri: shaUri,
@@ -848,8 +990,9 @@ export class FailsAssets {
           date,
           hashedpayload: this.emptyhash
         })
+
         response = await axios.put(shaPath, null, {
-          headers
+          headers: headers as Record<string, any>
         })
         if (response?.status !== 200) {
           console.log('axios response', response)
@@ -864,7 +1007,7 @@ export class FailsAssets {
       // third step remove temp file
       try {
         const date = new Date()
-        const headers = {
+        const headers: S3Headers = {
           Date: date.toUTCString(),
           Host: host,
           'x-amz-content-sha256': this.emptyhash
@@ -878,7 +1021,7 @@ export class FailsAssets {
           hashedpayload: this.emptyhash
         })
         response = await axios.delete(tempPath, {
-          headers
+          headers: headers as Record<string, any>
         })
         if (response?.status !== 204) {
           console.log('axios response', response)
@@ -896,7 +1039,13 @@ export class FailsAssets {
       const tempPath =
         '/v1/' + this.swiftaccount + '/' + this.swiftcontainer + '/temp-' + uuid
       try {
-        const config = {
+        const config: {
+          headers: {
+            'X-Auth-Token': string
+            'Content-Type': string
+            'Content-Disposition'?: string
+          }
+        } = {
           headers: {
             'X-Auth-Token': await this.openstackToken(),
             'Content-Type': mime
@@ -969,36 +1118,51 @@ export class FailsAssets {
   }
 
   async handleFileUpload(
-    req,
-    body,
-    requiredFields,
-    forbiddenFields,
-    filesToUpload,
-    maxFileSize,
-    supportedMime
+    req: Request,
+    body: Partial<Record<string, string>>,
+    requiredFields: { [x: string]: string },
+    forbiddenFields: { [x: string]: string },
+    filesToUpload: string[],
+    maxFileSize: number,
+    supportedMime: string[]
   ) {
-    const filesResolve = {}
-    const filesReject = {}
-    const files = {}
-    const filesSizes = {}
-    let forbiddenField
+    const filesResolve: Record<
+      string,
+      (value: BusBoyFile | undefined) => void
+    > = {}
+    const filesReject: Partial<Record<string, (reason: any) => void>> = {}
+    const files: Partial<Record<string, Promise<BusBoyFile | undefined>>> = {}
+    const filesSizes: Partial<Record<string, number>> = {}
+    let forbiddenField: string | undefined
     for (const file of filesToUpload) {
       const field = file
-      files[field] = new Promise((resolve, reject) => {
-        filesResolve[field] = resolve
-        filesReject[field] = reject
-      })
+      const { promise, resolve, reject } = Promise.withResolvers<
+        BusBoyFile | undefined
+      >()
+      files[field] = promise
+      filesResolve[field] = resolve
+      filesReject[field] = reject
     }
+    const contentType = req.headers['content-type']
+    if (!contentType) throw new Error('Content type not set')
 
-    const bus = new Busboy({ headers: req.headers })
+    const bus = new Busboy({
+      headers: { ...req.headers, 'content-type': contentType }
+    })
     bus.on(
       'file',
-      (fieldname, stream, filename, transferEncoding, mimeType) => {
+      (
+        fieldname: string,
+        stream: Readable,
+        filename: string,
+        transferEncoding: string,
+        mimeType: string
+      ) => {
         if (!files[fieldname]) return // only download requested files
         if (forbiddenField) {
           delete filesResolve[fieldname]
           delete files[fieldname]
-          filesReject[fieldname](
+          filesReject[fieldname]?.(
             new Error('Forbidden field transmitted before file')
           )
           return // we are not allowed to proceed if a forbidden field arrives
@@ -1006,7 +1170,7 @@ export class FailsAssets {
         if (Object.keys(requiredFields).length !== 0) {
           delete filesResolve[fieldname]
           delete files[fieldname]
-          filesReject[fieldname](
+          filesReject[fieldname]?.(
             new Error('Required fields not transmitted before file')
           )
           return // we must receive the required fields beforehand!
@@ -1014,7 +1178,7 @@ export class FailsAssets {
         if (!filesSizes[fieldname]) {
           delete filesResolve[fieldname]
           delete files[fieldname]
-          filesReject[fieldname](new Error('File length not transmitted'))
+          filesReject[fieldname]?.(new Error('File length not transmitted'))
           return // we must receive the fileSize beforehand!
         }
         const fileobj = {
@@ -1033,14 +1197,12 @@ export class FailsAssets {
     bus.on(
       'field',
       (
-        fieldname,
-        value,
-        fieldnameTruncated,
+        fieldname: string | null,
+        value: string,
+        fieldnameTruncated: boolean,
         valueTruncated,
-        // eslint-disable-next-line no-unused-vars
-        transferEncoding,
-        // eslint-disable-next-line no-unused-vars
-        mimeType
+        transferEncoding: string,
+        mimeType: string
       ) => {
         if (fieldname == null) return
         if (fieldnameTruncated || valueTruncated) return
@@ -1050,7 +1212,7 @@ export class FailsAssets {
           if (size > maxFileSize && files[fileKey]) {
             delete filesResolve[fileKey]
             delete files[fileKey]
-            filesReject[fileKey](new Error('File length exceeded'))
+            filesReject[fileKey]?.(new Error('File length exceeded'))
           }
           return
         }
@@ -1068,7 +1230,7 @@ export class FailsAssets {
       if (!forbiddenField) {
         // we need to reject the required files
         for (const [key, value] of Object.entries(filesReject)) {
-          value(new Error('File with key ' + key + ' not transmitted'))
+          value?.(new Error('File with key ' + key + ' not transmitted'))
         }
       } else {
         // if we encounter a field forbidden in file download, we do not reject.
@@ -1094,7 +1256,7 @@ export class FailsAssets {
     )
   }
 
-  mimeToExtension(mime) {
+  mimeToExtension(mime: string) {
     switch (mime) {
       case 'application/pdf':
         return '.pdf'
@@ -1111,7 +1273,7 @@ export class FailsAssets {
     }
   }
 
-  mimeToExtensionwoDot(mime) {
+  mimeToExtensionwoDot(mime: string) {
     switch (mime) {
       case 'application/pdf':
         return 'pdf'
@@ -1128,7 +1290,7 @@ export class FailsAssets {
     }
   }
 
-  extensionToMime(ext) {
+  extensionToMime(ext: string) {
     switch (ext) {
       case 'pdf':
         return 'application/pdf'
@@ -1145,7 +1307,7 @@ export class FailsAssets {
     }
   }
 
-  mimeToContentDisposition(mime) {
+  mimeToContentDisposition(mime: string) {
     switch (mime) {
       case 'application/pdf':
         return undefined

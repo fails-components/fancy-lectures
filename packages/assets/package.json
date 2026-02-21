@@ -8,10 +8,17 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/security.git"
   },
-  "main": "src/assets.js",
-  "module": "src/assets.js",
+  "main": "src/assets.ts",
+  "module": "src/assets.ts",
+  "exports": {
+    ".": {
+      "types": "./src/assets.ts",
+      "import": "./src/assets.ts",
+      "default": "./src/assets.ts"
+    }
+  },
   "files": [
-    "src/assets.js",
+    "src/assets.ts",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
@@ -31,5 +38,9 @@
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
+  },
+  "devDependencies": {
+    "@types/busboy": "^1.5.4",
+    "@types/express": "^4.17.21"
   }
 }
