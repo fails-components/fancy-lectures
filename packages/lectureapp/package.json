@@ -47,7 +47,7 @@
     "sass": "^1.47.0",
     "socket.io-client": "^4.5.3",
     "tiny-hashes": "^1.0.1",
-    "uuid": "^8.3.2"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",

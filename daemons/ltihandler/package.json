@@ -40,7 +40,7 @@
     "mongodb": "^3.7.1",
     "rasha": "^1.2.5",
     "redis": "^4.0.6",
-    "uuid": "^8.3.2"
+    "uuid": "^13.0.0"
   },
   "nodemonConfig": {
     "ignore": [

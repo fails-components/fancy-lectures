@@ -1,4 +1,3 @@
-/* eslint-disable node/no-callback-literal */
 /*
     Fails Components (Fancy Automated Internet Lecture System - Components)
     Copyright (C)  2015-2017 (original FAILS), 
@@ -20,9 +19,34 @@
 import { randomBytes } from 'crypto'
 import { promisify } from 'util'
 import { v4 as uuidv4, validate as isUUID } from 'uuid'
+import { type RedisClusterType, type RedisClientType } from 'redis'
+import type { Namespace } from 'socket.io'
+import type {
+  FailsJWTSigner,
+  AuthenticatedSocket
+} from '@fails-components/security'
 
 export class AuthConnection {
-  constructor(args) {
+  protected redis: RedisClusterType | RedisClientType
+  protected redissub: RedisClusterType | RedisClientType
+  protected authio: Namespace
+  protected signScreenJwt: FailsJWTSigner['signToken']
+  protected signNotepadJwt: FailsJWTSigner['signToken']
+  protected signNotesJwt: FailsJWTSigner['signToken']
+  protected noteshandlerURL: string
+  protected notepadhandlerURL: string
+  protected authhandlerURL: string
+
+  constructor(args: {
+    redis: RedisClusterType | RedisClientType
+    authio: Namespace
+    signScreenJwt: FailsJWTSigner['signToken']
+    signNotepadJwt: FailsJWTSigner['signToken']
+    signNotesJwt: FailsJWTSigner['signToken']
+    noteshandlerURL: string
+    notepadhandlerURL: string
+    authhandlerURL: string
+  }) {
     this.redis = args.redis
     this.authio = args.authio
     this.redissub = this.redis.duplicate()
@@ -40,29 +64,39 @@ export class AuthConnection {
     this.SocketHandlerAuth = this.SocketHandlerAuth.bind(this)
   }
 
-  async SocketHandlerAuth(socket) {
+  async SocketHandlerAuth(socket: AuthenticatedSocket) {
     const address = socket.client.conn.remoteAddress
     console.log('Auth %s with ip %s  connected', socket.id, address)
 
-    let currequest = null
+    let currequest:
+      | undefined
+      | {
+          reqs: {
+            purpose: 'screen' | 'lecture' | 'notes'
+            id: string
+          }[]
+          code: string
+          clearid?: ReturnType<typeof setTimeout>
+        } = undefined
 
-    const subfunct = async (message) => {
+    const subfunct = async (message: string) => {
       const pmess = JSON.parse(message)
       if (isUUID(pmess.uuid) && pmess.user && isUUID(pmess.user.useruuid)) {
         console.log('request', pmess)
+        if (!currequest) return
         const res = await this.processRequest(currequest, pmess)
         console.log('result', res)
         socket.emit('reqprocessed', res)
       }
       if (currequest) this.cancelRequest(currequest)
-      currequest = null
+      currequest = undefined
     }
 
     const clearfunct = () => {
       if (currequest) {
         this.cancelRequest(currequest)
       }
-      currequest = null
+      currequest = undefined
     }
 
     socket.on('request', async (cmd, callback) => {
@@ -76,11 +110,15 @@ export class AuthConnection {
     socket.on('disconnect', () => {
       console.log('Auth Client %s with ip %s  disconnected', socket.id, address)
       if (currequest) this.cancelRequest(currequest)
-      currequest = null
+      currequest = undefined
     })
   }
 
-  async startRequest(cmd, subfunct, clearfunct) {
+  async startRequest(
+    cmd: { reqs: { purpose: 'screen' | 'lecture' | 'notes'; id: string }[] },
+    subfunct: (message: string) => void,
+    clearfunct: () => void
+  ) {
     const randomBytesAsync = promisify(randomBytes)
     try {
       let id = null
@@ -88,41 +126,58 @@ export class AuthConnection {
         const rbytes = await randomBytesAsync(5)
         id = rbytes.toString('base64').slice(0, -1)
         const notnew = await this.redis.exists('auth::' + id)
-        if (notnew[0]) id = null
+        if (notnew > 0) id = null
       }
       // ok we have an id/cide
-      const toret = {}
-      toret.code = id
-      if (cmd.reqs && Array.isArray(cmd.reqs)) {
-        toret.reqs = cmd.reqs
-          .filter(
-            (el) =>
-              el.purpose === 'screen' ||
-              el.purpose === 'lecture' ||
-              el.purpose === 'notes'
-          )
-          .slice(0, 10)
-          .map((el) => ({ purpose: el.purpose, id: el.id }))
-      } else return null
+      const code = id
+      if (!(cmd.reqs && Array.isArray(cmd.reqs))) return
+      const reqs = cmd.reqs
+        .filter(
+          (el) =>
+            el.purpose === 'screen' ||
+            el.purpose === 'lecture' ||
+            el.purpose === 'notes'
+        )
+        .slice(0, 10)
+        .map((el) => ({ purpose: el.purpose, id: el.id }))
+
       await this.redis.set('auth::' + id, '1', { EX: 20 * 60 })
       this.redissub.subscribe('auth::' + id, subfunct)
 
-      toret.clearid = setTimeout(clearfunct, 10 * 60 * 1000)
-      return toret
+      const clearid = setTimeout(clearfunct, 10 * 60 * 1000)
+      return {
+        reqs,
+        code,
+        clearid
+      }
     } catch (error) {
       console.log('error in startRequest', cmd, error)
     }
   }
 
-  async cancelRequest(cmd) {
+  async cancelRequest(cmd: {
+    code: string
+    clearid?: ReturnType<typeof setTimeout>
+  }) {
     if (!cmd) return null
     if (cmd.clearid) clearTimeout(cmd.clearid)
     this.redissub.unsubscribe('auth::' + cmd.code)
     this.redis.del('auth::' + cmd.code)
   }
 
-  async processRequest(currequest, pmess) {
-    let toret = null
+  async processRequest(
+    currequest: {
+      reqs: { purpose: 'screen' | 'lecture' | 'notes'; id: string }[]
+    },
+    pmess: {
+      uuid: string
+      user: {}
+      appversion: string
+      features: string[]
+    }
+  ) {
+    type prReturn = { purpose: 'screen' | 'lecture' | 'notes' }
+    let toret: (prReturn | Promise<prReturn | undefined>)[] | null = null
     if (currequest) {
       if (currequest.reqs) {
         toret = currequest.reqs.map(async (el) => {
@@ -172,7 +227,7 @@ export class AuthConnection {
               notepadhandler: this.notepadhandlerURL,
               maxrenew: 288 // 24-48h, depending on renewal frequency
             }
-            return await {
+            return {
               token: await this.signNotepadJwt(content),
               id: el.id,
               purpose: el.purpose
@@ -180,8 +235,9 @@ export class AuthConnection {
           }
         })
       }
-      toret = Promise.all(toret)
-      return toret
+      if (!toret) return
+      const ptoret = Promise.all(toret)
+      return ptoret
     }
   }
 }
