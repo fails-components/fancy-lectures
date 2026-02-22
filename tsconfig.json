@@ -20,6 +20,7 @@
     { "path": "./packages/config" },
     { "path": "./packages/data" },
     { "path": "./packages/drawobjects" },
+    { "path": "./daemons/avsdispatcher" },
     { "path": "./daemons/notepadhandler" },
     { "path": "./daemons/noteshandler" },
     { "path": "./daemons/housekeeping" },

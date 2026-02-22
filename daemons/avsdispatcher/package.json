@@ -2,16 +2,16 @@
   "name": "@fails-components/avsdispatcher",
   "version": "1.2.14",
   "description": "Audio, Video, Screensharing dispatcher",
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "files": [
-    "src/*.js",
+    "src/*.ts",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node src/server.ts",
     "test": "run-s test:lint",
     "test:lint": "eslint .",
     "docker:build": "docker build -t ghcr.io/fails-components/avsdispatcher:master --secret id=GH_TOKEN -f Dockerfile ../.."
@@ -40,7 +40,7 @@
     "cors": "^2.8.5",
     "express": "^4.22.1",
     "express-jwt": "^8.2.0",
-    "mongodb": "^3.7.1",
+    "mongodb": "^7.1.0",
     "redis": "^4.0.6"
   }
 }

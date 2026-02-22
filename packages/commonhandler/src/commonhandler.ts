@@ -220,6 +220,7 @@ export interface Region {
   ipfilter?: string[]
   geopos: GeoJSONPoint[]
   changedAt: Date
+  fetchTime?: number
 }
 
 export interface RegionBasic {

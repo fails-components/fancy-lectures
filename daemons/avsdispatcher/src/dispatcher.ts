@@ -19,11 +19,33 @@
 
 import { webcrypto } from 'crypto'
 import { expressjwt as jwtexpress } from 'express-jwt'
+import type { Request, Express } from 'express'
+import { type Db as MongoDb } from 'mongodb'
+import type {
+  FailsJWTSigner,
+  FailsJWTVerifier
+} from '@fails-components/security'
+import { type Region } from '@fails-components/commonhandler'
+import jwt from 'jsonwebtoken'
+
+interface AuthenticatedRegionRequest extends Request {
+  token: {
+    region: string
+  }
+}
 
 export class AVSDispatcher {
-  constructor(args) {
+  protected mongo: MongoDb
+  protected signAvsJwt: FailsJWTSigner['signToken']
+  protected verifier: FailsJWTVerifier
+  protected regions: Partial<Record<string, Region>> | undefined
+
+  constructor(args: {
+    mongo: MongoDb
+    signAvsJwt: FailsJWTSigner['signToken']
+    verifier: FailsJWTVerifier
+  }) {
     this.mongo = args.mongo
-    this.redis = args.redis
     this.verifier = args.verifier
     this.signAvsJwt = args.signAvsJwt
 
@@ -41,6 +63,7 @@ export class AVSDispatcher {
   }
 
   async initRegions() {
+    if (!process.env.REGIONS) return
     const regions = process.env.REGIONS.split(' ')
       .map((el) => el.split('|'))
       .map((el) => ({
@@ -54,8 +77,11 @@ export class AVSDispatcher {
             if (posarr.length < 2) return undefined
             else
               return {
-                type: 'Point',
-                coordinates: [posarr[0], posarr[1]]
+                type: 'Point' as const,
+                coordinates: [Number(posarr[0]), Number(posarr[1])] as [
+                  number,
+                  number
+                ]
               }
           })
           .filter((el) => el !== undefined),
@@ -63,7 +89,7 @@ export class AVSDispatcher {
       }))
 
     try {
-      const regioncol = this.mongo.collection('avsregion')
+      const regioncol = this.mongo.collection<Region>('avsregion')
       const insertprom = regions.map(async (el) => {
         try {
           await regioncol.updateOne(
@@ -79,10 +105,10 @@ export class AVSDispatcher {
       })
 
       await Promise.all(insertprom)
-      const regionByName = {}
+      const regionByName: Record<string, Region> = {}
       regions.forEach((el) => {
-        el.fetchTime = Date.now()
-        regionByName[el.name] = el
+        const nel = { ...el, fetchTime: Date.now() }
+        regionByName[el.name] = nel
       })
       this.regions = regionByName
     } catch (error) {
@@ -90,25 +116,34 @@ export class AVSDispatcher {
     }
   }
 
-  async fetchRegion(region) {
-    const regioncol = this.mongo.collection('avsregion')
+  async fetchRegion(region: string) {
+    const regioncol = this.mongo.collection<Region>('avsregion')
     const regdoc = await regioncol.findOne({ name: region })
     if (regdoc) {
-      if (regdoc.hmac && regdoc.hmac.buffer) regdoc.hmac = regdoc.hmac.buffer
+      if (regdoc.hmac && 'buffer' in regdoc.hmac)
+        (regdoc as any).hmac = regdoc.hmac.buffer
+      if (!this.regions) {
+        throw new Error('Regions are not defined')
+      }
       this.regions[region] = regdoc
       this.regions[region].fetchTime = Date.now()
     }
   }
 
   express() {
-    const secretCallback = async (req, token) => {
+    const secretCallback = async (req: Request, token: jwt.Jwt | undefined) => {
+      if (!token || typeof token.payload === 'string') {
+        throw new Error('Invalid token structure')
+      }
       const region = token.payload.region
       if (token.payload.region !== token.header.kid)
         throw new Error('kid region mismatch')
       if (!region) throw new Error('no region provided')
+      if (!this.regions) throw new Error('')
       if (
         !this.regions[region] ||
-        this.regions[region].fetchTime + 1000 * 60 * 2 < Date.now()
+        (this.regions[region].fetchTime &&
+          this.regions[region].fetchTime + 1000 * 60 * 2 < Date.now())
       ) {
         // ok, may be another handler installed the region
         await this.fetchRegion(region)
@@ -117,7 +152,12 @@ export class AVSDispatcher {
         throw new Error('unknown region')
       }
 
-      return this.regions[region].hmac
+      const hmacSource = this.regions[region].hmac
+
+      if (hmacSource && 'buffer' in hmacSource) {
+        return Buffer.from(hmacSource.buffer as any)
+      }
+      return Buffer.from(hmacSource as any)
     }
     return jwtexpress({
       secret: secretCallback,
@@ -126,20 +166,15 @@ export class AVSDispatcher {
     })
   }
 
-  installHandlers(path, app) {
+  installHandlers(path: string, app: Express) {
     // renew the auth token
     app.get(path + '/key', async (req, res) => {
       // console.log('get key ', req.query)
-      if (
-        !(
-          req.query.kid &&
-          req.query.kid.match(/^[0-9a-zA-Z]+$/) &&
-          typeof req.query.kid === 'string'
-        )
-      )
+      const kid = req.query.kid
+      if (!(typeof kid === 'string' && kid.match(/^[0-9a-zA-Z]+$/)))
         return res.status(401).send('malformed request')
       try {
-        const pubkey = await this.verifier.getPublicKey(req.query.kid)
+        const pubkey = await this.verifier.getPublicKey(kid)
 
         if (!pubkey) res.status(404).send('key not found')
         else res.status(200).json({ key: pubkey })
@@ -167,8 +202,27 @@ export class AVSDispatcher {
       }
     })
     app.put(path + '/router', async (req, res) => {
+      type numericFields =
+        | 'numClients'
+        | 'maxClients'
+        | 'numRouterClients'
+        | 'numRealms'
+        | 'maxRealms'
+      type hashFields = 'localClients' | 'remoteClients' | 'primaryRealms'
+      type translatableFields =
+        | 'localClients'
+        | 'remoteClients'
+        | 'primaryRealms'
       // ok I got a put request
-      const toinsert = {}
+      const toinsert: {
+        url?: string
+        wsurl?: string
+        spki?: string
+        key?: webcrypto.JsonWebKey
+        changedAt?: Date
+        region?: string
+      } & Partial<Record<numericFields, number>> &
+        Partial<Record<hashFields, string[]>> = {}
       try {
         toinsert.url = new URL(req.body.url).toString()
         toinsert.wsurl = new URL(req.body.wsurl).toString()
@@ -185,13 +239,14 @@ export class AVSDispatcher {
         try {
           toinsert.key = JSON.parse(req.body.key)
         } catch (error) {
-          return res.status(401).send('malformed request, key json', error)
+          return res.status(401).send('malformed request, key json' + error)
         }
       } else {
         // console.log('malformes rquest debug', req.body)
         return res.status(401).send('malformed request, key')
       }
-      const numCheck = (field) => {
+
+      const numCheck = (field: numericFields) => {
         if (
           !(
             req.body[field] !== undefined &&
@@ -214,7 +269,7 @@ export class AVSDispatcher {
         return res.status(401).send('malformed request, ' + error)
       }
 
-      const hashCheck = (field) => {
+      const hashCheck = (field: hashFields) => {
         // console.log('hash check field', field, req.body[field])
         if (
           !(
@@ -248,13 +303,14 @@ export class AVSDispatcher {
             projection: { transHash: 1 }
           }
         )
-        const translateField = (field) => {
+        const translateField = (field: translatableFields) => {
           if (
             hashtable &&
             hashtable.transHash &&
             hashtable.transHash instanceof Object
           ) {
             // console.log('translate field', field, toinsert[field], req.body)
+            if (!toinsert[field]) return
             toinsert[field] = toinsert[field]
               .map((el) =>
                 el.split(':').map((hash) => hashtable.transHash[hash])
@@ -275,10 +331,11 @@ export class AVSDispatcher {
         delete toinsert.primaryRealms
         return res.status(500).send('internal server problem')
       }
+      const authreq = req as AuthenticatedRegionRequest
 
-      if (!req.token.region)
+      if (!authreq.token.region)
         return res.status(401).send('malformed request no region in token')
-      toinsert.region = req.token.region
+      toinsert.region = authreq.token.region
       // TODO add region! at field region coming from authorization record
       try {
         // console.log('toinsert', toinsert)
@@ -290,8 +347,8 @@ export class AVSDispatcher {
           { upsert: true }
         )
 
-        if (upres.result.n === 0) return res.status(500).send('db error')
-        if (upres.result.upserted) {
+        if (upres.matchedCount === 0) return res.status(500).send('db error')
+        if (upres.upsertedCount !== 0) {
           const hSA = await webcrypto.getRandomValues(new Uint8Array(16))
           const hashSalt = Buffer.from(
             hSA.buffer,

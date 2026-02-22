@@ -32,4 +32,4 @@ RUN if [ "$ENV" = "debug" ] ; then \
 
 EXPOSE 8080
 
-CMD [ "node", "src/main.js" ]
+CMD [ "node", "src/main.ts" ]

@@ -90,7 +90,7 @@ export class FailsConfig {
     }
     if (env.FAILS_LOCAL) {
       // string with all modules in debug mode
-      this.devmode = env.FAILS_LOCAL.split(' ')
+      this.devmode_ = env.FAILS_LOCAL.split(' ')
     }
     if (env.REDIS_HOST) {
       // string with all modules in debug mode
@@ -113,7 +113,7 @@ export class FailsConfig {
 
     if (env.REACT_APP_FAILS_LOCAL) {
       // string with all modules in debug mode
-      this.devmode = env.REACT_APP_FAILS_LOCAL.split(' ')
+      this.devmode_ = env.REACT_APP_FAILS_LOCAL.split(' ')
     }
     // console.log('dev mode', this.devmode)
     // console.log('process env', env)
@@ -300,7 +300,7 @@ export class FailsConfig {
   }
 
   get needCors() {
-    if (this.devmode && this.devmode.includes('appweb')) return true
+    if (this.devmode_ && this.devmode_.includes('appweb')) return true
     else return false
   }
 
@@ -446,10 +446,14 @@ export class FailsConfig {
     return this.development_
   }
 
+  get devmode() {
+    return this.devmode_
+  }
+
   private react?: boolean
   private env: Record<string, string | undefined>
   private development_: boolean | undefined
-  private devmode?: string[]
+  private devmode_?: string[]
   private redishost_: string
   private redisport_: number
   private redispass_?: string
