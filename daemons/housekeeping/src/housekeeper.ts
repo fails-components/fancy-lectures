@@ -17,26 +17,48 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import Redlock from 'redlock'
-import { RedisRedlockProxy } from '@fails-components/security'
+import { NodeRedisAdapter, createLock } from 'redlock-universal'
 import { commandOptions } from 'redis'
+import { type UpdateResult, type Db as MongoDb } from 'mongodb'
+import { type RedisClusterType, type RedisClientType } from 'redis'
+import { type Transporter } from 'nodemailer'
+import { type FailsAssets } from '@fails-components/assets'
+import {
+  type Lecture,
+  type LectureBoard,
+  type Region,
+  type MongoFile,
+  type PyNotebook,
+  type RouterInfo
+} from '@fails-components/commonhandler'
 
 export class Housekeeping {
-  constructor(args) {
+  protected mongo: MongoDb
+  protected redis: RedisClusterType | RedisClientType
+  protected redlock: NodeRedisAdapter
+  protected mailtransport?: Transporter
+  protected senderaddress?: string
+  protected rootemails?: string[]
+  protected deleteAsset: FailsAssets['shadelete']
+  protected setupAssets: FailsAssets['setupAssets']
+  protected lastInformAVS: { localAlarm?: boolean; globalAlarm?: boolean }
+
+  constructor(args: {
+    redis: RedisClusterType | RedisClientType
+    mongo: MongoDb
+    deleteAsset: FailsAssets['shadelete']
+    setupAssets: FailsAssets['setupAssets']
+    mailtransport?: Transporter
+    senderaddress?: string
+    rootemails?: string[]
+  }) {
     this.redis = args.redis
     this.mongo = args.mongo
 
     this.deleteAsset = args.deleteAsset
     this.setupAssets = args.setupAssets
 
-    this.redlock = new Redlock([RedisRedlockProxy(this.redis)], {
-      driftFactor: 0.01, // multiplied by lock ttl to determine drift time
-
-      retryCount: 10,
-
-      retryDelay: 200, // time in ms
-      retryJitter: 200 // time in ms
-    })
+    this.redlock = new NodeRedisAdapter(this.redis)
 
     // this.lastaccess = this.lastaccess.bind(this)
 
@@ -53,12 +75,22 @@ export class Housekeeping {
     this.rootemails = args.rootemails
   }
 
+  async createLock(key: string, ttl: number) {
+    return createLock({
+      adapter: this.redlock,
+      key,
+      ttl,
+      retryAttempts: 10,
+      retryDelay: 200
+    })
+  }
+
   async createMongoIndices() {
     // note: if an indices changes, that was released, it will be delete here and recreated
 
     // create indices,
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
 
       // first lectures
       // first one the unique identifier
@@ -78,7 +110,7 @@ export class Housekeeping {
       console.log('lectures owners index create', ownersres)
 
       // second boards
-      const boardscol = this.mongo.collection('lectureboards')
+      const boardscol = this.mongo.collection<LectureBoard>('lectureboards')
       const buuidres = await boardscol.createIndex({ uuid: 1, board: 1 }) // this one is not unique, currently board is not needed but may be useful in the future
       console.log('boards uuid and board name index create', buuidres)
 
@@ -97,7 +129,7 @@ export class Housekeeping {
       ) // this one is unique
       console.log('users unique email index create', emailres)
 
-      const avsroutercol = this.mongo.collection('avsrouters')
+      const avsroutercol = this.mongo.collection<RouterInfo>('avsrouters')
 
       const expres = await avsroutercol.createIndex(
         { changedAt: 1 },
@@ -128,7 +160,7 @@ export class Housekeeping {
         localPrimaryRealmsRes
       )
 
-      const avsregioncol = this.mongo.collection('avsregion')
+      const avsregioncol = this.mongo.collection<Region>('avsregion')
 
       const expregres = await avsregioncol.createIndex(
         { changedAt: 1 },
@@ -148,7 +180,8 @@ export class Housekeeping {
   async houseKeeping() {
     let lock
     try {
-      lock = await this.redlock.lock('housekeeping', 2000)
+      lock = await this.createLock('housekeeping', 2000)
+      let lockhandle = await lock.acquire()
       console.log('Do saveChangedLectures ' + new Date().toLocaleString())
       await this.saveChangedLectures()
       console.log('tryLectureRedisPurge ' + new Date().toLocaleString())
@@ -164,7 +197,7 @@ export class Housekeeping {
         'check for assets to delete done ' + new Date().toLocaleString()
       )
       console.log('House keeping done! ' + new Date().toLocaleString())
-      lock.unlock()
+      lock.release(lockhandle)
     } catch (error) {
       console.log('Busy or Error in Housekeeping', error)
     }
@@ -173,62 +206,77 @@ export class Housekeeping {
   async saveChangedLectures() {
     try {
       let cursor = 0
-      do {
-        const scanret = await this.redis.scan(cursor, {
-          MATCH: 'lecture:????????-????-????-????-????????????',
-          COUNT: 20
-        })
-        // got the lectures now figure out, which we need to save
-        const saveproms = Promise.all(
-          scanret.keys.map(async (el) => {
-            const info = await this.redis.hmGet(el, ['lastwrite', 'lastDBsave'])
-            if (
-              Number(info[0]) > Number(info[1]) + 3 * 60 * 1000 ||
-              (Date.now() > Number(info[1]) + 5 * 60 * 1000 &&
-                Number(info[0]) > Number(info[1]))
-            ) {
-              // do not save more often than every 3 minutes
-              // or you have waited for five minutes
-              const lectureuuid = el.substr(8)
-              return this.saveLectureToDB(lectureuuid)
-            } else return null
-          })
-        )
-        await saveproms // wait before next iteration, do not use up to much mem
+      const nodes =
+        'masters' in this.redis
+          ? await Promise.all(this.redis.masters.map((node) => node.client))
+          : [this.redis as RedisClientType]
 
-        cursor = scanret.cursor
-      } while (cursor !== 0)
+      for (const node of nodes) {
+        if (!node) continue
+        do {
+          const scanret = await node.scan(cursor, {
+            MATCH: 'lecture:{????????-????-????-????-????????????}',
+            COUNT: 20
+          })
+          // got the lectures now figure out, which we need to save
+          const saveproms = Promise.all(
+            scanret.keys.map(async (el) => {
+              const info = await this.redis.hmGet(el, [
+                'lastwrite',
+                'lastDBsave'
+              ])
+              if (
+                Number(info[0]) > Number(info[1]) + 3 * 60 * 1000 ||
+                (Date.now() > Number(info[1]) + 5 * 60 * 1000 &&
+                  Number(info[0]) > Number(info[1]))
+              ) {
+                // do not save more often than every 3 minutes
+                // or you have waited for five minutes
+                const lectureuuid = el.slice(9, -1)
+                return this.saveLectureToDB(lectureuuid)
+              } else return null
+            })
+          )
+          await saveproms // wait before next iteration, do not use up to much mem
+
+          cursor = scanret.cursor
+        } while (cursor !== 0)
+      }
     } catch (error) {
       console.log('Error saveChangedLecture', error)
     }
   }
 
-  async saveLectureToDB(lectureuuid) {
+  async saveLectureToDB(lectureuuid: string) {
     const time = Date.now()
     console.log('Try saveLectureToDB  for lecture', lectureuuid)
     try {
-      const lecturescol = this.mongo.collection('lectures')
-      const boardscol = this.mongo.collection('lectureboards')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
+      const boardscol = this.mongo.collection<LectureBoard>('lectureboards')
       // we got now through all boards and save them to the db
 
-      const boardprefix = 'lecture:' + lectureuuid + ':board'
-      let update = []
+      const boardprefix = 'lecture:{' + lectureuuid + '}:board'
+
       const backgroundp = this.redis.hGet(
-        'lecture:' + lectureuuid,
+        'lecture:{' + lectureuuid + '}',
         'backgroundbw'
       )
 
       const members = await this.redis.sMembers(boardprefix + 's')
       const copyprom = Promise.all(
         members.map(async (el) => {
+          let update: Promise<UpdateResult<LectureBoard>> | undefined
           const boardname = el ? el.toString() : null
+          if (!boardname) return
           // if (boardname=="s") return null; // "boards excluded"
           // console.log("one board", el);
           // console.log("boardname", boardname);
           let boarddata
-          if (this.redis.getBuffer)
+          if ('getBuffer' in this.redis)
             // required for v 4.0.0, remove later
-            boarddata = await this.redis.getBuffer(boardprefix + boardname)
+            boarddata = await (this.redis as any).getBuffer(
+              boardprefix + boardname
+            )
           // future api
           else
             boarddata = await this.redis.get(
@@ -252,11 +300,12 @@ export class Housekeeping {
           } else return null
         })
       )
-      update = update.concat(await copyprom) // reduces memory footprint
+      const update = await copyprom // reduces memory footprint
 
       const allboards = update
         .filter((el) => !!el)
         .map((el) => (el ? el[0] : null))
+        .filter((el) => el !== null)
       // console.log("allbaords", allboards);
       const backgroundbw = await backgroundp
       lecturescol.updateOne(
@@ -269,7 +318,7 @@ export class Housekeeping {
           }
         }
       )
-      await this.redis.hSet('lecture:' + lectureuuid, [
+      await this.redis.hSet('lecture:{' + lectureuuid + '}', [
         'lastDBsave',
         Date.now().toString()
       ])
@@ -281,68 +330,88 @@ export class Housekeeping {
 
   async tryLectureRedisPurge() {
     try {
-      let cursor = 0
       const allprom = []
 
-      do {
-        const scanret = await this.redis.scan(cursor, {
-          MATCH: 'lecture:????????-????-????-????-????????????',
-          COUNT: 40
-        })
-        // ok we figure out one by one if we should delete
-        // console.log('purge scanret', scanret)
-        const myprom = Promise.all(
-          scanret.keys.map(async (el) => {
-            const lastaccessesp = []
+      const nodes =
+        'masters' in this.redis
+          ? await Promise.all(this.redis.masters.map((node) => node.client))
+          : [this.redis as RedisClientType]
 
-            lastaccessesp.push(this.redis.hmGet(el, 'lastwrite', 'lastaccess'))
+      for (const node of nodes) {
+        let cursor = 0
+        if (!node) continue
+        do {
+          const scanret = await node.scan(cursor, {
+            MATCH: 'lecture:{????????-????-????-????-????????????}',
+            COUNT: 40
+          })
+          // ok we figure out one by one if we should delete
+          // console.log('purge scanret', scanret)
+          const myprom = Promise.all(
+            scanret.keys.map(async (el) => {
+              const lastaccessesp = []
 
-            // ok but also the notescreens are of interest
+              lastaccessesp.push(
+                this.redis.hmGet(el, ['lastwrite', 'lastaccess'])
+              )
 
-            let cursor2 = 0
-            do {
-              const scanret2 = await this.redis.scan(cursor2, {
-                MATCH: el + ':notescreen:????????-????-????-????-????????????'
-              })
-              // console.log('purge scanret2', scanret2)
-              const myprom2 = scanret2.keys.map((el2) => {
-                return this.redis.hmGet(el2, 'lastaccess')
-              })
-              lastaccessesp.push(...myprom2)
+              // ok but also the notescreens are of interest
 
-              cursor2 = scanret2.cursor
-            } while (cursor2 !== 0)
+              for (const node2 of nodes) {
+                let cursor2 = 0
+                if (!node2) continue
+                do {
+                  const scanret2 = await node2.scan(cursor2, {
+                    MATCH:
+                      el + ':notescreen:????????-????-????-????-????????????'
+                  })
+                  // console.log('purge scanret2', scanret2)
+                  const myprom2 = scanret2.keys.map((el2) => {
+                    return this.redis.hmGet(el2, 'lastaccess')
+                  })
+                  lastaccessesp.push(...myprom2)
 
-            let laarr = await Promise.all(lastaccessesp)
-            laarr = laarr.flat().map((el) => Number(el))
-            // console.log("laar",laarr);
-            const la = Math.max(...laarr)
-            // console.log("lastaccess",la,Date.now()-la );
-            const retprom = []
-            // console.log("before purge");
-            if (Date.now() - Number(la) > 30 * 60 * 1000) {
-              console.log('Starting to purge lecture ', el)
-              // purge allowed
-              retprom.push(this.redis.unlink(el))
-              retprom.push(this.redis.sRem('lectures', el))
-              let pcursor = 0
-              do {
-                const pscanret = await this.redis.scan(pcursor, {
-                  MATCH: el + ':*'
-                })
-                console.log('purge element', pscanret)
-                pcursor = pscanret.cursor
-                retprom.push(
-                  ...pscanret.keys.map((el2) => this.redis.unlink(el2), this)
-                )
-              } while (pcursor !== 0)
-            }
-            return Promise.all(retprom)
-          }, this)
-        )
-        allprom.push(myprom)
-        cursor = scanret.cursor
-      } while (cursor !== 0)
+                  cursor2 = scanret2.cursor
+                } while (cursor2 !== 0)
+              }
+
+              let laarr = await Promise.all(lastaccessesp)
+              const flaarr = laarr.flat().map((el) => Number(el))
+              // console.log("laar",laarr);
+              const la = Math.max(...flaarr)
+              // console.log("lastaccess",la,Date.now()-la );
+              const retprom = []
+              // console.log("before purge");
+              if (Date.now() - Number(la) > 30 * 60 * 1000) {
+                console.log('Starting to purge lecture ', el)
+                // purge allowed
+                retprom.push(this.redis.unlink(el))
+                retprom.push(this.redis.sRem('lectures', el))
+                for (const node2 of nodes) {
+                  let pcursor = 0
+                  if (!node2) continue
+                  do {
+                    const pscanret = await node2.scan(pcursor, {
+                      MATCH: el + ':*'
+                    })
+                    console.log('purge element', pscanret)
+                    pcursor = pscanret.cursor
+                    retprom.push(
+                      ...pscanret.keys.map(
+                        (el2) => this.redis.unlink(el2),
+                        this
+                      )
+                    )
+                  } while (pcursor !== 0)
+                }
+              }
+              return Promise.all(retprom)
+            }, this)
+          )
+          allprom.push(myprom)
+          cursor = scanret.cursor
+        } while (cursor !== 0)
+      }
       await Promise.all(allprom) // we are finished giving orders, wait for return
     } catch (err) {
       console.log('tryLectureRedisPurge error', err)
@@ -351,8 +420,8 @@ export class Housekeeping {
 
   async deleteOrphanedLect() {
     try {
-      const lecturescol = this.mongo.collection('lectures')
-      const boardscol = this.mongo.collection('lectureboards')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
+      const boardscol = this.mongo.collection<LectureBoard>('lectureboards')
 
       // first find all lectures that are orphaned, that means no course and no owner
       const query = {
@@ -369,18 +438,16 @@ export class Housekeeping {
         ]
       }
 
-      let deletedoc = (
-        await lecturescol.findOneAndDelete(query, {
-          projection: {
-            _id: 0,
-            usedpictures: 1,
-            pictures: 1,
-            backgroundpdf: 1,
-            usedipynbs: 1,
-            ipynbs: 1
-          }
-        })
-      ).value
+      let deletedoc = await lecturescol.findOneAndDelete(query, {
+        projection: {
+          _id: 0,
+          usedpictures: 1,
+          pictures: 1,
+          backgroundpdf: 1,
+          usedipynbs: 1,
+          ipynbs: 1
+        }
+      })
       const deleteprom = []
       while (deletedoc != null) {
         const nextdeletedoc = lecturescol.findOneAndDelete(query)
@@ -389,7 +456,7 @@ export class Housekeeping {
         // purge all connected boards
         deleteprom.push(boardscol.deleteMany({ uuid: lectureuuid }))
         // put all connected boards to a set for potential deletion
-        let pictset = []
+        let pictset: MongoFile[] = []
         if (deletedoc.usedpictures)
           pictset = pictset.concat(deletedoc.usedpictures)
         if (deletedoc.pictures) pictset = pictset.concat(deletedoc.pictures)
@@ -413,7 +480,7 @@ export class Housekeeping {
         tjpg = [...new Set(tjpg)]
         tpng = [...new Set(tpng)]
 
-        let ipynbset = []
+        let ipynbset: PyNotebook[] = []
         if (deletedoc.usedipynbs)
           ipynbset = ipynbset.concat(deletedoc.usedipynbs)
         if (deletedoc.ipynbs) ipynbset = ipynbset.concat(deletedoc.ipynbs)
@@ -440,7 +507,7 @@ export class Housekeeping {
           deleteprom.push(this.redis.sAdd('checkdel:png', tpng))
         // console.log('delete doc', deletedoc)
 
-        deletedoc = (await nextdeletedoc).value
+        deletedoc = await nextdeletedoc
       }
       await Promise.all(deleteprom) // wait that we are ready before doing other stuff
     } catch (error) {
@@ -455,10 +522,10 @@ export class Housekeeping {
     await this.checkAssetsforDeleteInt('ipynb')
   }
 
-  async checkAssetsforDeleteInt(fileext) {
+  async checkAssetsforDeleteInt(fileext: string) {
     const count = 10
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
       let curset = await this.redis.sPop('checkdel:' + fileext, count)
 
       while (curset.length > 0) {
@@ -491,7 +558,7 @@ export class Housekeeping {
     }
   }
 
-  deleteAssetfile(shastr, fileext) {
+  deleteAssetfile(shastr: string, fileext: string) {
     console.log('Delete asset with sha and fileext ', shastr, fileext)
     try {
       this.deleteAsset(shastr, fileext)
@@ -505,7 +572,7 @@ export class Housekeeping {
     }
   }
 
-  async sendStatusInfo(attn, message) {
+  async sendStatusInfo(attn: string, message: string) {
     console.log('Logging status info\n', attn, '\n', message)
     if (this.mailtransport && this.rootemails) {
       try {
@@ -527,7 +594,7 @@ export class Housekeeping {
 
   async checkAVSRouterStatus() {
     try {
-      const routercol = this.mongo.collection('avsrouters')
+      const routercol = this.mongo.collection<RouterInfo>('avsrouters')
 
       const cursor = routercol.find(
         {},
@@ -546,7 +613,7 @@ export class Housekeeping {
       )
 
       const routers = []
-      while (await cursor.hasNext()) {
+      for await (const doc of cursor) {
         const {
           region,
           localClients,
@@ -555,7 +622,7 @@ export class Housekeeping {
           maxClients,
           primaryRealms,
           url
-        } = await cursor.next()
+        } = doc
 
         routers.push({
           url,
@@ -580,17 +647,33 @@ export class Housekeeping {
 
       const globalAlarm = usedRatio > 0.8 // make me configurable
 
-      const regions = {}
+      const regions: Partial<
+        Record<
+          string,
+          {
+            region: string
+            numClients: number
+            maxClients: number
+            usedRatio?: number
+          }
+        >
+      > = {}
       routers.forEach((router) => {
         if (typeof router.region === 'undefined') return
-        if (!regions[router.region]) regions[router.region] = []
-        const region = regions[router.region]
+        let region = regions[router.region]
+        if (!region)
+          region = regions[router.region] = {
+            region: router.region,
+            numClients: 0,
+            maxClients: 0
+          }
         region.region = router.region
         region.numClients = (region.numClients || 0) + router.numClients
         region.maxClients = (region.maxClients || 0) + router.maxClients
       })
       let localAlarm = false
       Object.values(regions).forEach((region) => {
+        if (!region) return
         const usedRatio = region.numClients / region.maxClients
         region.usedRatio = usedRatio
         if (usedRatio > 0.8) localAlarm = true
@@ -633,6 +716,7 @@ export class Housekeeping {
           'Region information:\n' +
           'Region | numClients| maxClients\n' +
           Object.values(regions)
+            .filter((el) => !!el)
             .map(
               (el) =>
                 el.region + ' | ' + el.numClients + ' | ' + el.maxClients + '\n'

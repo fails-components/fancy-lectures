@@ -125,8 +125,15 @@ export interface Lecture {
   usedipynbs: PyNotebook[]
 }
 
+export interface LectureBoard {
+  uuid: string
+  board: string
+  savetime: number
+  boarddata: Binary
+}
+
 // Support Interfaces
-interface MongoFile {
+export interface MongoFile {
   name: string
   mimetype: string
   sha: Binary
@@ -146,7 +153,7 @@ interface PollOption {
   name: string
 }
 
-interface PyNotebook {
+export interface PyNotebook {
   id: string
   name: string
   sha: Binary

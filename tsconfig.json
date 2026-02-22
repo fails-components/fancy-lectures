@@ -21,6 +21,8 @@
     { "path": "./packages/data" },
     { "path": "./packages/drawobjects" },
     { "path": "./daemons/notepadhandler" },
+    { "path": "./daemons/noteshandler" },
+    { "path": "./daemons/housekeeping" },
     { "path": "./packages/security" }
   ]
 }

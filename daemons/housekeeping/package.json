@@ -9,34 +9,36 @@
     "url": "git+https://github.com/fails-components/notepadhandler.git"
   },
   "private": true,
-  "main": "src/main.js",
+  "main": "src/main.ts",
   "files": [
-    "src/*.js",
+    "src/*.ts",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "scripts": {
-    "start": "node src/main.js",
+    "start": "node src/main.ts",
     "test": "run-s test:lint",
     "test:lint": "eslint .",
     "docker:build": "docker build -t ghcr.io/fails-components/housekeeping:master --secret id=GH_TOKEN -f Dockerfile ../.."
   },
   "devDependencies": {
+    "@types/cron": "^2.0.1",
+    "@types/nodemailer": "^7.0.11",
+    "@fails-components/commonhandler": "^1.2.18",
     "cross-env": "^7.0.3"
   },
   "dependencies": {
     "@fails-components/assets": "^1.4.1",
     "@fails-components/config": "^1.7.0",
-    "@fails-components/security": "^1.4.1",
     "cron": "^1.8.2",
-    "mongodb": "^3.7.1",
+    "mongodb": "^7.1.0",
     "nodemailer": "^7.0.11",
     "redis": "^4.0.6",
-    "redlock": "^4.2.0"
+    "redlock-universal": "^0.8.2"
   },
   "nodemonConfig": {
     "ignore": [

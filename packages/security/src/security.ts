@@ -146,8 +146,6 @@ export class FailsJWTSigner {
     // ok first we get all keys in data base
     this.keys = []
 
-    let cursor = 0
-
     try {
       const promstore = []
 
@@ -157,6 +155,7 @@ export class FailsJWTSigner {
           : [this.redis as RedisClientType]
 
       for (const node of nodes) {
+        let cursor = 0
         if (!node) continue
 
         do {
