@@ -26,6 +26,7 @@ import { NodeRedisAdapter, createLock } from 'redlock-universal'
 import { expressjwt as jwtexpress } from 'express-jwt'
 import { promisify } from 'util'
 import { generateKeyPair } from 'node:crypto'
+import { type StringValue } from 'ms'
 
 type FailsJwt = jwt.Jwt & {
   payload: {
@@ -41,7 +42,7 @@ export class FailsJWTSigner {
   constructor(args: {
     redis: RedisClusterType | RedisClientType
     type: string
-    expiresIn: number
+    expiresIn: StringValue
     secret: string
   }) {
     this.redis = args.redis // redis database holding the keys
@@ -195,7 +196,7 @@ export class FailsJWTSigner {
   }
   private redis: RedisClusterType | RedisClientType
   private type: string
-  private expiresIn: number
+  private expiresIn: StringValue
   private secret: string
   private redlock: NodeRedisAdapter
   private keychecktime: number

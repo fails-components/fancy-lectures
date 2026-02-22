@@ -38,7 +38,22 @@ import type { Socket, Namespace } from 'socket.io'
 import type { webcrypto } from 'node:crypto'
 import type { FailsJWTSigner } from '@fails-components/security'
 
-export type NotepadScreenIdType = {
+export type BasicIdType = {
+  lectureuuid: string
+  socketid: string
+  appversion: string
+  features: string[]
+  user?: string
+  name: string
+  displayname: string
+  screensharechannelid?: string
+  roomname?: string
+  userhash?: string
+  cryptKey?: string
+  signKey?: string
+}
+
+export type NotepadScreenIdType = BasicIdType & {
   lectureuuid: string
   socketid: string
   notescreenuuid: string
@@ -55,6 +70,23 @@ export type NotepadScreenIdType = {
   signKey?: string
   color?: string
   keymaster?: boolean
+}
+
+export type NotesIdType = BasicIdType & {
+  lectureuuid: string
+  socketid: string
+  purpose: 'notes'
+  appversion: string
+  features: string[]
+  user?: string
+  name: string
+  displayname: string
+  screensharechannelid?: string
+  roomname?: string
+  userhash?: string
+  cryptKey?: string
+  signKey?: string
+  color?: string
 }
 
 export type NotepadScreenOnlyIdType = {
@@ -197,7 +229,7 @@ export interface TicketType {
   iv: Uint8Array<ArrayBuffer>
 }
 
-interface TokenType {
+export interface TokenType {
   accessRead?: string[]
   accessWrite?: string[]
   primaryRealm?: string
@@ -353,7 +385,7 @@ export abstract class CommonConnection {
     }
   }
 
-  async getLectDetail(notepadscreenid: NotepadScreenIdType, socket: Socket) {
+  async getLectDetail(notepadscreenid: BasicIdType, socket: Socket) {
     // TODO should be feed from mongodb
 
     type LectureProjection = Pick<
@@ -549,7 +581,7 @@ export abstract class CommonConnection {
   }
 
   async getRouting(
-    args: NotepadScreenIdType,
+    args: BasicIdType,
     cmd: { id: string; dir: 'in' | 'out'; tempOut?: string },
     routerurl: string,
     callback: (

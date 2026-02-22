@@ -28,11 +28,11 @@ import { finished } from 'stream/promises'
 import type { PathLike } from 'node:fs'
 import type { Request } from 'express'
 
-type AssstesOptions = {
+type AssetsOptions = {
   datadir: string
   dataurl: string
   webservertype: 'local' | 'nginx' | 'openstackswift' | 's3'
-  savefile: 'fs' | 'openstackswift' | 's3'
+  savefile?: 'fs' | 'openstackswift' | 's3'
   privateKey: string
   swift?: {
     account: string
@@ -81,7 +81,7 @@ export class FailsAssets {
   private datadir: string
   private dataurl: string
   private webservertype: 'local' | 'nginx' | 'openstackswift' | 's3'
-  private savefile: 'fs' | 'openstackswift' | 's3'
+  private savefile?: 'fs' | 'openstackswift' | 's3'
   private privateKey: string
   // swift webserver
   private swiftaccount?: string
@@ -107,7 +107,7 @@ export class FailsAssets {
   private xmlparser: XMLParser
   private emptyhash: string
 
-  constructor(args: AssstesOptions) {
+  constructor(args: AssetsOptions) {
     this.datadir = args.datadir ? args.datadir : 'files'
     this.dataurl = args.dataurl
     this.webservertype = args.webservertype

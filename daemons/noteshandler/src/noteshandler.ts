@@ -17,11 +17,54 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 import { createHash } from 'crypto'
-import { CommonConnection } from '@fails-components/commonhandler'
+import {
+  CommonConnection,
+  type NotesIdType,
+  type RouterInfo,
+  type TokenType
+} from '@fails-components/commonhandler'
+import { Binary, type Db as MongoDb } from 'mongodb'
+import { type RedisClusterType, type RedisClientType } from 'redis'
+import type { Namespace } from 'socket.io'
+import type { FailsAssets } from '@fails-components/assets'
+import type {
+  FailsJWTSigner,
+  AuthenticatedSocket
+} from '@fails-components/security'
+
+type NotesToken = {
+  user?: Record<string, any>
+  purpose: 'notes'
+  lectureuuid: string
+  appversion: string
+  features: string[]
+  name: string
+  maxrenew: number
+}
 
 export class NotesConnection extends CommonConnection {
-  constructor(args) {
-    super(args)
+  protected mongo: MongoDb
+  protected getFileURL: (sha: Binary, mimetype: string) => string
+  protected signAvsJwt: FailsJWTSigner['signToken']
+  protected redis: RedisClusterType | RedisClientType
+  protected notepadio: Namespace
+  protected notesio: Namespace
+  protected screenio: Namespace
+  protected noteshandlerURL: string
+  protected signNotesJwt: FailsJWTSigner['signToken']
+
+  constructor(args: {
+    redis: RedisClusterType | RedisClientType
+    mongo: MongoDb
+    getFileURL: FailsAssets['getFileURL']
+    noteshandlerURL: string
+    signNotesJwt: FailsJWTSigner['signToken']
+    signAvsJwt: FailsJWTSigner['signToken']
+    notepadio: Namespace
+    screenio: Namespace
+    notesio: Namespace
+  }) {
+    super()
     this.redis = args.redis
     this.mongo = args.mongo
     this.notesio = args.notesio
@@ -37,15 +80,21 @@ export class NotesConnection extends CommonConnection {
     this.SocketHandlerNotes = this.SocketHandlerNotes.bind(this)
   }
 
-  async SocketHandlerNotes(socket) {
-    const address = socket.handshake.headers['x-forwarded-for']
-      .split(',')
+  async SocketHandlerNotes(socket: AuthenticatedSocket) {
+    const address = socket?.handshake?.headers?.['x-forwarded-for']
+      ?.toString()
+      ?.split(',')
       .map((el) => el.trim()) || [socket.client.conn.remoteAddress]
     console.log('Notes %s with ip %s  connected', socket.id, address)
+    if (!socket.decoded_token) {
+      console.log('decoded token invalid')
+      socket.disconnect()
+      return
+    }
     console.log('Notes name', socket.decoded_token.name)
     console.log('Notes lecture uuid', socket.decoded_token.lectureuuid)
 
-    const purenotes = {
+    const purenotes: NotesIdType = {
       socketid: socket.id,
       lectureuuid: socket.decoded_token.lectureuuid,
       name: socket.decoded_token.name,
@@ -55,11 +104,12 @@ export class NotesConnection extends CommonConnection {
       purpose: 'notes'
     }
 
-    let curtoken = socket.decoded_token
-    let routerres
-    let routerurl = new Promise((resolve) => {
-      routerres = resolve
-    })
+    let curtoken: NotesToken = socket.decoded_token as NotesToken
+    let routerurl: Promise<string | undefined> | undefined
+    let routerres: ((value: string | undefined) => void) | undefined
+    ;({ promise: routerurl, resolve: routerres } = Promise.withResolvers<
+      string | undefined
+    >())
 
     // console.log('notes connected')
 
@@ -81,6 +131,10 @@ export class NotesConnection extends CommonConnection {
 
     {
       const token = await this.getNotesToken(curtoken)
+      if (!token.decoded) {
+        console.log('error in sending authtoken', token.error)
+        return
+      }
       curtoken = token.decoded
       socket.emit('authtoken', { token: token.token })
     }
@@ -94,20 +148,39 @@ export class NotesConnection extends CommonConnection {
     this.emitAVOffers(socket, purenotes)
     this.emitVideoquestions(socket, purenotes)
 
-    socket.on(
-      'reauthor',
-      async function () {
-        // we use the information from the already present authtoken
-        this.addUpdateCryptoIdent(purenotes)
-        const token = await this.getNotesToken(curtoken)
-        curtoken = token.decoded
-        socket.emit('authtoken', { token: token.token })
-      }.bind(this)
-    )
+    socket.on('reauthor', async () => {
+      // we use the information from the already present authtoken
+      const token = await this.getNotesToken(curtoken)
+      if (!token.decoded) {
+        console.log('error in reauthor', token.error)
+        return
+      }
+      curtoken = token.decoded
+      const { cryptKey, signKey, userhash } = purenotes
+      if (
+        typeof cryptKey !== 'string' ||
+        typeof signKey !== 'string' ||
+        typeof userhash !== 'string'
+      ) {
+        console.log('error in reauthor , no sign, userhash or crypt key')
+        return
+      }
+      this.addUpdateCryptoIdent({ ...purenotes, cryptKey, signKey, userhash })
+
+      socket.emit('authtoken', { token: token.token })
+    })
 
     socket.on('chatquestion', (cmd) => {
+      if (!curtoken) {
+        console.log('curtoken not defined in chatquestion')
+        return
+      }
+      if (!purenotes.roomname) {
+        console.log('roomname not defined in chatquestion')
+        return
+      }
       if (cmd.text) {
-        const displayname = socket.decoded_token.user.displayname
+        const displayname = curtoken.user?.displayname
         const userhash = purenotes.userhash
 
         this.notepadio.to(purenotes.roomname).emit('chatquestion', {
@@ -149,10 +222,15 @@ export class NotesConnection extends CommonConnection {
         ((typeof data.selection === 'string' &&
           /^[0-9a-zA-Z]{9}$/.test(data.selection)) ||
           (Array.isArray(data.selection) &&
-            data.selection.filter((el) => /^[0-9a-zA-Z]{9}$/.test(el)).length >
-              0))
+            data.selection.filter((el: string) => /^[0-9a-zA-Z]{9}$/.test(el))
+              .length > 0))
       ) {
         const pollstate = await this.getPollinfo(purenotes)
+        if (!pollstate) {
+          console.log('get pollinfo in castvote failed')
+          callback({ error: 'get pollinfo in castvote failed' })
+          return
+        }
         if (
           pollstate.limited &&
           !pollstate.participants.includes(purenotes.userhash)
@@ -165,14 +243,33 @@ export class NotesConnection extends CommonConnection {
           callback({ error: 'pollid does not match current running poll!' })
           return
         }
-        const useruuid = socket.decoded_token.user.useruuid
+        if (!curtoken) {
+          console.log('curtoken not defined in castvote')
+          callback({ error: 'curtoken not defined in castvote' })
+          return
+        }
+        const useruuid = curtoken.user?.useruuid
+        if (typeof useruuid === 'undefined') {
+          console.log('user.useruuid in token invalid')
+          socket.disconnect()
+          return
+        }
         try {
           const ballothash = createHash('sha256')
           ballothash.update(useruuid + data.pollid)
 
           const salt = await this.redis.get(
-            'pollsalt:lecture:' + purenotes.lectureuuid + ':poll:' + data.pollid
+            'pollsalt:lecture:{' +
+              purenotes.lectureuuid +
+              '}:poll:' +
+              data.pollid
           )
+          if (!salt) {
+            throw new Error('Problem in getting polsalt')
+          }
+          if (!purenotes.roomname) {
+            throw new Error('roomname not defined in castvoten')
+          }
           ballothash.update(salt)
           const ballotid = ballothash.digest('hex')
           this.notepadio.to(purenotes.roomname).emit('castvote', {
@@ -187,21 +284,26 @@ export class NotesConnection extends CommonConnection {
         }
       } else callback({ error: 'failure' })
     })
+    let rurl: string | undefined
 
     socket.on('getrouting', async (cmd, callback) => {
       let tempOut
       if (cmd.dir === 'out' && cmd.id === purenotes.socketid) {
         let toid
         try {
-          await Promise.any([
-            routerurl,
-            new Promise((resolve, reject) => {
-              toid = setTimeout(reject, 20 * 1000)
-            })
-          ])
+          if (typeof rurl === 'undefined' && routerurl)
+            rurl = await Promise.any([
+              routerurl,
+              new Promise<undefined>((resolve, reject) => {
+                toid = setTimeout(reject, 20 * 1000)
+              })
+            ])
           if (toid) clearTimeout(toid)
+          if (typeof rurl === 'undefined') {
+            throw new Error('Unknown routerurl')
+          }
           toid = undefined
-          tempOut = await this.getTempOutTransport(purenotes, await routerurl)
+          tempOut = await this.getTempOutTransport(purenotes, rurl)
         } catch (error) {
           callback({ error: 'getrouting: timeout or error tempout: ' + error })
         }
@@ -215,20 +317,19 @@ export class NotesConnection extends CommonConnection {
       ) {
         try {
           let toid
-          await Promise.any([
-            routerurl,
-            new Promise((resolve, reject) => {
-              toid = setTimeout(reject, 20 * 1000)
-            })
-          ])
+          if (typeof rurl === 'undefined' && routerurl)
+            rurl = await Promise.any([
+              routerurl,
+              new Promise<undefined>((resolve, reject) => {
+                toid = setTimeout(reject, 20 * 1000)
+              })
+            ])
           if (toid) clearTimeout(toid)
+          if (typeof rurl === 'undefined') {
+            throw new Error('Unknown routerurl')
+          }
           toid = undefined
-          this.getRouting(
-            purenotes,
-            { ...cmd, tempOut },
-            await routerurl,
-            callback
-          )
+          await this.getRouting(purenotes, { ...cmd, tempOut }, rurl, callback)
         } catch (error) {
           callback({ error: 'getrouting: timeout or error: ' + error })
         }
@@ -257,7 +358,7 @@ export class NotesConnection extends CommonConnection {
               routerres = undefined
               res(ret.url)
             }
-            routerurl = ret.url
+            rurl = ret.url
           } else routerurl = undefined
           callback(ret)
         }
@@ -270,12 +371,26 @@ export class NotesConnection extends CommonConnection {
       if (cmd.cryptKey && cmd.signKey) {
         purenotes.cryptKey = cmd.cryptKey
         purenotes.signKey = cmd.signKey
-        this.addUpdateCryptoIdent(purenotes)
+        this.addUpdateCryptoIdent(
+          purenotes as typeof purenotes & {
+            signKey: string
+            cryptKey: string
+            userhash: string
+          }
+        )
       }
     })
 
     socket.on('keymasterQuery', () => {
-      this.handleKeymasterQuery(purenotes)
+      if (purenotes.cryptKey && purenotes.signKey) {
+        this.handleKeymasterQuery(
+          purenotes as typeof purenotes & {
+            signKey: string
+            cryptKey: string
+            userhash: string
+          }
+        )
+      }
     })
 
     socket.on('disconnect', async () => {
@@ -291,13 +406,13 @@ export class NotesConnection extends CommonConnection {
             const proms = []
             proms.push(
               this.redis.hDel(
-                'lecture:' + purenotes.lectureuuid + ':idents',
+                'lecture:{' + purenotes.lectureuuid + '}:idents',
                 purenotes.socketid
               )
             )
             proms.push(
               this.redis.hDel(
-                'lecture:' + purenotes.lectureuuid + ':videoquestion',
+                'lecture:{' + purenotes.lectureuuid + '}:videoquestion',
                 'permitted:' + purenotes.socketid
               )
             )
@@ -321,7 +436,7 @@ export class NotesConnection extends CommonConnection {
             console.log('Problem disconnect:', error)
           }
           // console.log('notes disconnected leave room', purenotes.roomname)
-          purenotes.roomname = null
+          purenotes.roomname = undefined
         }
       }
     })
@@ -340,10 +455,15 @@ export class NotesConnection extends CommonConnection {
     }
   }
 
-  async getNotesToken(oldtoken) {
+  async getNotesToken(oldtoken: NotesToken): Promise<{
+    token?: string
+    decoded?: NotesToken
+    oldtoken?: NotesToken
+    error?: string
+  }> {
     const newtoken = {
       lectureuuid: oldtoken.lectureuuid,
-      purpose: 'notes', // in case a bug is there, no one should escape the realm
+      purpose: 'notes' as const, // in case a bug is there, no one should escape the realm
       name: oldtoken.name,
       user: oldtoken.user,
       appversion: oldtoken.appversion,
@@ -356,17 +476,23 @@ export class NotesConnection extends CommonConnection {
     return { token: await this.signNotesJwt(newtoken), decoded: newtoken }
   }
 
-  async getTempOutTransport(args, routerurl) {
+  async getTempOutTransport(
+    args: {
+      lectureuuid: string
+      socketid: string
+    },
+    routerurl: string
+  ) {
     try {
       // first check permissions
       const exists = await this.redis.hExists(
-        'lecture:' + args.lectureuuid + ':videoquestion',
+        'lecture:{' + args.lectureuuid + '}:videoquestion',
         'permitted:' + args.socketid
       )
       if (!exists) return
       // very well we have the permission, so generate a token for temperory perms
 
-      const routercol = this.mongo.collection('avsrouters')
+      const routercol = this.mongo.collection<RouterInfo>('avsrouters')
 
       const majorid = args.lectureuuid
       const clientid = args.lectureuuid + ':' + args.socketid
@@ -389,35 +515,47 @@ export class NotesConnection extends CommonConnection {
         }
       )
 
-      const calcHash = async (input) => {
+      if (!router) {
+        throw new Error('no router found')
+      }
+      const selrouter = router
+
+      const calcHash = async (input: string) => {
         const hash = createHash('sha256')
         hash.update(input)
         // console.log('debug router info', router)
-        hash.update(router.hashSalt)
+        hash.update(selrouter.hashSalt)
         return hash.digest('base64')
       }
 
       const realmhash = calcHash(args.lectureuuid)
       const clienthash = calcHash(args.socketid)
 
-      let token = {}
-      // todo hash table
-      token.accessWrite = [
-        (await realmhash).replace(/[+/]/g, '\\$&') +
-          ':' +
-          (await clienthash).replace(/[+/]/g, '\\$&')
-      ]
-      token.realm = await realmhash
-      token.client = await clienthash
-      token = this.signAvsJwt(token)
-      return await token
+      let token: TokenType = {
+        // todo hash table
+        accessWrite: [
+          (await realmhash).replace(/[+/]/g, '\\$&') +
+            ':' +
+            (await clienthash).replace(/[+/]/g, '\\$&')
+        ],
+        realm: await realmhash,
+        client: await clienthash
+      }
+      const jwttoken = this.signAvsJwt(token)
+      return await jwttoken
     } catch (error) {
       console.log('Problem getTempOutTransport', error)
       throw new Error()
     }
   }
 
-  async handleVQoffer(args, cmd) {
+  async handleVQoffer(
+    args: { lectureuuid: string; socketid: string },
+    cmd: {
+      type: 'video' | 'audio'
+      db: number
+    }
+  ) {
     // ok to things to do, inform the others about the offer
     // and store the information in redis
 
@@ -443,18 +581,18 @@ export class NotesConnection extends CommonConnection {
     // VQ offers are not saved
   }
 
-  async getPresentationinfo(args) {
+  async getPresentationinfo(args: { lectureuuid: string }) {
     try {
-      let lectprop = this.redis.hmGet('lecture:' + args.lectureuuid, [
+      let lectprop = this.redis.hmGet('lecture:{' + args.lectureuuid + '}', [
         'casttoscreens',
         'backgroundbw',
         'showscreennumber'
       ])
-      lectprop = await lectprop
+      const rlectprop = await lectprop
       return {
-        casttoscreens: lectprop[0] !== null ? lectprop[0] : 'false',
-        backgroundbw: lectprop[1] !== null ? lectprop[1] : 'true',
-        showscreennumber: lectprop[2] !== null ? lectprop[2] : 'false'
+        casttoscreens: rlectprop[0] !== null ? rlectprop[0] : 'false',
+        backgroundbw: rlectprop[1] !== null ? rlectprop[1] : 'true',
+        showscreennumber: rlectprop[2] !== null ? rlectprop[2] : 'false'
       }
     } catch (error) {
       console.log('getPresentationinfo', error)
@@ -462,7 +600,7 @@ export class NotesConnection extends CommonConnection {
     }
   }
 
-  async getPollinfo(args) {
+  async getPollinfo(args: { lectureuuid: string }) {
     try {
       const pollinfo = await this.redis.hGetAll(
         'lecture:' + args.lectureuuid + ':pollstate'
