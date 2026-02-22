@@ -4,6 +4,9 @@ files
 packages/*/.env.development.local
 packages/*/build
 packages/*/dist
+daemons/*/.env.development.local
+daemons/*/build
+daemons/*/dist
 /.npmrc
 .env
 daemons/staticserver/oss-attribution/*

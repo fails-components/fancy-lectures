@@ -36,21 +36,28 @@ import type {
 } from 'mongodb'
 import type { Socket, Namespace } from 'socket.io'
 import type { webcrypto } from 'node:crypto'
+import type { FailsJWTSigner } from '@fails-components/security'
 
-type NotepadScreenIdType = {
+export type NotepadScreenIdType = {
   lectureuuid: string
   socketid: string
   notescreenuuid: string
   purpose: 'notepad' | 'screen'
-  appversion: number
+  appversion: string
   features: string[]
-  user: string
+  user?: string
   name: string
   displayname: string
-  screensharechannelid: undefined | string
+  screensharechannelid?: string
+  roomname?: string
+  userhash?: string
+  cryptKey?: string
+  signKey?: string
+  color?: string
+  keymaster?: boolean
 }
 
-type NotepadScreenOnlyIdType = {
+export type NotepadScreenOnlyIdType = {
   lectureuuid: string
 }
 
@@ -73,9 +80,9 @@ export interface Lecture {
   owner: string[]
   date: Date
   pictures: MongoFile[]
-  backgroundpdfuse: string | boolean
+  backgroundpdfuse: number
   backgroundpdf: BackgroundPdf
-  polls: Poll[]
+  polls: LecturePoll[]
   boards: string[]
   boardsavetime: number
   backgroundbw: string | boolean // Appears as "true" (string) in your JSON
@@ -94,7 +101,7 @@ interface MongoFile {
   tsha: Binary
 }
 
-interface Poll {
+export interface LecturePoll {
   id: string
   name: string
   multi: boolean
@@ -115,7 +122,7 @@ interface PyNotebook {
   filename: string
   presentDownload: 'no' | 'download' | 'downloadAndEdit'
   note: string
-  applets: PyApplet[] | Record<string, any>
+  applets: PyApplet[]
 }
 
 interface PyApplet {
@@ -157,7 +164,7 @@ export interface RouterInfo {
 
 export interface TransportInfo {
   ipaddress: string[]
-  geopos: { longitude: number; latitude: number }
+  geopos?: { longitude: number; latitude: number }
   lectureuuid: string
   clientid: string
   canWrite: boolean
@@ -222,7 +229,7 @@ export interface AddUpdateCryptoIdentArgs {
 export abstract class CommonConnection {
   protected abstract mongo: MongoDb
   protected abstract getFileURL: (sha: Binary, mimetype: string) => string
-  protected abstract signAvsJwt: (token: Record<string, any>) => Promise<string>
+  protected abstract signAvsJwt: FailsJWTSigner['signToken']
   protected abstract notepadio: Namespace
   protected abstract notesio: Namespace
   protected abstract screenio: Namespace
@@ -313,7 +320,7 @@ export abstract class CommonConnection {
 
     try {
       const res = await this.redis.sMembers(
-        'lecture:' + lectureuuid + ':boards'
+        'lecture:{' + lectureuuid + '}:boards'
       )
 
       // console.log('boards', res, 'lecture:' + lectureuuid + ':boards')
@@ -326,7 +333,7 @@ export abstract class CommonConnection {
         try {
           const res2 = await this.redis.get(
             commandOptions({ returnBuffers: true }),
-            'lecture:' + lectureuuid + ':board' + boardnum
+            'lecture:{' + lectureuuid + '}:board' + boardnum
           )
 
           countdown--
@@ -397,10 +404,10 @@ export abstract class CommonConnection {
     }
     // Two things store it in redis until disconnect
     const oldidentProm = this.redis.hGet(
-      'lecture:' + args.lectureuuid + ':idents',
+      'lecture:{' + args.lectureuuid + '}:idents',
       args.socketid.toString()
     )
-    this.redis.hSet('lecture:' + args.lectureuuid + ':idents', [
+    this.redis.hSet('lecture:{' + args.lectureuuid + '}:idents', [
       args.socketid.toString(),
       JSON.stringify(identity)
     ])
@@ -440,9 +447,9 @@ export abstract class CommonConnection {
     // ok, first we have to figure out if a query is already running
     try {
       const operation = async (isoredis: typeof this.redis) => {
-        await isoredis.watch('lecture:' + args.lectureuuid + ':keymaster')
+        await isoredis.watch('lecture:{' + args.lectureuuid + '}:keymaster')
         const queryInfo = await isoredis.hGet(
-          'lecture:' + args.lectureuuid + ':keymaster',
+          'lecture:{' + args.lectureuuid + '}:keymaster',
           'queryTime'
         )
 
@@ -454,7 +461,7 @@ export abstract class CommonConnection {
 
         const res = await isoredis
           .multi()
-          .hSet('lecture:' + args.lectureuuid + ':keymaster', [
+          .hSet('lecture:{' + args.lectureuuid + '}:keymaster', [
             'queryTime',
             now.toString(),
             'bidding',
@@ -481,14 +488,14 @@ export abstract class CommonConnection {
 
   async emitAVOffers(socket: Socket, args: NotepadScreenOnlyIdType) {
     const alloffers = await this.redis.hGetAll(
-      'lecture:' + args.lectureuuid + ':avoffers'
+      'lecture:{' + args.lectureuuid + '}:avoffers'
     )
     const offers = []
     for (const label in alloffers) {
       const labels = label.split(':')
       offers.push({
         type: labels[0],
-        id: labels[1],
+        id: labels[1].slice(1, -1),
         time: alloffers[label]
       })
     }
@@ -497,7 +504,7 @@ export abstract class CommonConnection {
 
   async emitVideoquestions(socket: Socket, args: NotepadScreenOnlyIdType) {
     const allquestions = await this.redis.hGetAll(
-      'lecture:' + args.lectureuuid + ':videoquestion'
+      'lecture:{' + args.lectureuuid + '}:videoquestion'
     )
     const vquestions = []
     for (const label in allquestions) {
@@ -505,7 +512,7 @@ export abstract class CommonConnection {
         const labels = label.split(':')
         const obj = JSON.parse(allquestions[label])
         vquestions.push({
-          id: labels[1],
+          id: labels[1].slice(1, -1),
           ...obj
         })
       } catch (error) {
@@ -528,9 +535,10 @@ export abstract class CommonConnection {
     this.notesio.to(roomname).emit('closevideoquestion', message)
 
     try {
-      await this.redis.hDel('lecture:' + args.lectureuuid + ':videoquestion', [
-        'permitted:' + cmd.id
-      ])
+      await this.redis.hDel(
+        'lecture:{' + args.lectureuuid + '}:videoquestion',
+        ['permitted:' + cmd.id]
+      )
     } catch (error) {
       console.log('problem in closeVideoQuestion', error)
     }

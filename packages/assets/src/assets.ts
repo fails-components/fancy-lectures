@@ -787,7 +787,7 @@ export class FailsAssets {
 
   async saveFile(
     input: Buffer | Uint8Array,
-    sha: { toString: (arg0: string) => any },
+    sha: Buffer<ArrayBuffer>,
     mime: string,
     size: any
   ) {

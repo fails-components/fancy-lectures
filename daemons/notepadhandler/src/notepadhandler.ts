@@ -22,28 +22,87 @@ import {
   Dispatcher,
   Collection,
   /*  MemContainer, */
-  CallbackContainer
+  CallbackContainer,
+  type ContainerWriteData
 } from '@fails-components/data'
 import { randomUUID } from 'node:crypto'
+import { NodeRedisAdapter, createLock } from 'redlock-universal'
 import { promisify } from 'util'
-import Redlock from 'redlock'
 import { randomBytes, createHash } from 'crypto'
-import { RedisRedlockProxy } from '@fails-components/security'
 import { WatchError } from 'redis'
-import { CommonConnection } from '@fails-components/commonhandler'
+import {
+  CommonConnection,
+  type NotepadScreenOnlyIdType,
+  type NotepadScreenIdType,
+  type Lecture,
+  type LecturePoll
+} from '@fails-components/commonhandler'
+import { Binary, type Db as MongoDb } from 'mongodb'
+import { type RedisClusterType, type RedisClientType } from 'redis'
+import type { Socket, Namespace } from 'socket.io'
+import type { FailsAssets } from '@fails-components/assets'
+import type {
+  FailsJWTSigner,
+  AuthenticatedSocket
+} from '@fails-components/security'
 
 // next function from Gemini
 // probably coming from this stackoverflow question:
 // https://stackoverflow.com/questions/7905929/how-to-test-valid-uuid-guid
-function isUUID(str) {
+function isUUID(str: string) {
   const regex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   return regex.test(str)
 }
 
+type ScreenLectureToken = {
+  user?: string
+  purpose: 'notepad' | 'screen'
+  lectureuuid: string
+  notescreenuuid: string
+  notepadhandler: string
+  appversion: string
+  features: string[]
+  name: string
+  maxrenew: number
+  color?: string
+}
+
 export class NoteScreenConnection extends CommonConnection {
-  constructor(args) {
-    super(args)
+  protected mongo: MongoDb
+  protected getFileURL: (sha: Binary, mimetype: string) => string
+  protected signAvsJwt: FailsJWTSigner['signToken']
+  protected notepadio: Namespace
+  protected notesio: Namespace
+  protected screenio: Namespace
+  protected redis: RedisClusterType | RedisClientType
+
+  protected screenUrl: Partial<Record<string, string>>
+  protected notepadUrl: Partial<Record<string, string>>
+  protected notepadhandlerURL: string
+
+  protected saveFile: FailsAssets['saveFile'] // typeof the method
+  protected signScreenJwt: FailsJWTSigner['signToken']
+  protected signNotepadJwt: FailsJWTSigner['signToken']
+
+  protected redlock: NodeRedisAdapter
+
+  constructor(args: {
+    redis: RedisClusterType | RedisClientType
+    mongo: MongoDb
+    saveFile: FailsAssets['saveFile']
+    getFileURL: FailsAssets['getFileURL']
+    signScreenJwt: FailsJWTSigner['signToken']
+    signNotepadJwt: FailsJWTSigner['signToken']
+    signAvsJwt: FailsJWTSigner['signToken']
+    screenUrl: Partial<Record<string, string>>
+    notepadUrl: Partial<Record<string, string>>
+    notepadhandlerURL: string
+    notepadio: Namespace
+    screenio: Namespace
+    notesio: Namespace
+  }) {
+    super()
     this.redis = args.redis
     this.mongo = args.mongo
     this.notepadio = args.notepadio
@@ -61,14 +120,7 @@ export class NoteScreenConnection extends CommonConnection {
 
     this.notepadhandlerURL = args.notepadhandlerURL
 
-    this.redlock = new Redlock([RedisRedlockProxy(this.redis)], {
-      driftFactor: 0.01, // multiplied by lock ttl to determine drift time
-
-      retryCount: 10,
-
-      retryDelay: 200, // time in ms
-      retryJitter: 200 // time in ms
-    })
+    this.redlock = new NodeRedisAdapter(this.redis)
 
     this.SocketHandlerNotepad = this.SocketHandlerNotepad.bind(this)
     this.SocketHandlerScreen = this.SocketHandlerScreen.bind(this)
@@ -77,12 +129,22 @@ export class NoteScreenConnection extends CommonConnection {
     this.lastaccess = this.lastaccess.bind(this)
   }
 
-  lastaccess(/*uuid */) {
+  async createLock(key: string, ttl: number) {
+    return createLock({
+      adapter: this.redlock,
+      key,
+      ttl,
+      retryAttempts: 10,
+      retryDelay: 200
+    })
+  }
+
+  lastaccess(uuid: string) {
     // TODO
     // console.log('lastaccess', uuid)
   }
 
-  async emitscreenlists(args) {
+  async emitscreenlists(args: NotepadScreenOnlyIdType) {
     // only lectureuuid
     const roomname = this.getRoomName(args.lectureuuid)
 
@@ -114,31 +176,49 @@ export class NoteScreenConnection extends CommonConnection {
   }
 
   // fullnotepad lifecycle
-  async SocketHandlerNotepad(socket) {
-    const address = socket.handshake.headers['x-forwarded-for']
-      .split(',')
+  async SocketHandlerNotepad(socket: AuthenticatedSocket) {
+    const address = socket?.handshake?.headers?.['x-forwarded-for']
+      ?.toString()
+      ?.split(',')
       .map((el) => el.trim()) || [socket.client.conn.remoteAddress]
     console.log('Client %s with ip %s  connected', socket.id, address)
     if (socket.decoded_token)
       console.log('Client username', socket.decoded_token.user.displayname)
     else console.log('no decoded token')
+    if (!socket.decoded_token) {
+      console.log('decoded token invalid')
+      socket.disconnect()
+      return
+    }
+    let curtoken: ScreenLectureToken =
+      socket.decoded_token as ScreenLectureToken
 
     // console.log('decoded token', socket.decoded_token)
+    const lectureuuid = socket.decoded_token?.lectureuuid
 
-    if (!isUUID(socket.decoded_token.lectureuuid)) {
+    if (!isUUID(lectureuuid)) {
       console.log('lectureuuid in decoded token invalid')
+      socket.disconnect()
+      return
+    }
+    const notescreenuuid = socket.decoded_token?.notescreenuuid
+
+    if (!isUUID(notescreenuuid)) {
+      console.log('notescreenuuid in decoded token invalid')
+      socket.disconnect()
+      return
     }
 
-    const notepadscreenid = {
-      lectureuuid: socket.decoded_token.lectureuuid,
+    const notepadscreenid: NotepadScreenIdType = {
+      lectureuuid,
       socketid: socket.id,
-      notescreenuuid: socket.decoded_token.notescreenuuid,
+      notescreenuuid: notescreenuuid,
       purpose: 'notepad',
       appversion: socket.decoded_token.appversion,
       features: socket.decoded_token.features,
       user: socket.decoded_token.user,
       name: socket.decoded_token.name,
-      displayname: socket.decoded_token.user.displayname,
+      displayname: socket.decoded_token.user?.displayname,
       screensharechannelid: undefined
     }
     this.cleanupNotescreens(notepadscreenid) // Cleanup
@@ -148,22 +228,29 @@ export class NoteScreenConnection extends CommonConnection {
       })); */
     const loadlectprom = this.loadLectFromDB(notepadscreenid.lectureuuid)
 
-    let curtoken = socket.decoded_token
-    let routerres
-    let routerurl = new Promise((resolve) => {
-      routerres = resolve
-    })
+    let routerurl: Promise<string | undefined> | undefined
+    let routerres: ((value: string | undefined) => void) | undefined
+    ;({ promise: routerurl, resolve: routerres } = Promise.withResolvers<
+      string | undefined
+    >())
 
     // setup data for handling the connection
 
     const collection = new Collection(
       function (id, data) {
-        return new CallbackContainer(id, data)
+        const nid = Number(id)
+        if (nid !== id) throw new Error('Id is not numerical for container')
+        return new CallbackContainer(nid, data)
       },
       {
         writeData: async (obj, number, data, append) => {
           await loadlectprom
-          obj.writeData(notepadscreenid.lectureuuid, number, data, append)
+          ;(obj as { writeData: ContainerWriteData }).writeData(
+            notepadscreenid.lectureuuid,
+            number,
+            data,
+            append
+          )
         },
         obj: this
       }
@@ -176,7 +263,7 @@ export class NoteScreenConnection extends CommonConnection {
     // should be handled by client, really
     /*
     this.redis.get(
-      Buffer.from('lecture:' + notepadscreenid.lectureuuid + ':boardcommand'),
+      Buffer.from('lecture:{' + notepadscreenid.lectureuuid + '}:boardcommand'),
       function (err, res) {
         if (err) console.log('get board command', err)
         else if (res) {
@@ -221,7 +308,13 @@ export class NoteScreenConnection extends CommonConnection {
 
     {
       const messagehash = createHash('sha256')
-      const useruuid = socket.decoded_token.user.useruuid
+      const useruuid = socket?.decoded_token?.user?.useruuid
+      if (typeof useruuid === 'undefined') {
+        console.log('user.useruuid in decoded token invalid')
+        socket.disconnect()
+        return
+      }
+
       // now we create a hash that can be used to identify a user, if and only if,
       // access to this database is available and not between lectures!
       messagehash.update(useruuid + notepadscreenid.lectureuuid)
@@ -230,6 +323,10 @@ export class NoteScreenConnection extends CommonConnection {
 
     const emittoken = async () => {
       const token = await this.getLectureToken(curtoken)
+      if (!token.decoded) {
+        console.log('error in emittoken', token.error)
+        return
+      }
       curtoken = token.decoded
       socket.emit('authtoken', { token: token.token })
     }
@@ -244,24 +341,47 @@ export class NoteScreenConnection extends CommonConnection {
     socket.on('reauthor', async () => {
       // we use the information from the already present authtoken
       const token = await this.getLectureToken(curtoken)
+      if (!token.decoded) {
+        console.log('error in reauthor', token.error)
+        return
+      }
       curtoken = token.decoded
-      this.updateNotescreenActive(notepadscreenid)
+      const { cryptKey, signKey, userhash } = notepadscreenid
+      if (
+        typeof cryptKey !== 'string' ||
+        typeof signKey !== 'string' ||
+        typeof userhash !== 'string'
+      ) {
+        console.log('error in reauthor , no sign, userhash or crypt key')
+        return
+      }
+      this.updateNotescreenActive({
+        ...notepadscreenid,
+        cryptKey,
+        signKey,
+        userhash
+      })
       socket.emit('authtoken', { token: token.token })
     })
+    let rurl: string | undefined
 
     socket.on('getrouting', async (cmd, callback) => {
       if (cmd && cmd.id && cmd.dir && (cmd.dir === 'in' || cmd.dir === 'out')) {
         try {
           let toid
-          await Promise.any([
-            routerurl,
-            new Promise((resolve, reject) => {
-              toid = setTimeout(reject, 20 * 1000)
-            })
-          ])
+          if (typeof rurl === 'undefined' && routerurl)
+            rurl = await Promise.any([
+              routerurl,
+              new Promise<undefined>((resolve, reject) => {
+                toid = setTimeout(reject, 20 * 1000)
+              })
+            ])
           if (toid) clearTimeout(toid)
+          if (typeof rurl === 'undefined') {
+            throw new Error('Unknown routerurl')
+          }
           toid = undefined
-          await this.getRouting(notepadscreenid, cmd, await routerurl, callback)
+          await this.getRouting(notepadscreenid, cmd, rurl, callback)
         } catch (error) {
           callback({ error: 'getrouting: timeout or error: ' + error })
         }
@@ -272,8 +392,8 @@ export class NoteScreenConnection extends CommonConnection {
       let geopos
       if (cmd && cmd.geopos && cmd.geopos.longitude && cmd.geopos.latitude)
         geopos = {
-          longitude: cmd.geopos.longitude,
-          latitude: cmd.geopos.latitude
+          longitude: Number(cmd.geopos.longitude),
+          latitude: Number(cmd.geopos.latitude)
         }
       this.getTransportInfo(
         {
@@ -290,8 +410,8 @@ export class NoteScreenConnection extends CommonConnection {
               routerres = undefined
               res(ret.url)
             }
-            routerurl = ret.url
-          } else routerurl = undefined
+            rurl = ret.url
+          } else rurl = undefined
           callback(ret)
         }
       ).catch((error) => {
@@ -299,16 +419,31 @@ export class NoteScreenConnection extends CommonConnection {
       })
     })
 
-    socket.on('keyInfo', (cmd) => {
+    socket.on('keyInfo', (cmd: { cryptKey?: string; signKey?: string }) => {
       if (cmd.cryptKey && cmd.signKey) {
         notepadscreenid.cryptKey = cmd.cryptKey
         notepadscreenid.signKey = cmd.signKey
-        this.addUpdateCryptoIdent(notepadscreenid)
+        // note userhash is enforced by the calling sequence
+        this.addUpdateCryptoIdent(
+          notepadscreenid as typeof notepadscreenid & {
+            signKey: string
+            cryptKey: string
+            userhash: string
+          }
+        )
       }
     })
 
     socket.on('keymasterQuery', () => {
-      this.handleKeymasterQuery(notepadscreenid)
+      if (notepadscreenid.cryptKey && notepadscreenid.signKey) {
+        this.handleKeymasterQuery(
+          notepadscreenid as typeof notepadscreenid & {
+            signKey: string
+            cryptKey: string
+            userhash: string
+          }
+        )
+      }
     })
 
     socket.on('keymasterQueryResponse', (data) => {
@@ -318,9 +453,9 @@ export class NoteScreenConnection extends CommonConnection {
     socket.on('getKeyNum', async (callback) => {
       try {
         const keynum = await this.redis.hIncrBy(
-          'lecture:' + notepadscreenid.lectureuuid + ':keymaster',
+          'lecture:{' + notepadscreenid.lectureuuid + '}:keymaster',
           'keynum',
-          '1'
+          1
         )
         callback({ keynum })
       } catch (error) {
@@ -334,7 +469,7 @@ export class NoteScreenConnection extends CommonConnection {
         try {
           const dest = data.dest
           const exists = await this.redis.hExists(
-            'lecture:' + notepadscreenid.lectureuuid + ':idents',
+            'lecture:{' + notepadscreenid.lectureuuid + '}:idents',
             dest
           )
           // on check if the identity is inside our lecture, otherwise an attacker may be able to break out context
@@ -375,7 +510,7 @@ export class NoteScreenConnection extends CommonConnection {
       })
     })
 
-    socket.on('closevideoquestion', (cmd) => {
+    socket.on('closevideoquestion', (cmd: { id: string }) => {
       this.closeVideoQuestion(notepadscreenid, cmd).catch((error) => {
         console.log('Problem in closeVideoQuestion', error)
       })
@@ -383,17 +518,18 @@ export class NoteScreenConnection extends CommonConnection {
 
     socket.on('chatquestion', (cmd) => {
       if (cmd.text) {
-        const displayname = socket.decoded_token.user.displayname
-
-        this.notesio.to(notepadscreenid.roomname).emit('chatquestion', {
-          displayname: displayname,
-          text: cmd.text,
-          encData: cmd.encData,
-          keyindex: cmd.keyindex,
-          iv: cmd.iv,
-          resend: !!cmd.resend,
-          showSendername: !!cmd.showSendername
-        })
+        const displayname: string = socket.decoded_token?.user?.displayname
+        if (notepadscreenid.roomname) {
+          this.notesio.to(notepadscreenid.roomname).emit('chatquestion', {
+            displayname: displayname,
+            text: cmd.text,
+            encData: cmd.encData,
+            keyindex: cmd.keyindex,
+            iv: cmd.iv,
+            resend: !!cmd.resend,
+            showSendername: !!cmd.showSendername
+          })
+        }
       }
     })
 
@@ -493,7 +629,7 @@ export class NoteScreenConnection extends CommonConnection {
       }
       const poll = cmd.poll
       const limited = !!cmd.limited
-      let participants
+      let participants: string[] | undefined
       if (typeof cmd.participants !== 'undefined') {
         if (!Array.isArray(cmd.participants)) {
           console.log('poll participants is not an array')
@@ -502,7 +638,7 @@ export class NoteScreenConnection extends CommonConnection {
         console.log('partcipants peak', cmd.participants)
         if (
           cmd.participants.some(
-            (el) => typeof el !== 'string' || !/^[0-9a-zA-Z]+$/.test(el)
+            (el: any) => typeof el !== 'string' || !/^[0-9a-zA-Z]+$/.test(el)
           )
         ) {
           console.log('poll participant items are not userhash format')
@@ -533,6 +669,10 @@ export class NoteScreenConnection extends CommonConnection {
 
     socket.on('switchAppMaster', async (/* cmd */) => {
       const masterCommand = { appletMaster: socket.id }
+      if (!notepadscreenid.roomname) {
+        console.log('switchAppMaster roomname not set')
+        return
+      }
       this.notepadio
         .to(notepadscreenid.roomname)
         .emit('switchAppMaster', masterCommand)
@@ -581,6 +721,10 @@ export class NoteScreenConnection extends CommonConnection {
         if (notepadscreenid) {
           const pictinfo = await this.getPicture(notepadscreenid, cmd.uuid)
           if (pictinfo) {
+            if (!notepadscreenid.roomname) {
+              console.log('drawcommand addPicture roomname not set')
+              return
+            }
             this.notepadio
               .to(notepadscreenid.roomname)
               .emit('pictureinfo', pictinfo)
@@ -597,6 +741,10 @@ export class NoteScreenConnection extends CommonConnection {
         const ipynbinfo = await this.getIpynb(notepadscreenid, cmd.id, cmd.sha)
         if (ipynbinfo) {
           const sendinfo = { ipynbs: ipynbinfo, appletMaster: socket.id }
+          if (!notepadscreenid.roomname) {
+            console.log('startApp roomname not set')
+            return
+          }
           this.notepadio
             .to(notepadscreenid.roomname)
             .emit('ipynbinfo', sendinfo)
@@ -649,7 +797,7 @@ export class NoteScreenConnection extends CommonConnection {
       console.log('Client %s with ip %s  disconnected', socket.id, address)
       if (notepadscreenid.roomname) {
         socket.leave(notepadscreenid.roomname)
-        notepadscreenid.roomname = null
+        notepadscreenid.roomname = undefined
       }
       if (notepadscreenid) {
         // delete  notepadscreen.socket;
@@ -659,19 +807,42 @@ export class NoteScreenConnection extends CommonConnection {
     })
   }
 
-  async SocketHandlerScreen(socket) {
-    const address = socket.handshake.headers['x-forwarded-for']
-      .split(',')
+  async SocketHandlerScreen(socket: AuthenticatedSocket) {
+    const address = socket?.handshake?.headers?.['x-forwarded-for']
+      ?.toString()
+      ?.split(',')
       .map((el) => el.trim()) || [socket.client.conn.remoteAddress]
     console.log('Screen %s with ip %s  connected', socket.id, address)
-    console.log('Screen name', socket.decoded_token.name)
-    console.log('Screen uuid', socket.decoded_token.notescreenuuid)
-    console.log('Screen lecture uuid', socket.decoded_token.lectureuuid)
+    if (socket.decoded_token) {
+      console.log('Screen name', socket.decoded_token.name)
+      console.log('Screen uuid', socket.decoded_token.notescreenuuid)
+      console.log('Screen lecture uuid', socket.decoded_token.lectureuuid)
+    } else console.log('no decoded token')
+    if (!socket.decoded_token) {
+      console.log('decoded token invalid')
+      socket.disconnect()
+      return
+    }
 
-    const purescreen = {
+    const lectureuuid = socket.decoded_token?.lectureuuid
+
+    if (!isUUID(lectureuuid)) {
+      console.log('lectureuuid in decoded token invalid')
+      socket.disconnect()
+      return
+    }
+    const notescreenuuid = socket.decoded_token?.notescreenuuid
+
+    if (!isUUID(notescreenuuid)) {
+      console.log('notescreenuuid in decoded token invalid')
+      socket.disconnect()
+      return
+    }
+
+    const purescreen: NotepadScreenIdType = {
       socketid: socket.id,
-      lectureuuid: socket.decoded_token.lectureuuid,
-      notescreenuuid: socket.decoded_token.notescreenuuid,
+      lectureuuid: lectureuuid,
+      notescreenuuid: notescreenuuid,
       name: socket.decoded_token.name,
       displayname: socket.decoded_token.user.displayname,
       appversion: socket.decoded_token.appversion,
@@ -685,11 +856,13 @@ export class NoteScreenConnection extends CommonConnection {
     this.connectNotescreen(purescreen)
     // this.addScreen(purescreen);
 
-    let curtoken = socket.decoded_token
-    let routerres
-    let routerurl = new Promise((resolve) => {
-      routerres = resolve
-    })
+    let curtoken: ScreenLectureToken =
+      socket.decoded_token as ScreenLectureToken
+    let routerurl: Promise<string | undefined> | undefined
+    let routerres: ((value: string | undefined) => void) | undefined
+    ;({ promise: routerurl, resolve: routerres } = Promise.withResolvers<
+      string | undefined
+    >())
 
     // console.log('screen connected')
 
@@ -702,7 +875,7 @@ export class NoteScreenConnection extends CommonConnection {
         this.sendBoardsToSocket(purescreen.lectureuuid, socket)
       })
       .catch((error) => {
-        console.error('Failed to load lecture:', error)
+        console.error('Failed to load lecture,', error)
       })
 
     purescreen.roomname = this.getRoomName(purescreen.lectureuuid)
@@ -717,6 +890,10 @@ export class NoteScreenConnection extends CommonConnection {
     } */
     const emittoken = async () => {
       const token = await this.getScreenToken(curtoken)
+      if (!token.decoded) {
+        console.log('error in emittoken', token.error)
+        return
+      }
       curtoken = token.decoded
       socket.emit('authtoken', { token: token.token })
     }
@@ -739,7 +916,25 @@ export class NoteScreenConnection extends CommonConnection {
     socket.on('reauthor', async () => {
       // we use the information from the already present authtoken
       const token = await this.getScreenToken(curtoken)
-      this.updateNotescreenActive(purescreen)
+      const { cryptKey, signKey, userhash } = purescreen
+      if (
+        typeof cryptKey !== 'string' ||
+        typeof signKey !== 'string' ||
+        typeof userhash !== 'string'
+      ) {
+        console.log('error in reauthor , no sign, userhash or crypt key')
+        return
+      }
+      this.updateNotescreenActive({
+        ...purescreen,
+        cryptKey,
+        signKey,
+        userhash
+      })
+      if (!token.decoded) {
+        console.log('error in reauthor', token.error)
+        return
+      }
       curtoken = token.decoded
       socket.emit('authtoken', { token: token.token })
     })
@@ -759,6 +954,7 @@ export class NoteScreenConnection extends CommonConnection {
         // todo send also to screens
       }
     })
+    let rurl: string | undefined
 
     socket.on('getrouting', async (cmd, callback) => {
       if (
@@ -769,15 +965,19 @@ export class NoteScreenConnection extends CommonConnection {
       ) {
         try {
           let toid
-          await Promise.any([
-            routerurl,
-            new Promise((resolve, reject) => {
-              toid = setTimeout(reject, 20 * 1000)
-            })
-          ])
+          if (typeof rurl === 'undefined' && routerurl)
+            rurl = await Promise.any([
+              routerurl,
+              new Promise<undefined>((resolve, reject) => {
+                toid = setTimeout(reject, 20 * 1000)
+              })
+            ])
           if (toid) clearTimeout(toid)
+          if (typeof rurl === 'undefined') {
+            throw new Error('Unknown routerurl')
+          }
           toid = undefined
-          this.getRouting(purescreen, cmd, await routerurl, callback)
+          this.getRouting(purescreen, cmd, rurl, callback)
         } catch (error) {
           callback({ error: 'getrouting: timeout or error: ' + error })
         }
@@ -806,8 +1006,8 @@ export class NoteScreenConnection extends CommonConnection {
               routerres = undefined
               res(ret.url)
             }
-            routerurl = ret.url
-          } else routerurl = undefined
+            rurl = ret.url
+          } else rurl = undefined
           callback(ret)
         }
       ).catch((error) => {
@@ -819,12 +1019,24 @@ export class NoteScreenConnection extends CommonConnection {
       if (cmd.cryptKey && cmd.signKey) {
         purescreen.cryptKey = cmd.cryptKey
         purescreen.signKey = cmd.signKey
-        this.addUpdateCryptoIdent(purescreen)
+        this.addUpdateCryptoIdent(
+          purescreen as typeof purescreen & {
+            signKey: string
+            cryptKey: string
+            userhash: string
+          }
+        )
       }
     })
 
     socket.on('keymasterQuery', () => {
-      this.handleKeymasterQuery(purescreen)
+      this.handleKeymasterQuery(
+        purescreen as typeof purescreen & {
+          signKey: string
+          cryptKey: string
+          userhash: string
+        }
+      )
     })
 
     socket.on('disconnect', () => {
@@ -837,7 +1049,7 @@ export class NoteScreenConnection extends CommonConnection {
         if (purescreen.roomname) {
           socket.leave(purescreen.roomname)
           // console.log('screen disconnected leave room', purescreen.roomname)
-          purescreen.roomname = null
+          purescreen.roomname = undefined
         }
         /* if (purescreen.socketid) {
           purescreen.socketid = null;
@@ -849,26 +1061,32 @@ export class NoteScreenConnection extends CommonConnection {
     })
   }
 
-  async createScreenForLecture(notepadscreenid, maxrenew) {
-    const content = {
+  async createScreenForLecture(
+    notepadscreenid: NotepadScreenIdType,
+    maxrenew: number
+  ) {
+    const content: ScreenLectureToken = {
       lectureuuid: notepadscreenid.lectureuuid,
       notescreenuuid: randomUUID(),
       purpose: 'screen',
       notepadhandler: this.notepadhandlerURL,
       appversion: notepadscreenid.appversion,
       features: notepadscreenid.features,
-      maxrenew: maxrenew,
+      maxrenew,
       name: 'Created from lecture',
       user: notepadscreenid.user
     }
     return await this.signScreenJwt(content)
   }
 
-  async createNotepadForLecture(notepadscreenid, maxrenew) {
-    const content = {
+  async createNotepadForLecture(
+    notepadscreenid: NotepadScreenIdType,
+    maxrenew: number
+  ) {
+    const content: ScreenLectureToken = {
       lectureuuid: notepadscreenid.lectureuuid,
       notescreenuuid: randomUUID(),
-      purpose: 'lecture',
+      purpose: 'notepad',
       name: 'Secondary Notebook',
       user: notepadscreenid.user,
       notepadhandler: this.notepadhandlerURL,
@@ -879,8 +1097,8 @@ export class NoteScreenConnection extends CommonConnection {
     return await this.signNotepadJwt(content)
   }
 
-  async getScreenToken(oldtoken) {
-    const newtoken = {
+  async getScreenToken(oldtoken: ScreenLectureToken) {
+    const newtoken: ScreenLectureToken = {
       user: oldtoken.user,
       lectureuuid: oldtoken.lectureuuid,
       notescreenuuid: oldtoken.notescreenuuid,
@@ -896,13 +1114,13 @@ export class NoteScreenConnection extends CommonConnection {
       return { error: 'maxrenew token failed', oldtoken: oldtoken }
     try {
       this.redis.hSet(
-        'lecture:' +
+        'lecture:{' +
           oldtoken.lectureuuid +
-          ':notescreen:' +
+          '}:notescreen:' +
           oldtoken.notescreenuuid,
         ['active', '1', 'lastaccess', Date.now().toString()]
       )
-      this.redis.hSet('lecture:' + oldtoken.lectureuuid, [
+      this.redis.hSet('lecture:{' + oldtoken.lectureuuid + '}', [
         'lastaccess',
         Date.now().toString()
       ])
@@ -912,8 +1130,13 @@ export class NoteScreenConnection extends CommonConnection {
     return { token: await this.signScreenJwt(newtoken), decoded: newtoken }
   }
 
-  async getLectureToken(oldtoken) {
-    const newtoken = {
+  async getLectureToken(oldtoken: ScreenLectureToken): Promise<{
+    token?: string
+    decoded?: ScreenLectureToken
+    oldtoken?: ScreenLectureToken
+    error?: string
+  }> {
+    const newtoken: ScreenLectureToken = {
       user: oldtoken.user,
       purpose: 'notepad',
       lectureuuid: oldtoken.lectureuuid,
@@ -928,13 +1151,13 @@ export class NoteScreenConnection extends CommonConnection {
       return { error: 'maxrenew token failed', oldtoken: oldtoken }
     try {
       this.redis.hSet(
-        'lecture:' +
+        'lecture:{' +
           oldtoken.lectureuuid +
-          ':notescreen:' +
+          '}:notescreen:' +
           oldtoken.notescreenuuid,
         ['active', '1', 'lastaccess', Date.now().toString()]
       )
-      this.redis.hSet('lecture:' + oldtoken.lectureuuid, [
+      this.redis.hSet('lecture:{' + oldtoken.lectureuuid + '}', [
         'lastaccess',
         Date.now().toString()
       ])
@@ -945,10 +1168,10 @@ export class NoteScreenConnection extends CommonConnection {
   }
 
   async setLectureProperties(
-    args,
-    casttoscreens,
-    backgroundbw,
-    showscreennumber
+    args: NotepadScreenIdType,
+    casttoscreens: boolean | null | undefined,
+    backgroundbw: boolean | null | undefined,
+    showscreennumber: boolean | null | undefined
   ) {
     // console.log("sNs: lecture:"+args.lectureuuid+":notepad:"+args.notepaduuid);
     const tasks = []
@@ -966,7 +1189,7 @@ export class NoteScreenConnection extends CommonConnection {
     }
     if (tasks.length > 0)
       try {
-        await this.redis.hSet('lecture:' + args.lectureuuid, tasks)
+        await this.redis.hSet('lecture:{' + args.lectureuuid + '}', tasks)
         this.emitscreenlists(args)
       } catch (error) {
         console.log('redis error in setLectureProperties', error)
@@ -977,11 +1200,15 @@ export class NoteScreenConnection extends CommonConnection {
      this.backgroundbw = backgroundbw; */
   }
 
-  async updateNoteScreen(args, scrollheight, purpose) {
+  async updateNoteScreen(
+    args: NotepadScreenIdType,
+    scrollheight: number,
+    purpose: 'screen' | 'notepad'
+  ) {
     // console.log('update notescreen', scrollheight, purpose, args)
     try {
       await this.redis.hSet(
-        'lecture:' + args.lectureuuid + ':notescreen:' + args.notescreenuuid,
+        'lecture:{' + args.lectureuuid + '}:notescreen:' + args.notescreenuuid,
         ['scrollheight', scrollheight.toString(), 'purpose', purpose]
       )
       this.emitscreenlists(args)
@@ -990,17 +1217,17 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async getAvailablePicts(notepadscreenid) {
-    let lecturedoc = {}
+  async getAvailablePicts(notepadscreenid: NotepadScreenIdType) {
     try {
-      const lecturescol = this.mongo.collection('lectures')
-      lecturedoc = await lecturescol.findOne(
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
+      let lecturedoc = await lecturescol.findOne(
         { uuid: notepadscreenid.lectureuuid },
         {
           projection: { _id: 0, pictures: 1 }
         }
       )
       // console.log("lecturedoc",lecturedoc);
+      if (!lecturedoc) return
 
       if (!lecturedoc.pictures) return []
 
@@ -1008,9 +1235,9 @@ export class NoteScreenConnection extends CommonConnection {
         return {
           name: el.name,
           mimetype: el.mimetype,
-          sha: el.sha.buffer.toString('hex'),
-          url: this.getFileURL(el.sha.buffer, el.mimetype),
-          urlthumb: this.getFileURL(el.tsha.buffer, el.mimetype)
+          sha: el.sha.toString('hex'),
+          url: this.getFileURL(el.sha, el.mimetype),
+          urlthumb: this.getFileURL(el.tsha, el.mimetype)
         }
       })
       // ok now I have the picture, but I also have to generate the urls
@@ -1019,16 +1246,16 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async getAvailableIpynbs(notepadscreenid) {
-    let lecturedoc = {}
+  async getAvailableIpynbs(notepadscreenid: NotepadScreenIdType) {
     try {
-      const lecturescol = this.mongo.collection('lectures')
-      lecturedoc = await lecturescol.findOne(
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
+      let lecturedoc = await lecturescol.findOne(
         { uuid: notepadscreenid.lectureuuid },
         {
           projection: { _id: 0, ipynbs: 1 }
         }
       )
+      if (!lecturedoc) return
 
       if (!lecturedoc.ipynbs) return []
 
@@ -1038,14 +1265,14 @@ export class NoteScreenConnection extends CommonConnection {
           filename: el.filename,
           note: el.note,
           id: el.id,
-          sha: el.sha.buffer.toString('hex'),
+          sha: el.sha.toString('hex'),
           mimetype: el.mimetype,
           /* sha: el.sha.buffer.toString('hex'),  No download necessary ! */
           applets: el.applets?.map?.((applet) => ({
             appid: applet.appid,
             appname: applet.appname
           })),
-          url: this.getFileURL(el.sha.buffer, el.mimetype)
+          url: this.getFileURL(el.sha, el.mimetype)
         }
       })
       // ok now I have the ipynb, but I also have to generate the urls
@@ -1054,7 +1281,15 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async uploadPicture(notepadscreenid, { name, type, picture, thumbnail }) {
+  async uploadPicture(
+    notepadscreenid: NotepadScreenIdType,
+    {
+      name,
+      type,
+      picture,
+      thumbnail
+    }: { name: string; type: string; picture: Buffer; thumbnail: Buffer }
+  ) {
     const picthash = createHash('sha256')
     picthash.update(picture)
     const thumbhash = createHash('sha256')
@@ -1068,7 +1303,7 @@ export class NoteScreenConnection extends CommonConnection {
       this.saveFile(thumbnail, tsha, type, thumbnail.length)
     ])
 
-    const lecturescol = this.mongo.collection('lectures')
+    const lecturescol = this.mongo.collection<Lecture>('lectures')
     await lecturescol.updateOne(
       { uuid: notepadscreenid.lectureuuid },
       {
@@ -1076,8 +1311,8 @@ export class NoteScreenConnection extends CommonConnection {
           usedpictures: {
             name,
             mimetype: type,
-            sha,
-            tsha
+            sha: new Binary(sha),
+            tsha: new Binary(tsha)
           }
         },
         $currentDate: { lastaccess: true }
@@ -1090,9 +1325,9 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async getPicture(notepadscreenid, id) {
+  async getPicture(notepadscreenid: NotepadScreenIdType, id: string) {
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
       // first figure out if it already is assigned to the lecture, we use here mongo db instead of the redis cache
       const lecturedoc = await lecturescol.findOne(
         { uuid: notepadscreenid.lectureuuid },
@@ -1100,18 +1335,19 @@ export class NoteScreenConnection extends CommonConnection {
           projection: { _id: 0, pictures: 1, usedpictures: 1 }
         }
       )
+      if (!lecturedoc) throw new Error('Lecture uuid not found in getPicture')
 
       if (!lecturedoc.usedpictures) lecturedoc.usedpictures = []
 
       const findex = lecturedoc.usedpictures.findIndex(
-        (el) => el.sha.buffer.toString('hex') === id
+        (el) => el.sha.toString('hex') === id
       )
 
       if (findex === -1) {
         if (!lecturedoc.pictures) throw new Error('Pictures not found ' + id)
         // oh oh it is not found, but maybe it is available...
         const pindex = lecturedoc.pictures.findIndex(
-          (el) => el.sha.buffer.toString('hex') === id
+          (el) => el.sha.toString('hex') === id
         )
         if (pindex === -1) {
           throw new Error('Picture not found ' + id)
@@ -1132,9 +1368,9 @@ export class NoteScreenConnection extends CommonConnection {
         return {
           name: el.name,
           mimetype: el.mimetype,
-          sha: el.sha.buffer.toString('hex'),
-          url: this.getFileURL(el.sha.buffer, el.mimetype),
-          urlthumb: this.getFileURL(el.tsha.buffer, el.mimetype)
+          sha: el.sha.toString('hex'),
+          url: this.getFileURL(el.sha, el.mimetype),
+          urlthumb: this.getFileURL(el.tsha, el.mimetype)
         }
       }, this)
     } catch (err) {
@@ -1144,9 +1380,13 @@ export class NoteScreenConnection extends CommonConnection {
     return null
   }
 
-  async getIpynb(notepadscreenid, id, sha) {
+  async getIpynb(
+    notepadscreenid: NotepadScreenIdType,
+    id: string,
+    sha: string
+  ) {
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
       // first figure out if it already is assigned to the lecture, we use here mongo db instead of the redis cache
       const lecturedoc = await lecturescol.findOne(
         { uuid: notepadscreenid.lectureuuid },
@@ -1154,18 +1394,19 @@ export class NoteScreenConnection extends CommonConnection {
           projection: { _id: 0, ipynbs: 1, usedipynbs: 1 }
         }
       )
+      if (!lecturedoc) throw new Error('Lecture uuid not found in getIpynb')
 
       if (!lecturedoc.usedipynbs) lecturedoc.usedipynbs = []
 
       const findex = lecturedoc.usedipynbs.findIndex(
-        (el) => el.sha.buffer.toString('hex') === sha && el.id === id
+        (el) => el.sha.toString('hex') === sha && el.id === id
       )
 
       if (findex === -1) {
         if (!lecturedoc.ipynbs) throw new Error('No ipynbs found ' + id)
         // oh oh it is not found, but maybe it is available...
         const iindex = lecturedoc.ipynbs.findIndex(
-          (el) => el.sha.buffer.toString('hex') === sha && el.id === id
+          (el) => el.sha.toString('hex') === sha && el.id === id
         )
         if (iindex === -1) {
           throw new Error('Ipynb not found ' + id)
@@ -1188,8 +1429,8 @@ export class NoteScreenConnection extends CommonConnection {
           note: el.note,
           id: el.id,
           mimetype: el.mimetype,
-          sha: el.sha.buffer.toString('hex'),
-          url: this.getFileURL(el.sha.buffer, el.mimetype),
+          sha: el.sha.toString('hex'),
+          url: this.getFileURL(el.sha, el.mimetype),
           applets: el.applets?.map?.((applet) => ({
             appid: applet.appid,
             appname: applet.appname
@@ -1202,26 +1443,33 @@ export class NoteScreenConnection extends CommonConnection {
     return null
   }
 
-  async getPolls(notepadscreenid) {
+  async getPolls(notepadscreenid: NotepadScreenIdType) {
     // TODO should be feed from mongodb
 
-    let lecturedoc = {}
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
 
-      lecturedoc = await lecturescol.findOne(
+      let lecturedoc = await lecturescol.findOne(
         { uuid: notepadscreenid.lectureuuid },
         {
           projection: { _id: 0, polls: 1 }
         }
       )
+      if (!lecturedoc) throw new Error('Lecture uuid not found in getPolls')
       return lecturedoc.polls
     } catch (err) {
       console.log('error in getpolls', err)
     }
   }
 
-  async startPoll(lectureuuid, { poll, limited, participants }) {
+  async startPoll(
+    lectureuuid: string,
+    {
+      poll,
+      limited,
+      participants
+    }: { poll: LecturePoll; limited: boolean; participants?: string[] }
+  ) {
     const roomname = this.getRoomName(lectureuuid)
     // ok first thing, we have to create a salt and set it in redis!
     const randBytes = promisify(randomBytes)
@@ -1229,7 +1477,7 @@ export class NoteScreenConnection extends CommonConnection {
     try {
       const pollsalt = (await randBytes(16)).toString('base64') // the salt is absolutely confidential, everyone who knows it can spoil secrecy of polling!
       await this.redis.set(
-        'pollsalt:lecture:' + lectureuuid + ':poll:' + poll.id,
+        'pollsalt:lecture:{' + lectureuuid + '}:poll:' + poll.id,
         pollsalt,
         { EX: 10 * 60 /* 10 Minutes for polling */ }
       ) // after the pollsalt is gone, the poll is over!
@@ -1239,12 +1487,12 @@ export class NoteScreenConnection extends CommonConnection {
         'data',
         JSON.stringify(poll),
         'limited',
-        limited
+        String(limited)
       ]
       if (limited) {
         pollstateCmd.push('participants', JSON.stringify(participants))
       }
-      this.redis.hSet('lecture:' + lectureuuid + ':pollstate', pollstateCmd)
+      this.redis.hSet('lecture:{' + lectureuuid + '}:pollstate', pollstateCmd)
 
       this.notepadio.to(roomname).emit('startPoll', { ...poll, participants }) // overwrite participants
       this.notesio.to(roomname).emit('startPoll', { ...poll, participants })
@@ -1253,24 +1501,32 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async finishPoll(lectureuuid, data) {
+  async finishPoll(
+    lectureuuid: string,
+    data: {
+      result: { id: string; name: string; data: number[] }[]
+      pollid: string
+    }
+  ) {
     const roomname = this.getRoomName(lectureuuid)
     // ok first thing, we have to create a salt and set it in redis!
 
     try {
-      this.redis.del('pollsalt:lecture:' + lectureuuid + ':poll:' + data.pollid) // after the pollsalt is gone, the poll is over!
+      this.redis.del(
+        'pollsalt:lecture:{' + lectureuuid + '}:poll:' + data.pollid
+      ) // after the pollsalt is gone, the poll is over!
       const parti = await this.redis.hGet(
-        'lecture:' + lectureuuid + ':pollstate',
+        'lecture:{' + lectureuuid + '}:pollstate',
         'participants'
       )
       let participants
-      if (!parti) {
+      if (parti) {
         participants = JSON.parse(parti)
       }
       const res = data.result
         .filter((el) => /^[0-9a-zA-Z]{9}$/.test(el.id))
         .map((el) => ({ id: el.id, data: el.data, name: el.name }))
-      this.redis.del('lecture:' + lectureuuid + ':pollstate')
+      this.redis.del('lecture:{' + lectureuuid + '}:pollstate')
       this.notepadio
         .to(roomname)
         .emit('finishPoll', { id: data.pollid, result: res, participants })
@@ -1282,20 +1538,25 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async loadLectFromDB(lectureuuid) {
-    const boardprefix = 'lecture:' + lectureuuid + ':board'
+  async loadLectFromDB(lectureuuid: string) {
+    const boardprefix = 'lecture:{' + lectureuuid + '}:board'
 
     let lock = null
+    let lockhandle = null
     try {
-      // console.log(' try to lock ', 'lecture:' + lectureuuid + ':loadlock')
-      lock = await this.redlock.lock(
-        'lecture:' + lectureuuid + ':loadlock',
+      // console.log(' try to lock ', 'lecture:{' + lectureuuid + '}:loadlock')
+      lock = await this.createLock(
+        'lecture:{' + lectureuuid + '}:loadlock',
         2000
       )
-      const lecturescol = this.mongo.collection('lectures')
+      lockhandle = await lock.acquire()
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
       const boardscol = this.mongo.collection('lectureboards')
 
-      let lastwrite = this.redis.hGet('lecture:' + lectureuuid, 'lastwrite')
+      let lastwrite = this.redis.hGet(
+        'lecture:{' + lectureuuid + '}',
+        'lastwrite'
+      )
       const lecturedoc = await lecturescol.findOne(
         { uuid: lectureuuid },
         {
@@ -1307,6 +1568,9 @@ export class NoteScreenConnection extends CommonConnection {
           }
         }
       )
+      if (!lecturedoc) {
+        throw new Error('Lecture not found')
+      }
       if (!lecturedoc.backgroundpdfuse) {
         lecturescol.updateOne(
           { uuid: lectureuuid },
@@ -1315,19 +1579,19 @@ export class NoteScreenConnection extends CommonConnection {
       }
       const boardsavetime = lecturedoc.boardsavetime
       const backgroundbw = lecturedoc.backgroundbw
-      lastwrite = await lastwrite
+      let rlastwrite = await lastwrite
       // console.log('lastwrite', lastwrite, boardsavetime, lecturedoc)
 
       if (!boardsavetime) {
-        lock.unlock()
+        lock.release(lockhandle)
         return
       } // no save no transfer
       if (
-        lastwrite &&
+        rlastwrite &&
         boardsavetime &&
-        Number(lastwrite) < Number(boardsavetime) + 10 * 60 * 1000
+        Number(rlastwrite) < Number(boardsavetime) + 10 * 60 * 1000
       ) {
-        lock.unlock()
+        lock.release(lockhandle)
         return
       } // no newer data than 10 minutes no transfer, redis should  always be more recent
       console.log('loadLectFromDB for lecture ', lectureuuid)
@@ -1339,7 +1603,7 @@ export class NoteScreenConnection extends CommonConnection {
         const boardinfo = await cursor.next()
         // console.log("boardinfo", boardinfo);
         // ok we have one document so push it to redis, TODO think of sending the documents directly to clients?
-        if (!boardinfo.board || !boardinfo.boarddata) continue // no valid data
+        if (!boardinfo || !boardinfo.board || !boardinfo.boarddata) continue // no valid data
         boards.push(boardinfo.board)
         const myprom = this.redis.set(
           boardprefix + boardinfo.board,
@@ -1350,7 +1614,7 @@ export class NoteScreenConnection extends CommonConnection {
       // console.log('cursor it finished')
       await Promise.all(redisprom) // ok wait that everything is transfered and then update the time
       if (boards.length > 0)
-        await this.redis.sAdd('lecture:' + lectureuuid + ':boards', boards)
+        await this.redis.sAdd('lecture:{' + lectureuuid + '}:boards', boards)
       const hsetpara = []
       if (boardsavetime) {
         hsetpara.push('lastwrite')
@@ -1361,27 +1625,35 @@ export class NoteScreenConnection extends CommonConnection {
         hsetpara.push(backgroundbw.toString())
       }
       if (hsetpara.length > 0)
-        await this.redis.hSet('lecture:' + lectureuuid, hsetpara)
+        await this.redis.hSet('lecture:{' + lectureuuid + '}', hsetpara)
       console.log('loadLectFromDB successful for lecture', lectureuuid)
-      lock.unlock()
+      lock.release(lockhandle)
     } catch (err) {
       console.log('loadLectFromDBErr', err, lectureuuid)
     }
   }
 
-  async writeData(lectureuuid, number, data, append) {
+  async writeData(
+    lectureuuid: string,
+    number: number,
+    data: Buffer,
+    append: boolean
+  ) {
     // TODO check mongo db
     if (append) {
       // if (!number) console.log("number not defined", number);
       try {
-        this.redis.sAdd('lecture:' + lectureuuid + ':boards', number.toString())
-        this.redis.hSet('lecture:' + lectureuuid, [
+        this.redis.sAdd(
+          'lecture:{' + lectureuuid + '}:boards',
+          number.toString()
+        )
+        this.redis.hSet('lecture:{' + lectureuuid + '}', [
           'lastwrite',
           Date.now().toString()
         ])
 
         await this.redis.append(
-          'lecture:' + lectureuuid + ':board' + number,
+          'lecture:{' + lectureuuid + '}:board' + number,
           Buffer.from(new Uint8Array(data))
         )
       } catch (error) {
@@ -1393,18 +1665,18 @@ export class NoteScreenConnection extends CommonConnection {
   }
 
   async addNewChannel(
-    args,
-    type,
-    emitscreens // notebooks or screencast
+    args: NotepadScreenOnlyIdType,
+    type: 'notebooks' | 'screenshare',
+    emitscreens?: boolean // notebooks or screencast
   ) {
     const newuuid = randomUUID()
     // console.log('addnewchannel')
     try {
       await this.redis
         .multi()
-        .lRem('lecture:' + args.lectureuuid + ':channels', 0, newuuid)
-        .rPush('lecture:' + args.lectureuuid + ':channels', newuuid)
-        .hSet('lecture:' + args.lectureuuid + ':channel:' + newuuid, [
+        .lRem('lecture:{' + args.lectureuuid + '}:channels', 0, newuuid)
+        .rPush('lecture:{' + args.lectureuuid + '}:channels', newuuid)
+        .hSet('lecture:{' + args.lectureuuid + '}:channel:' + newuuid, [
           'type',
           type
         ])
@@ -1417,77 +1689,88 @@ export class NoteScreenConnection extends CommonConnection {
     return newuuid
   }
 
-  async removeChannel(args, channeluuid) {
+  async removeChannel(args: NotepadScreenIdType, channeluuid: string) {
     await this.cleanupNotescreens(args)
 
     try {
       const targetchanneluuid = await this.redis.hGet(
-        'lecture:' + args.lectureuuid + ':notescreen:' + args.notescreenuuid,
+        'lecture:{' + args.lectureuuid + '}:notescreen:' + args.notescreenuuid,
         'channel'
       )
       if (channeluuid === targetchanneluuid)
         console.log('tried to remove primary channel')
 
-      await this.redis.executeIsolated(async (isoredis) => {
+      const operation = async (isoredis: typeof this.redis) => {
         await isoredis.watch([
-          'lecture:' + args.lectureuuid + ':channel:' + channeluuid,
-          'lecture:' +
+          'lecture:{' + args.lectureuuid + '}:channel:' + channeluuid,
+          'lecture:{' +
             args.lectureuuid +
-            ':channel:' +
+            '}:channel:' +
             channeluuid +
             ':members',
-          'lecture:' +
+          'lecture:{' +
             args.lectureuuid +
-            ':channel:' +
+            '}:channel:' +
             targetchanneluuid +
             ':members',
-          'lecture:' + args.lectureuuid + ':channels'
+          'lecture:{' + args.lectureuuid + '}:channels'
         ])
 
         const memberslength = await isoredis.lLen(
-          'lecture:' + args.lectureuuid + ':channel:' + channeluuid + ':members'
+          'lecture:{' +
+            args.lectureuuid +
+            '}:channel:' +
+            channeluuid +
+            ':members'
         )
 
         const multi = isoredis.multi()
 
         for (let i = 0; i < memberslength; i++)
           multi.lMove(
-            'lecture:' +
+            'lecture:{' +
               args.lectureuuid +
-              ':channel:' +
+              '}:channel:' +
               channeluuid +
               ':members',
-            'lecture:' +
+            'lecture:{' +
               args.lectureuuid +
-              ':channel:' +
+              '}:channel:' +
               targetchanneluuid +
-              ':members'
+              ':members',
+            'LEFT',
+            'RIGHT'
           )
 
         multi
           .del(
-            'lecture:' +
+            'lecture:{' +
               args.lectureuuid +
-              ':channel:' +
+              '}:channel:' +
               channeluuid +
               ':members'
           )
-          .lRem('lecture:' + args.lectureuuid + ':channels', 0, channeluuid)
-          .del('lecture:' + args.lectureuuid + ':channel:' + channeluuid)
+          .lRem('lecture:{' + args.lectureuuid + '}:channels', 0, channeluuid)
+          .del('lecture:{' + args.lectureuuid + '}:channel:' + channeluuid)
 
         await multi.exec()
-      })
+      }
+      if ('executeIsolated' in this.redis) {
+        await this.redis.executeIsolated(operation)
+      } else {
+        await operation(this.redis)
+      }
     } catch (error) {
       console.log('removeChannel error', error)
     }
     this.emitscreenlists(args)
   }
 
-  async cleanupNotescreens(args) {
+  async cleanupNotescreens(args: NotepadScreenIdType) {
     // ok first we need a list of notescreens
     try {
       const allscreens = await this.redis.sMembers(
-        'lecture:' + args.lectureuuid + ':notescreens'
+        'lecture:{' + args.lectureuuid + '}:notescreens'
       )
       // console.log('allscreens', allscreens)
       // now we collect the active status of all member
@@ -1499,7 +1782,7 @@ export class NoteScreenConnection extends CommonConnection {
           return Promise.all([
             el,
             this.redis.hmGet(
-              'lecture:' + args.lectureuuid + ':notescreen:' + el,
+              'lecture:{' + args.lectureuuid + '}:notescreen:' + el,
               ['active', 'lastaccess']
             )
           ])
@@ -1516,25 +1799,26 @@ export class NoteScreenConnection extends CommonConnection {
 
       // now we have the list of notescreens for potential deletion, we have to watch all these recprds and check it again
       const towatch = todelete.map(
-        (el) => 'lecture:' + args.lectureuuid + ':notescreen:' + el
+        (el) => 'lecture:{' + args.lectureuuid + '}:notescreen:' + el
       )
       // console.log('towatch', towatch)
-      await this.redis.executeIsolated(async (isoredis) => {
+
+      const operation = async (isoredis: typeof this.redis) => {
         await isoredis.watch(towatch)
 
-        let todelete2 = await Promise.all(
+        let todelete2bf = await Promise.all(
           todelete.map((el) => {
             // ok we got the uuid
             return Promise.all([
               el,
               isoredis.hmGet(
-                'lecture:' + args.lectureuuid + ':notescreen:' + el,
+                'lecture:{' + args.lectureuuid + '}:notescreen:' + el,
                 ['active', 'lastaccess']
               )
             ])
           }, this)
         )
-        todelete2 = todelete2
+        let todelete2 = todelete2bf
           .filter((el) =>
             el[1] ? Date.now() - Number(el[1][1]) > 20 * 60 * 1000 : false
           ) // inverted active condition
@@ -1542,13 +1826,14 @@ export class NoteScreenConnection extends CommonConnection {
         if (todelete2.length === 0) return // we are ready
 
         const channels = await isoredis.lRange(
-          'lecture:' + args.lectureuuid + ':channels',
+          'lecture:{' + args.lectureuuid + '}:channels',
           0,
           -1
         )
 
         const channelwatch = channels.map(
-          (el) => 'lecture:' + args.lectureuuid + ':channel:' + el + ':members'
+          (el: string) =>
+            'lecture:{' + args.lectureuuid + '}:channel:' + el + ':members'
         )
         // console.log('channelwatch', channelwatch)
 
@@ -1556,11 +1841,11 @@ export class NoteScreenConnection extends CommonConnection {
         // now we are sure they are for deletion start the multi
         const multi = isoredis.multi()
         const deletenotescreens = todelete2.map(
-          (el) => 'lecture:' + args.lectureuuid + ':notescreen:' + el
+          (el) => 'lecture:{' + args.lectureuuid + '}:notescreen:' + el
         )
         multi.del(deletenotescreens) // delete the notescreens
         // now remove them for them lists of notescreens
-        multi.sRem('lecture:' + args.lectureuuid + ':notescreens', todelete2)
+        multi.sRem('lecture:{' + args.lectureuuid + '}:notescreens', todelete2)
         // and from the channels
         if (channelwatch.length > 0)
           todelete2.forEach((notescreen) =>
@@ -1570,13 +1855,22 @@ export class NoteScreenConnection extends CommonConnection {
           ) // everthings is queued now execute
 
         await multi.exec()
-      })
+      }
+      if ('executeIsolated' in this.redis) {
+        await this.redis.executeIsolated(operation)
+      } else {
+        await operation(this.redis)
+      }
     } catch (err) {
       console.log('cleanupNotescreen error ', err)
     }
   }
 
-  async handleKeymasterQueryResponse(args, data, socket) {
+  async handleKeymasterQueryResponse(
+    args: NotepadScreenIdType,
+    data: { bidding: number },
+    socket: Socket
+  ) {
     let now = Date.now() / 1000
     args.keymaster = false
     if (!data || !data.bidding) return
@@ -1587,29 +1881,22 @@ export class NoteScreenConnection extends CommonConnection {
       repeat = false
 
       try {
-        await this.redis.executeIsolated(async (isoredis) => {
-          await isoredis.watch('lecture:' + args.lectureuuid + ':keymaster')
+        const operation = async (isoredis: typeof this.redis) => {
+          await isoredis.watch('lecture:{' + args.lectureuuid + '}:keymaster')
           const biddingInfo = await isoredis.hGetAll(
-            'lecture:' + args.lectureuuid + ':keymaster'
+            'lecture:{' + args.lectureuuid + '}:keymaster'
           )
           if (
             Number(biddingInfo.bidding) >= data.bidding ||
             args.socketid === biddingInfo.master ||
             Number(biddingInfo.queryTime) + 5 < now
           ) {
-            isoredis.unwatch()
+            await isoredis.multi().exec()
             return
           }
-          /* console.log(
-            'before hSet',
-            args.lectureuuid,
-            'lecture:' + args.lectureuuid + ':keymaster',
-            data.bidding,
-            args.socketid
-          ) */
           /* const multiret = */ await isoredis
             .multi()
-            .hSet('lecture:' + args.lectureuuid + ':keymaster', [
+            .hSet('lecture:{' + args.lectureuuid + '}:keymaster', [
               'bidding',
               data.bidding.toString(),
               'master',
@@ -1624,7 +1911,12 @@ export class NoteScreenConnection extends CommonConnection {
           ]) */
           master = true
           mastertime = Number(biddingInfo.queryTime) + 6
-        })
+        }
+        if ('executeIsolated' in this.redis) {
+          await this.redis.executeIsolated(operation)
+        } else {
+          await operation(this.redis)
+        }
       } catch (error) {
         if (error instanceof WatchError) {
           repeat = true
@@ -1639,13 +1931,12 @@ export class NoteScreenConnection extends CommonConnection {
       // console.log('I can be master', args.socketid)
       now = Date.now() / 1000
       if (mastertime - now > 0)
-        await new Promise(
-          (resolve) => setTimeout(resolve),
-          (mastertime - now) * 1000
+        await new Promise((resolve) =>
+          setTimeout(resolve, (mastertime - now) * 1000)
         )
 
       const masterquery = await this.redis.hGet(
-        'lecture:' + args.lectureuuid + ':keymaster',
+        'lecture:{' + args.lectureuuid + '}:keymaster',
         'master'
       )
       // console.log('pre emit keymasterQueryResponse', masterquery, args.socketid)
@@ -1664,9 +1955,9 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async emitCryptoIdent(socket, args) {
+  async emitCryptoIdent(socket: Socket, args: NotepadScreenOnlyIdType) {
     const allidents = await this.redis.hGetAll(
-      'lecture:' + args.lectureuuid + ':idents'
+      'lecture:{' + args.lectureuuid + '}:idents'
     )
     for (const id in allidents) {
       allidents[id] = JSON.parse(allidents[id])
@@ -1674,7 +1965,10 @@ export class NoteScreenConnection extends CommonConnection {
     socket.emit('identList', allidents)
   }
 
-  async handleAVoffer(args, cmd) {
+  async handleAVoffer(
+    args: NotepadScreenIdType,
+    cmd: { type: 'video' | 'audio' | 'screen'; db: number; miScChg: boolean }
+  ) {
     // ok to things to do, inform the others about the offer
     // and store the information in redis
 
@@ -1684,7 +1978,13 @@ export class NoteScreenConnection extends CommonConnection {
 
     const roomname = this.getRoomName(args.lectureuuid)
 
-    const message = {
+    const message: {
+      id: string
+      type: 'video' | 'audio' | 'screen'
+      db?: number
+      miScChg?: boolean
+      channelid?: string
+    } = {
       id: args.socketid,
       type: cmd.type
     }
@@ -1714,7 +2014,7 @@ export class NoteScreenConnection extends CommonConnection {
 
     // we do not have to save the db value
     try {
-      await this.redis.hSet('lecture:' + args.lectureuuid + ':avoffers', [
+      await this.redis.hSet('lecture:{' + args.lectureuuid + '}:avoffers', [
         cmd.type + ':' + args.socketid,
         Date.now().toString()
       ])
@@ -1723,7 +2023,10 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async allowVideoQuestion(args, cmd) {
+  async allowVideoQuestion(
+    args: NotepadScreenIdType,
+    cmd: { id: string; displayname: string; userhash: string }
+  ) {
     if (!cmd.id) return // do not proceed without id.
     const roomname = this.getRoomName(args.lectureuuid)
 
@@ -1738,19 +2041,22 @@ export class NoteScreenConnection extends CommonConnection {
     this.notesio.to(roomname).emit('videoquestion', message)
 
     try {
-      await this.redis.hSet('lecture:' + args.lectureuuid + ':videoquestion', [
-        'permitted:' + cmd.id,
-        JSON.stringify({
-          displayname: args.displayname,
-          userhash: args.userhash
-        })
-      ])
+      await this.redis.hSet(
+        'lecture:{' + args.lectureuuid + '}:videoquestion',
+        [
+          'permitted:' + cmd.id,
+          JSON.stringify({
+            displayname: args.displayname,
+            userhash: args.userhash
+          })
+        ]
+      )
     } catch (error) {
       console.log('problem in allowVideoQuestion', error)
     }
   }
 
-  async connectNotescreen(args) {
+  async connectNotescreen(args: NotepadScreenIdType) {
     // console.log('connectnotepads', args)
     this.lastaccess(args.lectureuuid)
     try {
@@ -1758,11 +2064,14 @@ export class NoteScreenConnection extends CommonConnection {
         .multi()
         .sAdd('lectures', args.lectureuuid)
         .sAdd(
-          'lecture:' + args.lectureuuid + ':notescreens',
+          'lecture:{' + args.lectureuuid + '}:notescreens',
           args.notescreenuuid
         )
         .hSet(
-          'lecture:' + args.lectureuuid + ':notescreen:' + args.notescreenuuid,
+          'lecture:{' +
+            args.lectureuuid +
+            '}:notescreen:' +
+            args.notescreenuuid,
           [
             'purpose',
             args.purpose,
@@ -1776,11 +2085,11 @@ export class NoteScreenConnection extends CommonConnection {
           /* todo may be we have to add an instance id */
         )
         .exec()
-      let push = 'lPush'
+      let push: 'lPush' | 'rPush' = 'lPush'
       if (args.purpose === 'screen') push = 'rPush'
 
       const res = await this.redis.hGet(
-        'lecture:' + args.lectureuuid + ':notescreen:' + args.notescreenuuid,
+        'lecture:{' + args.lectureuuid + '}:notescreen:' + args.notescreenuuid,
         'channel'
       )
 
@@ -1791,12 +2100,20 @@ export class NoteScreenConnection extends CommonConnection {
         await this.redis
           .multi()
           .lRem(
-            'lecture:' + args.lectureuuid + ':channel:' + channel + ':members',
+            'lecture:{' +
+              args.lectureuuid +
+              '}:channel:' +
+              channel +
+              ':members',
             0,
             args.notescreenuuid
           )
           [push](
-            'lecture:' + args.lectureuuid + ':channel:' + channel + ':members',
+            'lecture:{' +
+              args.lectureuuid +
+              '}:channel:' +
+              channel +
+              ':members',
             args.notescreenuuid
           )
           .exec()
@@ -1804,7 +2121,7 @@ export class NoteScreenConnection extends CommonConnection {
         // just in case, datastructures are broken
       } else {
         const lres = await this.redis.lRange(
-          'lecture:' + args.lectureuuid + ':channels',
+          'lecture:{' + args.lectureuuid + '}:channels',
           0,
           1
         )
@@ -1817,19 +2134,27 @@ export class NoteScreenConnection extends CommonConnection {
         await this.redis
           .multi()
           .hSet(
-            'lecture:' +
+            'lecture:{' +
               args.lectureuuid +
-              ':notescreen:' +
+              '}:notescreen:' +
               args.notescreenuuid,
             ['channel', channel]
           )
           .lRem(
-            'lecture:' + args.lectureuuid + ':channel:' + channel + ':members',
+            'lecture:{' +
+              args.lectureuuid +
+              '}:channel:' +
+              channel +
+              ':members',
             0,
             args.notescreenuuid
           )
           [push](
-            'lecture:' + args.lectureuuid + ':channel:' + channel + ':members',
+            'lecture:{' +
+              args.lectureuuid +
+              '}:channel:' +
+              channel +
+              ':members',
             args.notescreenuuid
           )
           .exec()
@@ -1847,7 +2172,7 @@ export class NoteScreenConnection extends CommonConnection {
     return true
   }
 
-  async disconnectNotescreen(args) {
+  async disconnectNotescreen(args: NotepadScreenIdType) {
     this.lastaccess(args.lectureuuid)
     // this.redis.srem("lecture:"+args.lectureuuid+":notescreens",0,args.notescreenuuid);
     const roomname = this.getRoomName(args.lectureuuid)
@@ -1855,32 +2180,35 @@ export class NoteScreenConnection extends CommonConnection {
       const proms = []
       proms.push(
         this.redis.hSet(
-          'lecture:' + args.lectureuuid + ':notescreen:' + args.notescreenuuid,
+          'lecture:{' +
+            args.lectureuuid +
+            '}:notescreen:' +
+            args.notescreenuuid,
           ['active', '0']
         )
       )
       proms.push(
         this.redis.hDel(
-          'lecture:' + args.lectureuuid + ':idents',
+          'lecture:{' + args.lectureuuid + '}:idents',
           args.socketid
         )
       )
 
       proms.push(
         this.redis.hDel(
-          'lecture:' + args.lectureuuid + ':avoffers',
+          'lecture:{' + args.lectureuuid + '}:avoffers',
           'video:' + args.socketid
         )
       )
       proms.push(
         this.redis.hDel(
-          'lecture:' + args.lectureuuid + ':avoffers',
+          'lecture:{' + args.lectureuuid + '}:avoffers',
           'audio:' + args.socketid
         )
       )
       proms.push(
         this.redis.hDel(
-          'lecture:' + args.lectureuuid + ':avoffers',
+          'lecture:{' + args.lectureuuid + '}:avoffers',
           'screen:' + args.socketid
         )
       )
@@ -1897,11 +2225,17 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async updateNotescreenActive(args) {
+  async updateNotescreenActive(
+    args: NotepadScreenIdType & {
+      cryptKey: string
+      signKey: string
+      userhash: string
+    }
+  ) {
     this.addUpdateCryptoIdent(args)
     try {
       await this.redis.hSet(
-        'lecture:' + args.lectureuuid + ':notescreen:' + args.notescreenuuid,
+        'lecture:{' + args.lectureuuid + '}:notescreen:' + args.notescreenuuid,
         ['active', '1', 'lastaccess', Date.now().toString()]
       )
     } catch (error) {
@@ -1913,7 +2247,7 @@ export class NoteScreenConnection extends CommonConnection {
   async iterOverNotescreens(args, itfunc) {
     try {
       const res = await this.redis.smembers(
-        'lecture:' + args.lectureuuid + ':notescreens'
+        'lecture:{' + args.lectureuuid + '}:notescreens'
       )
       if (res) {
         res.forEach((item) => {
@@ -1927,16 +2261,16 @@ export class NoteScreenConnection extends CommonConnection {
   }
   */
 
-  async getNoteScreens(args /*, funct*/) {
+  async getNoteScreens(args: NotepadScreenOnlyIdType /*, funct*/) {
     try {
       const screens = await this.redis.sMembers(
-        'lecture:' + args.lectureuuid + ':notescreens'
+        'lecture:{' + args.lectureuuid + '}:notescreens'
       )
       // console.log('our screens', screens)
       const screenret = Promise.all(
         screens.map(async (el) => {
           const temp = await this.redis.hmGet(
-            'lecture:' + args.lectureuuid + ':notescreen:' + el,
+            'lecture:{' + args.lectureuuid + '}:notescreen:' + el,
             ['name', 'purpose', 'channel', 'active', 'lastaccess']
           )
           return {
@@ -1963,18 +2297,18 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async getPresentationinfo(args) {
+  async getPresentationinfo(args: NotepadScreenOnlyIdType) {
     try {
-      let lectprop = this.redis.hmGet('lecture:' + args.lectureuuid, [
+      let lectprop = this.redis.hmGet('lecture:{' + args.lectureuuid + '}', [
         'casttoscreens',
         'backgroundbw',
         'showscreennumber'
       ])
-      lectprop = await lectprop
+      const rlectprop = await lectprop
       return {
-        casttoscreens: lectprop[0] !== null ? lectprop[0] : 'false',
-        backgroundbw: lectprop[1] !== null ? lectprop[1] : 'true',
-        showscreennumber: lectprop[2] !== null ? lectprop[2] : 'false'
+        casttoscreens: rlectprop[0] !== null ? rlectprop[0] : 'false',
+        backgroundbw: rlectprop[1] !== null ? rlectprop[1] : 'true',
+        showscreennumber: rlectprop[2] !== null ? rlectprop[2] : 'false'
       }
     } catch (error) {
       console.log('getPresentationinfo', error)
@@ -1982,22 +2316,22 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async getChannelNoteScreens(args) {
+  async getChannelNoteScreens(args: NotepadScreenOnlyIdType) {
     try {
-      let lectprop = this.redis.hmGet('lecture:' + args.lectureuuid, [
+      let lectprop = this.redis.hmGet('lecture:{' + args.lectureuuid + '}', [
         'casttoscreens',
         'backgroundbw',
         'showscreennumber'
       ])
       const channels = await this.redis.lRange(
-        'lecture:' + args.lectureuuid + ':channels',
+        'lecture:{' + args.lectureuuid + '}:channels',
         0,
         -1
       )
       // console.log("channels",channels);
       const channelret = channels.map((el) =>
         this.redis.lRange(
-          'lecture:' + args.lectureuuid + ':channel:' + el + ':members',
+          'lecture:{' + args.lectureuuid + '}:channel:' + el + ':members',
           0,
           -1
         )
@@ -2009,7 +2343,7 @@ export class NoteScreenConnection extends CommonConnection {
           const channeluuid = channels[ind]
           const channelnotescreens = notescreenuuids.map(async (el2) => {
             const details = this.redis.hmGet(
-              'lecture:' + args.lectureuuid + ':notescreen:' + el2,
+              'lecture:{' + args.lectureuuid + '}:notescreen:' + el2,
               [
                 'active',
                 'name',
@@ -2022,7 +2356,7 @@ export class NoteScreenConnection extends CommonConnection {
             return Promise.all([el2, details])
           }, this)
           const chandetail = this.redis.hmGet(
-            'lecture:' + args.lectureuuid + ':channel:' + channeluuid,
+            'lecture:{' + args.lectureuuid + '}:channel:' + channeluuid,
             'type'
           )
 
@@ -2054,12 +2388,12 @@ export class NoteScreenConnection extends CommonConnection {
           ),
         type: el[2][0]
       }))
-      lectprop = await lectprop
+      const rlectprop = await lectprop
       return {
         channelinfo: toret,
-        casttoscreens: lectprop[0],
-        backgroundbw: lectprop[1],
-        showscreennumber: lectprop[2]
+        casttoscreens: rlectprop[0],
+        backgroundbw: rlectprop[1],
+        showscreennumber: rlectprop[2]
       }
     } catch (error) {
       console.log(' getChannelNoteScreens', error)
@@ -2067,55 +2401,62 @@ export class NoteScreenConnection extends CommonConnection {
     }
   }
 
-  async assignNoteScreenToChannel(args) {
+  async assignNoteScreenToChannel(args: {
+    channeluuid: string
+    lectureuuid: string
+    notescreenuuid: string
+  }) {
     // console.log('assignNotePadToChannel', args)
     try {
       // TODO get content of old channel
-      await this.redis.executeIsolated(async (isoredis) => {
-        await isoredis.watch(
-          'lecture:' + args.lectureuuid + ':assignable',
-          'lecture:' +
+      const operation = async (isoredis: typeof this.redis) => {
+        await isoredis.watch([
+          'lecture:{' + args.lectureuuid + '}:assignable',
+          'lecture:{' +
             args.lectureuuid +
-            ':channel:' +
+            '}:channel:' +
             args.channeluuid +
             ':members'
-        )
+        ])
 
         const res = await isoredis.hGet(
-          'lecture:' + args.lectureuuid + ':notescreen:' + args.notescreenuuid,
+          'lecture:{' +
+            args.lectureuuid +
+            '}:notescreen:' +
+            args.notescreenuuid,
           'channel'
         )
         const oldchanneluuid = res
         await isoredis.watch(
-          'lecture:' +
+          'lecture:{' +
             args.lectureuuid +
-            ':channel:' +
+            '}:channel:' +
             oldchanneluuid +
             ':members'
         )
         await isoredis
           .multi()
           .lRem(
-            'lecture:' +
+            'lecture:{' +
               args.lectureuuid +
-              ':channel:' +
+              '}:channel:' +
               oldchanneluuid +
               ':members',
             0,
             args.notescreenuuid
           )
           .rPush(
-            'lecture:' +
+            'lecture:{' +
               args.lectureuuid +
-              ':channel:' +
+              '}:channel:' +
               args.channeluuid +
               ':members',
             args.notescreenuuid
           )
           .hSet(
-            'lecture:' +
+            'lecture:{' +
               args.lectureuuid +
-              ':notescreen:' +
+              '}:notescreen:' +
               args.notescreenuuid,
             [
               'channel',
@@ -2127,7 +2468,13 @@ export class NoteScreenConnection extends CommonConnection {
             ]
           )
           .exec()
-      })
+      }
+      if ('executeIsolated' in this.redis) {
+        await this.redis.executeIsolated(operation)
+      } else {
+        await operation(this.redis)
+      }
+
       this.emitscreenlists(args)
     } catch (error) {
       console.log('assignNotescreenToChannel', error)

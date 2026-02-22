@@ -55,7 +55,7 @@ export default [
     }
   },
   {
-    files: ['packages/**/*.ts', 'packages/**/*.tsx'],
+    files: ['packages/**/*.ts', 'packages/**/*.tsx', 'daemons/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {}

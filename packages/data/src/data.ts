@@ -1257,10 +1257,10 @@ export class MemContainer extends Container {
 
 type CallbackContainerConfig = {
   obj: {}
-  writeData: WriteData
+  writeData: ContainerWriteData
 }
 
-type WriteData = (
+export type ContainerWriteData = (
   obj: {},
   number: StorageType,
   data: ArrayBuffer,
@@ -1283,7 +1283,7 @@ export class CallbackContainer extends Container {
     this.writeData(this.obj, this.number, data, false)
   }
 
-  protected writeData: WriteData
+  protected writeData: ContainerWriteData
   protected obj: {}
   protected number: StorageType
 }
@@ -1293,7 +1293,7 @@ type ContainerId = SpecialContainerId | number
 
 type CollectionContainerConfig = {
   obj: {}
-  writeData: WriteData
+  writeData: ContainerWriteData
 }
 
 type CollectionContainerType = (

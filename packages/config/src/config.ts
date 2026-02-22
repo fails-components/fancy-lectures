@@ -26,7 +26,7 @@ function checkEnv(
 }
 
 export class FailsConfig {
-  constructor(args: { react: boolean }) {
+  constructor(args?: { react: boolean }) {
     if (args && args.react) this.react = true
 
     let env: Record<string, string | undefined>
@@ -294,6 +294,11 @@ export class FailsConfig {
     return this.redispass_
   }
 
+  get redisClusterConfig() {
+    // to be implemented
+    return undefined
+  }
+
   get needCors() {
     if (this.devmode && this.devmode.includes('appweb')) return true
     else return false
@@ -327,7 +332,7 @@ export class FailsConfig {
     return this.mongourl_
   }
 
-  mongoDB() {
+  get mongoDB() {
     return this.mongoname_
   }
 
@@ -343,7 +348,7 @@ export class FailsConfig {
     return this.staticsecret_
   }
 
-  getPath(type: string, branch: string) {
+  getPath(type: string, branch?: string) {
     const paths: Record<string, string> = {
       web: 'static/lecture/',
       app: 'app',
@@ -382,7 +387,7 @@ export class FailsConfig {
     return this.exthost_
   }
 
-  getSPath(type: string, branch: string) {
+  getSPath(type: string, branch?: string) {
     const path = this.getPath(type, branch)
     if (path === '') return ''
     else return '/' + this.getPath(type, branch)
@@ -400,10 +405,10 @@ export class FailsConfig {
     if (this.devmode && this.devmode.includes(type)) {
       const name = 'FAILS_DEV_' + type.toUpperCase() + '_PORT'
       if (this.env[name]) {
-        return this.env[name]
+        return Number(this.env[name])
       }
       if (this.env['REACT_APP_' + name]) {
-        return this.env['REACT_APP_' + name]
+        return Number(this.env['REACT_APP_' + name])
       }
       if (this.devPorts[type]) return this.devPorts[type]
     }
@@ -422,7 +427,7 @@ export class FailsConfig {
     return port === 443
   }
 
-  getURL(type: string, branch: string) {
+  getURL(type: string, branch?: string) {
     const port = this.getPort(type)
     const ishttps = port ? this.isHttps(Number(port)) : false
     if (this.devmode && this.devmode.includes(type)) {

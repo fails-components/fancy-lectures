@@ -24,7 +24,7 @@
   ],
   "type": "module",
   "engines": {
-    "node": ">=16"
+    "node": ">=24"
   },
   "scripts": {
     "test": "run-s  test:lint",
