@@ -27,7 +27,6 @@ import { serialize as BSONserialize } from 'bson'
 import { createHash, webcrypto as crypto } from 'crypto'
 import type {
   Db as MongoDb,
-  ObjectId,
   Binary,
   UpdateFilter,
   WithId,
@@ -41,7 +40,7 @@ import type { FailsJWTSigner } from '@fails-components/security'
 export type BasicIdType = {
   lectureuuid: string
   socketid: string
-  appversion: string
+  appversion: 'stable' | 'experimental'
   features: string[]
   user?: string
   name: string
@@ -58,7 +57,6 @@ export type NotepadScreenIdType = BasicIdType & {
   socketid: string
   notescreenuuid: string
   purpose: 'notepad' | 'screen'
-  appversion: string
   features: string[]
   user?: string
   name: string
@@ -76,7 +74,6 @@ export type NotesIdType = BasicIdType & {
   lectureuuid: string
   socketid: string
   purpose: 'notes'
-  appversion: string
   features: string[]
   user?: string
   name: string
@@ -95,34 +92,32 @@ export type NotepadScreenOnlyIdType = {
 
 // database types lecture
 export interface Lecture {
-  _id: ObjectId
   lms: {
     iss: string
     resource_id: string
-    course_id: string
-    platform_id: string
-    deploy_id: string
+    course_id?: string
+    platform_id?: string
+    deploy_id?: string
   }
-  title: string
-  coursetitle: string
+  title?: string
+  coursetitle?: string
   uuid: string
-  owners: string[]
-  ownersdisplaynames: string[]
+  owners?: string[]
+  ownersdisplaynames?: string[]
   lastaccess: Date
-  owner: string[]
   date: Date
-  pictures: MongoFile[]
-  backgroundpdfuse: number
-  backgroundpdf: BackgroundPdf
-  polls: LecturePoll[]
-  boards: string[]
-  boardsavetime: number
-  backgroundbw: string | boolean // Appears as "true" (string) in your JSON
-  usedpictures: MongoFile[]
-  appversion: string
-  features: string[]
-  ipynbs: PyNotebook[]
-  usedipynbs: PyNotebook[]
+  pictures?: MongoFile[]
+  backgroundpdfuse?: number
+  backgroundpdf?: BackgroundPdf
+  polls?: LecturePoll[]
+  boards?: string[]
+  boardsavetime?: number
+  backgroundbw?: string | boolean // Appears as "true" (string) in your JSON
+  usedpictures?: MongoFile[]
+  appversion?: 'stable' | 'experimental'
+  features?: string[]
+  ipynbs?: PyNotebook[]
+  usedipynbs?: PyNotebook[]
 }
 
 export interface LectureBoard {

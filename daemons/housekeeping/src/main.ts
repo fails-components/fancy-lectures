@@ -24,7 +24,7 @@ import {
   type RedisClientType
 } from 'redis'
 import { MongoClient } from 'mongodb'
-import { Housekeeping } from './housekeeper.js'
+import { Housekeeping } from './housekeeper.ts'
 import { writeFile, rm } from 'node:fs/promises'
 import { FailsConfig } from '@fails-components/config'
 import { FailsAssets } from '@fails-components/assets'

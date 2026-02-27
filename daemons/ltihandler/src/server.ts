@@ -1,7 +1,7 @@
 /*
     Fails Components (Fancy Automated Internet Lecture System - Components)
-    Copyright (C)  2015-2017 (original FAILS), 
-                   2022- (FAILS Components)  Marten Richter <marten.richter@freenet.de>
+    Copyright (C)  2015-2017 (original FAILS),
+                   2021- (FAILS Components)  Marten Richter <marten.richter@freenet.de>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -18,19 +18,18 @@
 */
 
 import express from 'express'
-import { MongoClient } from 'mongodb'
-import { AVSDispatcher } from './dispatcher.ts'
-import { FailsConfig } from '@fails-components/config'
-import { FailsJWTVerifier, FailsJWTSigner } from '@fails-components/security'
-import cors from 'cors'
 import {
   createClient as redisCreateClient,
   createCluster as redisCreateCluster,
   type RedisClusterType,
   type RedisClientType
 } from 'redis'
+import { MongoClient } from 'mongodb'
+import { FailsJWTSigner } from '@fails-components/security'
+import { FailsConfig } from '@fails-components/config'
 
-console.log('start initialize server')
+// import { v4 as uuidv4, validate as isUUID } from 'uuid';
+import { LtiHandler } from './ltihandler.ts'
 
 const cfg = new FailsConfig()
 
@@ -58,38 +57,57 @@ await rediscl.connect()
 console.log('redisclient connected')
 
 const mongoclient = new MongoClient(cfg.mongoURL)
-await mongoclient.connect()
 const mongodb = mongoclient.db(cfg.mongoDB)
-
-let ready = false
-
-const avsverifier = new FailsJWTVerifier({ redis: rediscl, type: 'avs' })
 
 const keysSecret = cfg.keysSecret
 if (typeof keysSecret === 'undefined')
   throw new Error('Secret for keys not set')
 
-const avssecurity = new FailsJWTSigner({
+const appsecurity = new FailsJWTSigner({
   redis: rediscl,
-  type: 'avs',
+  type: 'app',
   expiresIn: '1m',
   secret: keysSecret
 })
 
-const dispatcher = new AVSDispatcher({
+const lmsList = cfg.lmsList
+
+const ltihandler = new LtiHandler({
+  lmslist: lmsList,
+  signJwt: appsecurity.signToken,
+  redis: rediscl,
   mongo: mongodb,
-  verifier: avsverifier,
-  signAvsJwt: avssecurity.signToken
+  basefailsurl: {
+    stable: cfg.getURL('appweb', 'stable'),
+    experimental: cfg.getURL('appweb', 'experimental')
+  },
+  coursewhitelist: cfg.courseWhitelist,
+  onlyLearners: cfg.onlyLearners,
+  addAdminList: cfg.addlAdmins
 })
 
 const app = express()
+let ready: undefined | true
+
+// may be move the io also inside the object, on the other hand, I can not insert middleware anymore
+
+/* var ioIns = new Server(server,{cors: {
+  origin: "http://192.168.1.116:3000",
+  methods: ["GET", "POST"],
+ // credentials: true
+}}); */
+
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
-// only in development!
-if (cfg.devmode) {
-  app.use(cors())
-}
+console.log('debug path ', cfg.getSPath('lti') + '/launch')
+app.all(cfg.getSPath('lti') + '/launch', (req, res) => {
+  return ltihandler.handleLaunch(req, res)
+})
+
+app.all(cfg.getSPath('lti') + '/login', (req, res) => {
+  return ltihandler.handleLogin(req, res)
+})
 
 // Kubernetes livelyness and readyness probes
 app.get('/ready', (req, res) => {
@@ -101,14 +119,40 @@ app.get('/health', async (req, res) => {
   res.send('Healthy')
 })
 
-app.use(cfg.getSPath('avsdispatcher'), dispatcher.express()) // secure all app routes
-dispatcher.installHandlers(cfg.getSPath('avsdispatcher'), app)
+app.use(cfg.getSPath('lti') + '/maintenance/', ltihandler.maintenanceExpress()) // secure maintenance routes
 
-let port = cfg.getPort('avsdispatcher')
+app.get(cfg.getSPath('lti') + '/maintenance/user', (req, res) => {
+  return ltihandler.handleGetUser(req, res)
+})
+
+app.delete(cfg.getSPath('lti') + '/maintenance/user', (req, res) => {
+  return ltihandler.handleDeleteUser(req, res)
+})
+
+app.delete(cfg.getSPath('lti') + '/maintenance/course', (req, res) => {
+  return ltihandler.handleDeleteCourse(req, res)
+})
+
+app.delete(cfg.getSPath('lti') + '/maintenance/resource', (req, res) => {
+  return ltihandler.handleDeleteResource(req, res)
+})
+
+/*
+// old test code?
+app.all("/auth",function(req,res,next) {
+  // console.log("Request:", req.token);
+  // console.log("Res:",res);
+   console.log("req.query auth",req.query);
+   console.log("req.body auth",req.body);
+   res.send('Hello LTI');
+ });
+ */
+
+let port = cfg.getPort('lti')
 if (port === 443) port = 8080 // we are in production mode inside a container
 app.listen(port, cfg.host, function () {
   console.log(
-    'Failsserver avsdispatcher handler listening port:',
+    'Failsserver lti handler listening port:',
     port,
     ' host:',
     cfg.host

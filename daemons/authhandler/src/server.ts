@@ -25,7 +25,7 @@ import {
   type RedisClusterType,
   type RedisClientType
 } from 'redis'
-import { AuthConnection } from './authhandler.js'
+import { AuthConnection } from './authhandler.ts'
 import { FailsJWTSigner } from '@fails-components/security'
 import { FailsConfig } from '@fails-components/config'
 

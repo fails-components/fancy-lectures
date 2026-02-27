@@ -18,15 +18,76 @@
 */
 
 import { v4 as uuidv4, validate } from 'uuid'
-import url from 'fast-url-parser'
+import { type RedisClusterType, type RedisClientType } from 'redis'
 import jwt from 'jsonwebtoken'
 import { expressjwt as jwtexpress } from 'express-jwt'
-import got from 'got'
+import ky from 'ky'
 import Jwk from 'rasha'
 import moment from 'moment'
+import { type Db as MongoDb } from 'mongodb'
+import type { FailsJWTSigner } from '@fails-components/security'
+import type { Request, Response } from 'express'
+import { type Lecture } from '@fails-components/commonhandler'
+
+type FailsLtiJwt = jwt.Jwt & {
+  payload: {
+    kid?: string
+    iss?: string
+  }
+}
+
+type FailsUser = {
+  lms?: { username: string; sub: string }
+  email?: string
+  firstnames?: string
+  lastname?: string
+  displayname?: string
+  lastlogin: Date
+  uuid: string
+}
+
+export interface AuthenticatedLtiRequest extends Request {
+  token?: { iss?: string }
+}
+
+type LtiKey = Jwk.Jwk & {
+  kid: string
+}
 
 export class LtiHandler {
-  constructor(args) {
+  protected mongo: MongoDb
+  protected redis: RedisClusterType | RedisClientType
+  protected signJwt: FailsJWTSigner['signToken']
+  protected basefailsurl: Record<'stable' | 'experimental', string>
+  protected onlyLearners: boolean
+  protected addAdminList: string[]
+  protected lmslist: Record<
+    string,
+    {
+      keyset_url: string
+      access_token_url: string
+      auth_request_url: string
+    }
+  >
+  protected coursewhitelist?: string[]
+
+  constructor(args: {
+    lmslist: Record<
+      string,
+      {
+        keyset_url: string
+        access_token_url: string
+        auth_request_url: string
+      }
+    >
+    signJwt: FailsJWTSigner['signToken']
+    redis: RedisClusterType | RedisClientType
+    mongo: MongoDb
+    basefailsurl: Record<'stable' | 'experimental', string>
+    coursewhitelist?: string[]
+    onlyLearners: boolean
+    addAdminList: string[]
+  }) {
     this.lmslist = args.lmslist
     this.redis = args.redis
     this.mongo = args.mongo
@@ -41,7 +102,7 @@ export class LtiHandler {
       console.log('all access limited to learner level for instructors')
   }
 
-  handleLogin(req, res) {
+  handleLogin(req: Request, res: Response) {
     // console.log("Request:", req);
     // console.log("Res:",res);
     const params = { ...req.body }
@@ -68,12 +129,18 @@ export class LtiHandler {
     // if not active platform redirect
 
     const query = {
+      // eslint-disable-next-line camelcase
       response_type: 'id_token',
+      // eslint-disable-next-line camelcase
       response_mode: 'form_post',
+      // eslint-disable-next-line camelcase
       id_token_signed_response_alg: 'RS256',
       scope: 'openid',
+      // eslint-disable-next-line camelcase
       client_id: params.client_id,
+      // eslint-disable-next-line camelcase
       redirect_uri: params.target_link_uri,
+      // eslint-disable-next-line camelcase
       login_hint: params.login_hint,
       nonce: uuidv4(),
       prompt: 'none'
@@ -82,19 +149,22 @@ export class LtiHandler {
       // on which we have to keep track
       // it would be something else, if we require the user to login to our system first...
     }
-    if (params.lti_message_hint)
-      query.lti_message_hint = params.lti_message_hint
-    if (params.lti_deployment_id)
-      query.lti_deployment_id = params.lti_deployment_id
-    res.redirect(
-      url.format({
-        pathname: platform.auth_request_url,
-        query: query
+    const url = new URL(platform.auth_request_url)
+    url.search = new URLSearchParams({
+      ...query,
+      ...(params.lti_message_hint && {
+        // eslint-disable-next-line camelcase
+        lti_message_hint: params.lti_message_hint
+      }),
+      ...(params.lti_deployment_id && {
+        // eslint-disable-next-line camelcase
+        lti_deployment_id: params.lti_deployment_id
       })
-    )
+    }).toString()
+    res.redirect(url.toString())
   }
 
-  async handleLaunch(req, res) {
+  async handleLaunch(req: Request, res: Response) {
     // console.log("Request:", req);
     // console.log("Res:",res);
     if (req.body.error) {
@@ -102,7 +172,26 @@ export class LtiHandler {
     }
     if (req.body.id_token) {
       const decodedToken = jwt.decode(req.body.id_token, { complete: true })
+
+      if (!decodedToken || typeof decodedToken.payload === 'string')
+        return res.status(400).send({
+          status: 400,
+          error: 'Bad Request',
+          details: {
+            message: 'no token or string payload' + ' not registered/supported'
+          }
+        })
+
+      if (typeof decodedToken.payload.iss !== 'string')
+        return res.status(400).send({
+          status: 400,
+          error: 'Bad Request',
+          details: {
+            message: 'payload.iss is not a string'
+          }
+        })
       const platform = this.lmslist[decodedToken.payload.iss]
+
       if (!platform)
         return res.status(400).send({
           status: 400,
@@ -114,15 +203,21 @@ export class LtiHandler {
               ' not registered/supported'
           }
         })
-      let keyinfo
+      interface JwksResponse {
+        keys: ({ kid: string } & Jwk.Jwk)[]
+      }
+      let keyinfo: JwksResponse | undefined
       try {
-        keyinfo = await got.get(platform.keyset_url).json()
+        keyinfo = await ky.get(platform.keyset_url).json()
+        if (!keyinfo || typeof keyinfo.keys !== 'object')
+          throw new Error('wrong Keyinfo type')
       } catch (error) {
         console.log('lti error, key fetch', error)
         return res
           .status(400)
           .send({ status: 400, error: 'problem, while accessing platform key' })
       }
+
       const keys = keyinfo.keys
       if (!keys)
         return res.status(400).send({ status: 400, error: 'Keyset not found' })
@@ -137,7 +232,11 @@ export class LtiHandler {
         return res.status(400).send({ status: 400, error: 'key not found' })
       let key
       try {
-        key = await Jwk.export({ jwk: jwk })
+        key = await Jwk.export({
+          jwk: jwk,
+          format: 'pkcs1',
+          public: true
+        })
       } catch (error) {
         console.log('Jwk export: error', error)
         return res
@@ -202,21 +301,24 @@ export class LtiHandler {
 
         // now we have to collect the data
         const userinfo = {
-          firstnames: payload.given_name,
-          lastname: payload.family_name,
-          displayname: payload.name,
-          email: payload.email, // can be used for matching persons, multple possible
-          lmssub: payload.sub // even this may be missing in anonymus case
+          ...{
+            firstnames: payload.given_name,
+            lastname: payload.family_name,
+            displayname: payload.name,
+            email: payload.email, // can be used for matching persons, multple possible
+            lmssub: payload.sub // even this may be missing in anonymus case
+          },
+          ...(payload['https://purl.imsglobal.org/spec/lti/claim/ext'] && {
+            lmsusername:
+              payload['https://purl.imsglobal.org/spec/lti/claim/ext']
+                .user_username
+          })
         }
-        if (payload['https://purl.imsglobal.org/spec/lti/claim/ext'])
-          userinfo.lmsusername =
-            payload[
-              'https://purl.imsglobal.org/spec/lti/claim/ext'
-            ].user_username
 
         // console.log("userinfo", userinfo);
         const lmscontext = {
           // TODO add unique platform identifier?
+          // eslint-disable-next-line camelcase
           ret_url:
             payload[
               'https://purl.imsglobal.org/spec/lti/claim/launch_presentation'
@@ -224,13 +326,17 @@ export class LtiHandler {
           iss: payload.iss, // not optional, use for identification
 
           /* aud: payload.aud, */ // may be exclude
+          // eslint-disable-next-line camelcase
           platform_id:
             payload['https://purl.imsglobal.org/spec/lti/claim/tool_platform']
               .guid, // optional
+          // eslint-disable-next-line camelcase
           deploy_id:
             payload['https://purl.imsglobal.org/spec/lti/claim/deployment_id'], // do not use for identification, period!
+          // eslint-disable-next-line camelcase
           course_id:
             payload['https://purl.imsglobal.org/spec/lti/claim/context'].id, // optional, use for context identification if possible
+          // eslint-disable-next-line camelcase
           resource_id:
             payload['https://purl.imsglobal.org/spec/lti/claim/resource_link']
               .id // use for identification
@@ -300,10 +406,14 @@ export class LtiHandler {
         // and the user !!
         const failsuser = await this.identifyCreateUser(userinfo)
         // console.log('failsuser', failsuser)
-        const courseinfo = { lms: lmscontext, linfo: lectureinfo }
-        if (role.includes('instructor') && !role.includes('administrator')) {
-          courseinfo.owner = failsuser.useruuid // claim ownership
-          courseinfo.ownerdisplayname = failsuser.displayname
+        const courseinfo = {
+          ...{ lms: lmscontext, linfo: lectureinfo },
+          ...(role.includes('instructor') &&
+            !role.includes('administrator') &&
+            failsuser && {
+              owner: failsuser.useruuid, // claim ownership
+              ownerdisplayname: failsuser.displayname
+            })
         }
         // the next is done after displayname setting, as this case should not prevent changing displaynames
         if (
@@ -314,9 +424,8 @@ export class LtiHandler {
           role.push('administrator')
         }
 
-        const failscourse = await this.identifyCreateLectureAndCourse(
-          courseinfo
-        ) // TODO
+        const failscourse =
+          await this.identifyCreateLectureAndCourse(courseinfo) // TODO
         if (!failscourse)
           return res
             .status(400)
@@ -348,8 +457,15 @@ export class LtiHandler {
       })
   }
 
-  async identifyCreateUser(userinfo) {
-    const userscol = this.mongo.collection('users')
+  async identifyCreateUser(userinfo: {
+    lmsusername?: string
+    lmssub?: string
+    email?: string
+    firstnames?: string
+    lastname?: string
+    displayname?: string
+  }) {
+    const userscol = this.mongo.collection<FailsUser>('users')
 
     const orquery = []
     if (userinfo.lmssub) orquery.push({ 'lms.sub': userinfo.lmssub })
@@ -368,25 +484,28 @@ export class LtiHandler {
     let email = userinfo.email
 
     if (userdoc == null) {
-      // deploy data
-      const toinsert = {}
+      const lmssub = userinfo.lmssub
+      const lmsusername = userinfo.lmsusername
       if (!displayname && firstnames && lastname)
         displayname = firstnames + lastname
-      if (displayname) toinsert.displayname = displayname
-      if (userinfo.firstnames) toinsert.firstnames = userinfo.firstnames
-      if (userinfo.lastname) toinsert.lastname = userinfo.lastname
-      if (userinfo.email) toinsert.email = userinfo.email
-      if (userinfo.lmssub || userinfo.lmsusername) toinsert.lms = {}
-      if (userinfo.lmssub) {
-        toinsert.lms.sub = userinfo.lmssub
+      // deploy data
+      const toinsert: FailsUser = {
+        ...{
+          lastlogin: new Date(),
+          uuid: uuidv4()
+        },
+        ...(lmssub &&
+          lmsusername && {
+            lms: {
+              sub: lmssub,
+              username: lmsusername
+            }
+          }),
+        ...(displayname && { displayname }),
+        ...(firstnames && { firstnames }),
+        ...(lastname && { lastname }),
+        ...(email && { email })
       }
-      if (userinfo.lmsusername) {
-        toinsert.lms.username = userinfo.lmsusername
-      }
-      toinsert.lastlogin = new Date()
-
-      useruuid = uuidv4()
-      toinsert.uuid = useruuid
 
       await userscol.insertOne(toinsert)
     } else {
@@ -400,24 +519,29 @@ export class LtiHandler {
       if (!displayname && firstnames && lastname)
         displayname = firstnames + lastname
 
-      const toupdate = {}
-      if (userdoc.displayname !== displayname)
-        toupdate.displayname = displayname
-      if (userdoc.firstnames !== userinfo.firstnames)
-        toupdate.firstnames = userinfo.firstnames
-      if (userdoc.lastname !== userinfo.lastname)
-        toupdate.lastname = userinfo.lastname
-      if (userdoc.email !== userinfo.email) toupdate.email = userinfo.email
-      if (
-        (userinfo.lmssub || userinfo.lmsusername) &&
-        (!userdoc.lms ||
-          userdoc.lms.sub !== userinfo.lmssub ||
-          userdoc.lms.username !== userinfo.lmsusername)
-      ) {
-        const updatelms = userdoc.lms
-        if (userinfo.lmssub) updatelms.sub = userinfo.lmssub
-        if (userinfo.lmsusername) updatelms.username = userinfo.lmsusername
-        toupdate.lms = updatelms
+      const toupdate: Partial<FailsUser> = {
+        ...(userdoc.displayname !== displayname && { displayname }),
+        ...(userdoc.firstnames !== userinfo.firstnames && {
+          firstnames: userinfo.firstnames
+        }),
+        ...(userdoc.lastname !== userinfo.lastname && {
+          lastname: userinfo.lastname
+        }),
+        ...(userdoc.email !== userinfo.email && { email: userinfo.email }),
+        ...((userinfo.lmssub || userinfo.lmsusername) &&
+          (!userdoc.lms ||
+            userdoc.lms.sub !== userinfo.lmssub ||
+            userdoc.lms.username !== userinfo.lmsusername) &&
+          userinfo.lmssub &&
+          userinfo.lmsusername && {
+            lms: {
+              ...userdoc.lms,
+              ...{
+                sub: userinfo.lmssub,
+                username: userinfo.lmsusername
+              }
+            }
+          })
       }
       if (Object.keys(toupdate).length > 0) {
         userscol.updateOne(
@@ -440,19 +564,35 @@ export class LtiHandler {
       }
     }
 
-    const retobj = { useruuid: useruuid }
-    // if (firstnames) retobj.firstnames=firstnames;
-    // if (lastname) retobj.lastname=lastname;
-    if (displayname) retobj.displayname = displayname
+    const retobj = {
+      ...{ useruuid: useruuid },
+      // if (firstnames) retobj.firstnames=firstnames;
+      // if (lastname) retobj.lastname=lastname;
+      ...(displayname && { displayname })
+    }
     // if (email) retobj.email=email;
     return retobj
   }
 
-  async identifyCreateLectureAndCourse(args) {
+  async identifyCreateLectureAndCourse(args: {
+    lms: {
+      iss?: string
+      resource_id?: string
+      course_id?: string
+      platform_id?: string
+      deploy_id?: string
+    }
+    linfo: {
+      lecturetitle: string
+      coursetitle: string
+    }
+    owner?: string
+    ownerdisplayname?: string
+  }) {
     const lms = args.lms
     const linfo = args.linfo
 
-    const lecturescol = this.mongo.collection('lectures')
+    const lecturescol = this.mongo.collection<Lecture>('lectures')
 
     const andquery = []
 
@@ -473,7 +613,11 @@ export class LtiHandler {
     let title = linfo.lecturetitle
     let coursetitle = linfo.coursetitle
 
-    let appversion = lecturedoc?.appversion || 'stable'
+    let appversion =
+      lecturedoc?.appversion === 'stable' ||
+      lecturedoc?.appversion === 'experimental'
+        ? (lecturedoc.appversion as 'stable' | 'experimental')
+        : 'stable'
     let features = lecturedoc?.features || []
     if ((lecturedoc == null || !lecturedoc.appversion) && lms.course_id) {
       const lectappdoc = await lecturescol.findOne(
@@ -485,56 +629,47 @@ export class LtiHandler {
     }
 
     if (lecturedoc == null) {
-      // deploy data
-      const toinsert = {}
-      toinsert.lms = {}
-      toinsert.lms.iss = lms.iss
-      toinsert.lms.resource_id = lms.resource_id
-      if (lms.course_id) toinsert.lms.course_id = lms.course_id
-      if (lms.platform_id) toinsert.lms.platform_id = lms.platform_id
-      if (lms.deploy_id) toinsert.lms.deploy_id = lms.deploy_id
-      if (linfo.lecturetitle) toinsert.title = linfo.lecturetitle
-      if (linfo.coursetitle) toinsert.coursetitle = linfo.coursetitle
-      toinsert.appversion = appversion
-      toinsert.features = features
       lectureuuid = uuidv4()
-      toinsert.uuid = lectureuuid
-      if (args.owner) {
-        toinsert.owners = [args.owner]
-        if (args.ownerdisplayname)
-          toinsert.ownersdisplaynames = [args.ownerdisplayname]
-        else toinsert.ownersdisplaynames = ['N.N.']
-        toinsert.date = new Date()
-        toinsert.lastaccess = new Date()
+      // deploy data
+      const toinsert = {
+        ...{
+          appversion,
+          features,
+          uuid: lectureuuid,
+          date: new Date(),
+          lastaccess: new Date(),
+          lms: {
+            ...{
+              iss: lms.iss,
+              // eslint-disable-next-line camelcase
+              resource_id: lms.resource_id
+            },
+            // eslint-disable-next-line camelcase
+            ...(lms.course_id && { course_id: lms.course_id }),
+            // eslint-disable-next-line camelcase
+            ...(lms.platform_id && { platform_id: lms.platform_id }),
+            // eslint-disable-next-line camelcase
+            ...(lms.deploy_id && { deploy_id: lms.deploy_id })
+          }
+        },
+        ...(linfo.lecturetitle && { title: linfo.lecturetitle }),
+        ...(linfo.coursetitle && { coursetitle: linfo.coursetitle }),
+        ...(args.owner && {
+          owners: [args.owner]
+        }),
+        ...(args.owner &&
+          ((args.ownerdisplayname && {
+            ownersdisplaynames: [args.ownerdisplayname]
+          }) || { ownerdisplaynames: ['N.N.'] }))
       }
 
       await lecturescol.insertOne(toinsert)
     } else {
-      if (!title) title = lecturedoc.title
-      if (!coursetitle) coursetitle = lecturedoc.coursetitle
+      if (!title && lecturedoc.title) title = lecturedoc.title
+      if (!coursetitle && lecturedoc.coursetitle)
+        coursetitle = lecturedoc.coursetitle
 
       lectureuuid = lecturedoc.uuid
-      // check if we want to update
-      const toupdate = {}
-      if (
-        lecturedoc.lms.course_id !== lms.course_id ||
-        lecturedoc.lms.platform_id !== lms.platform_id ||
-        lecturedoc.lms.deploy_id !== lms.deploy_id
-      )
-        toupdate.lms = lecturedoc.lms
-      if (lecturedoc.lms.course_id !== lms.course_id)
-        toupdate.lms.course_id = lms.course_id
-      if (lecturedoc.lms.platform_id !== lms.platform_id)
-        toupdate.lms.platform_id = lms.platform_id
-      if (lecturedoc.lms.deploy_id !== lms.deploy_id)
-        toupdate.lms.deploy_id = lms.deploy_id
-      if (lecturedoc.title !== linfo.lecturetitle)
-        toupdate.title = linfo.lecturetitle
-      if (lecturedoc.coursetitle !== linfo.coursetitle)
-        toupdate.coursetitle = linfo.coursetitle
-      if (!lecturedoc.appversion) lecturedoc.appversion = appversion
-      if (!lecturedoc.features) lecturedoc.features = features
-
       let containsowner = true
       let isowner = false
       if (args.owner) {
@@ -544,16 +679,49 @@ export class LtiHandler {
         isowner = true
       }
 
-      if (containsowner && !lecturedoc.date) toupdate.date = new Date()
+      // check if we want to update
+      const toupdate = {
+        ...(lecturedoc.title !== linfo.lecturetitle && {
+          title: linfo.lecturetitle
+        }),
+        ...(lecturedoc.coursetitle !== linfo.coursetitle && {
+          coursetitle: linfo.coursetitle
+        }),
+        ...(!lecturedoc.features && { features }),
+        ...(!lecturedoc.appversion && { appversion }),
+        ...(containsowner && !lecturedoc.date ? { date: new Date() } : {}),
+        ...((lecturedoc.lms.course_id !== lms.course_id ||
+          lecturedoc.lms.platform_id !== lms.platform_id ||
+          lecturedoc.lms.deploy_id !== lms.deploy_id) && {
+          lms: {
+            ...lecturedoc.lms,
+            ...(lecturedoc.lms.course_id !== lms.course_id && {
+              // eslint-disable-next-line camelcase
+              course_id: lms.course_id
+            }),
+            ...(lecturedoc.lms.platform_id !== lms.platform_id && {
+              // eslint-disable-next-line camelcase
+              platform_id: lms.platform_id
+            }),
+            ...(lecturedoc.lms.deploy_id !== lms.deploy_id && {
+              // eslint-disable-next-line camelcase
+              deploy_id: lms.deploy_id
+            })
+          }
+        })
+      }
+
       if (Object.keys(toupdate).length > 0 || !containsowner) {
-        const updateops = {}
-        if (Object.keys(toupdate).length > 0) updateops.$set = toupdate
-        if (!containsowner && isowner) {
-          updateops.$addToSet = { owners: args.owner }
-          if (args.ownerdisplayname)
-            updateops.$push = { ownersdisplaynames: args.ownerdisplayname }
+        const updateops = {
+          ...(Object.keys(toupdate).length > 0 && { $set: toupdate }),
+          ...(!containsowner &&
+            isowner && {
+              ...{ $addToSet: { owners: args.owner } },
+              ...(args.ownerdisplayname && {
+                $push: { ownersdisplaynames: args.ownerdisplayname }
+              })
+            })
         }
-        if (isowner) updateops.$currentDate = { lastaccess: true }
         // console.log("toupdate",updateops);
         lecturescol.updateOne({ uuid: lectureuuid }, updateops)
       } else {
@@ -581,15 +749,21 @@ export class LtiHandler {
   }
 
   maintenanceExpress() {
-    const secretCallback = async (req, { header, payload }) => {
+    const secretCallback = async (
+      req: Request,
+      token: FailsLtiJwt | undefined
+    ) => {
+      if (!token) throw new Error('no token passed')
+      const { payload } = token
       const keyid = payload.kid
       if (!keyid) throw new Error('no valid kid!')
 
+      if (!payload.iss) throw new Error('no valid iss field')
       const platform = this.lmslist[payload.iss]
       if (!platform) throw new Error('platform not registered/supported')
       let keyinfo
       try {
-        keyinfo = await got.get(platform.keyset_url).json()
+        keyinfo = await ky.get(platform.keyset_url).json<{ keys: LtiKey[] }>()
       } catch (error) {
         console.log('Key info loading problem in maintenance:', error)
         throw new Error('cannot load key info')
@@ -603,7 +777,7 @@ export class LtiHandler {
       if (!jwk) throw new Error('key not found')
       let key
       try {
-        key = await Jwk.export({ jwk: jwk })
+        key = await Jwk.export({ jwk: jwk, format: 'pkcs1', public: true })
       } catch (error) {
         console.log('Jwk export: error', error)
         throw new Error('Jwk key export problem')
@@ -618,7 +792,7 @@ export class LtiHandler {
     })
   }
 
-  async handleGetUser(req, res) {
+  async handleGetUser(req: AuthenticatedLtiRequest, res: Response) {
     const userscol = this.mongo.collection('users')
     const orquery = []
 
@@ -657,7 +831,7 @@ export class LtiHandler {
     }
   }
 
-  async handleDeleteUser(req, res) {
+  async handleDeleteUser(req: AuthenticatedLtiRequest, res: Response) {
     if (!validate(req.body.uuid))
       return res.status(401).send('malformed request: missing uuid')
     const useruuid = req.body.uuid
@@ -682,7 +856,7 @@ export class LtiHandler {
     }
   }
 
-  async handleDeleteCourse(req, res) {
+  async handleDeleteCourse(req: AuthenticatedLtiRequest, res: Response) {
     if (!req.token)
       return res.status(401).send('malformed request: token invalid or missing')
     if (!req.token.iss)
@@ -707,7 +881,7 @@ export class LtiHandler {
     }
   }
 
-  async handleDeleteResource(req, res) {
+  async handleDeleteResource(req: AuthenticatedLtiRequest, res: Response) {
     if (!req.token)
       return res.status(401).send('malformed request: token invalid or missing')
     if (!req.token.iss)

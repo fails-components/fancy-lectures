@@ -22,6 +22,7 @@
     { "path": "./packages/drawobjects" },
     { "path": "./daemons/avsdispatcher" },
     { "path": "./daemons/authhandler" },
+    { "path": "./daemons/ltihandler" },
     { "path": "./daemons/notepadhandler" },
     { "path": "./daemons/noteshandler" },
     { "path": "./daemons/housekeeping" },

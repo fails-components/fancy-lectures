@@ -27,7 +27,7 @@ import {
   type RedisClientType
 } from 'redis'
 import { MongoClient } from 'mongodb'
-import { NoteScreenConnection } from './notepadhandler.js'
+import { NoteScreenConnection } from './notepadhandler.ts'
 import { FailsJWTSigner, FailsJWTVerifier } from '@fails-components/security'
 import { FailsAssets } from '@fails-components/assets'
 import { FailsConfig } from '@fails-components/config'

@@ -27,7 +27,7 @@ import {
   type RedisClientType
 } from 'redis'
 import { MongoClient } from 'mongodb'
-import { NotesConnection } from './noteshandler.js'
+import { NotesConnection } from './noteshandler.ts'
 import { FailsJWTSigner, FailsJWTVerifier } from '@fails-components/security'
 import { FailsAssets } from '@fails-components/assets'
 import { FailsConfig } from '@fails-components/config'
