@@ -28,7 +28,7 @@ import {
 } from '@fails-components/security'
 import { FailsConfig } from '@fails-components/config'
 
-import { AppHandler } from './apphandler.js'
+import { AppHandler } from './apphandler.ts'
 
 const initServer = async () => {
   console.log('start initialize server')
