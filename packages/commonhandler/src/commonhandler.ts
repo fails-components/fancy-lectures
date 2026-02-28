@@ -101,6 +101,7 @@ export interface Lecture {
   }
   title?: string
   coursetitle?: string
+  running?: boolean
   uuid: string
   owners?: string[]
   ownersdisplaynames?: string[]
@@ -154,6 +155,7 @@ export interface PyNotebook {
   sha: Binary
   mimetype: string
   filename: string
+  date?: Date
   presentDownload: 'no' | 'download' | 'downloadAndEdit'
   note: string
   applets: PyApplet[]
@@ -173,6 +175,7 @@ interface PyAppletPart {
 
 interface BackgroundPdf {
   sha: Binary
+  name: string
 }
 
 export type RouterHash = string

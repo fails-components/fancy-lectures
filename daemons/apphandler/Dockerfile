@@ -35,4 +35,4 @@ EXPOSE 8080
 
 VOLUME ["/usr/src/fails/daemons/apphandler/files"]
 
-CMD [ "node", "src/server.js" ]
+CMD [ "node", "src/server.ts" ]

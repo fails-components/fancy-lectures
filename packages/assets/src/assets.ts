@@ -1120,12 +1120,18 @@ export class FailsAssets {
   async handleFileUpload(
     req: Request,
     body: Partial<Record<string, string>>,
-    requiredFields: { [x: string]: string },
-    forbiddenFields: { [x: string]: string },
+    requiredFields: { [x: string]: boolean },
+    forbiddenFields: { [x: string]: boolean },
     filesToUpload: string[],
     maxFileSize: number,
     supportedMime: string[]
-  ) {
+  ): Promise<
+    | (
+        | { sha256: Buffer<ArrayBufferLike>; mimeType: string; size: number }
+        | undefined
+      )[]
+    | undefined
+  > {
     const filesResolve: Record<
       string,
       (value: BusBoyFile | undefined) => void

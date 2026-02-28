@@ -9,33 +9,35 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/apphandler.git"
   },
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "files": [
-    "src/*.js",
+    "src/*.ts",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
   "type": "module",
   "engines": {
-    "node": ">=16"
+    "node": ">=24"
   },
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node src/server.ts",
     "test": "run-s  test:lint",
     "test:lint": "eslint .",
     "docker:build": "docker build -t ghcr.io/fails-components/apphandler:master --secret id=GH_TOKEN -f Dockerfile ../.."
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "dotenv": "^10.0.0"
+    "dotenv": "^10.0.0",
+    "@fails-components/commonhandler": "^1.2.18"
   },
   "dependencies": {
     "@fails-components/config": "^1.3.0",
     "@fails-components/security": "^1.5.1",
+    "@fails-components/assets": "^1.5.1",
     "cors": "^2.8.5",
     "express": "^4.22.1",
     "moment": "^2.29.4",
-    "mongodb": "^3.7.1",
+    "mongodb": "^7.1.0",
     "redis": "^4.0.6",
     "uuid": "^13.0.0"
   },

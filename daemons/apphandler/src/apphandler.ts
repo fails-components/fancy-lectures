@@ -18,9 +18,52 @@
 */
 
 import { v4 as uuidv4, validate as isUUID } from 'uuid'
+import { type RedisClusterType, type RedisClientType } from 'redis'
+import type { Request, Express } from 'express'
+import { type Binary, type Db as MongoDb, type UpdateFilter } from 'mongodb'
+import type { FailsJWTSigner } from '@fails-components/security'
+import type { FailsAssets } from '@fails-components/assets'
+import type {
+  RouterInfo,
+  Lecture,
+  LectureBoard
+} from '@fails-components/commonhandler'
+
+interface AuthenticatedAppRequest extends Request {
+  token: {
+    role?: string[]
+    course?: { lectureuuid?: string }
+    user?: { useruuid?: string; displayname: string }
+    appversion?: 'experimental' | 'stable'
+    features?: string[]
+    context?: 'lti'
+    maxrenew: number
+  }
+}
 
 export class AppHandler {
-  constructor(args) {
+  protected mongo: MongoDb
+  protected redis: RedisClusterType | RedisClientType
+  protected signLectureJwt: FailsJWTSigner['signToken']
+  protected signNotesJwt: FailsJWTSigner['signToken']
+  protected signServerJwt: FailsJWTSigner['signToken']
+  protected getFileURL: (sha: Binary, mimetype: string) => string
+  protected fixednotepadURL: string
+  protected fixednotesURL: string
+  protected maxFileSize: number // may be make const
+  protected handleFileUpload: FailsAssets['handleFileUpload']
+
+  constructor(args: {
+    signServerJwt: FailsJWTSigner['signToken']
+    signLectureJwt: FailsJWTSigner['signToken']
+    signNotesJwt: FailsJWTSigner['signToken']
+    redis: RedisClusterType | RedisClientType
+    mongo: MongoDb
+    handleFileUpload: FailsAssets['handleFileUpload']
+    getFileURL: (sha: Binary, mimetype: string) => string
+    fixednotepadURL: string
+    fixednotesURL: string
+  }) {
     this.redis = args.redis
     this.mongo = args.mongo
     this.signLectureJwt = args.signLectureJwt
@@ -33,24 +76,24 @@ export class AppHandler {
     this.maxFileSize = 30000000
   }
 
-  notepadURL(/* lectureuuid */) {
+  notepadURL(lectureuuid: string) {
     // later we will ask redis, where the primary lecture is handled, or if a new one should be started
 
     return this.fixednotepadURL
   }
 
-  notesURL(/* lectureuuid */) {
+  notesURL(lectureuuid: string) {
     // later we will ask redis, where the secondary lecture is handled, or if a new one should be started
 
     return this.fixednotesURL
   }
 
-  async autoaddfeatures(oldfeatures) {
-    const newfeatures = [...oldfeatures]
+  async autoaddfeatures(oldfeatures?: string[]) {
+    const newfeatures = oldfeatures ? [...oldfeatures] : []
 
     // check, if we have global avs feature
     try {
-      const routercol = this.mongo.collection('avsrouters')
+      const routercol = this.mongo.collection<RouterInfo>('avsrouters')
       const firstrouter = await routercol.findOne(
         {},
         { projection: { _id: 1 } }
@@ -65,13 +108,14 @@ export class AppHandler {
     return newfeatures
   }
 
-  installHandlers(path, app) {
+  installHandlers(path: string, app: Express) {
     // secure the lecture permissions
     app.use(path + '/lecture', (req, res, next) => {
-      if (!req.token.role) return res.status(401).send('unauthorized')
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token.role) return res.status(401).send('unauthorized')
       if (
-        !req.token.role.includes('instructor') &&
-        !req.token.role.includes('audience')
+        !authreq.token.role.includes('instructor') &&
+        !authreq.token.role.includes('audience')
       )
         return res.status(401).send('unauthorized')
       next()
@@ -79,13 +123,17 @@ export class AppHandler {
 
     // renew the auth token
     app.get(path + '/token', async (req, res) => {
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
       if (
-        !req.token.role.includes('instructor') &&
-        !req.token.role.includes('audience')
+        !authreq.token.role?.includes('instructor') &&
+        !authreq.token.role?.includes('audience')
       )
         return res.status(401).send('unauthorized')
 
-      const oldtoken = req.token
+      const oldtoken = authreq.token
       const newtoken = {
         course: oldtoken.course,
         user: oldtoken.user,
@@ -102,11 +150,18 @@ export class AppHandler {
 
     // get auth token for notebook
     app.get(path + '/lecture/notepadtoken', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (!authreq.token.role.includes('instructor'))
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(400).send('unauthorized uuid') // supply valid data
-      const oldtoken = req.token
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(400).send('unauthorized uuid') // supply valid data
+      const oldtoken = authreq.token
       const features = await this.autoaddfeatures(oldtoken.features)
 
       const lecturetokendata = {
@@ -126,11 +181,21 @@ export class AppHandler {
     })
 
     app.get(path + '/lecture/studenttoken', async (req, res) => {
-      if (!req.token.role.includes('audience'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('audience')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(400).send('unauthorized uuid') // supply valid data
-      const oldtoken = req.token
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(400).send('unauthorized uuid') // supply valid data
+      const oldtoken = authreq.token
       const features = await this.autoaddfeatures(oldtoken.features)
 
       const lecturetokendata = {
@@ -148,19 +213,29 @@ export class AppHandler {
     })
 
     app.post(path + '/lecture/auth', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(401).send('unauthorized uuid') // supply valid data
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(401).send('unauthorized uuid') // supply valid data
 
-      const user = req.token.user
+      const user = authreq.token.user
 
-      const features = await this.autoaddfeatures(req.token.features)
+      const features = await this.autoaddfeatures(authreq.token.features)
 
       const payload = {
         uuid: lectureuuid,
         user,
-        appversion: req.token.appversion,
+        appversion: authreq.token.appversion,
         features
       }
       if (!req.body.id || !/[A-Za-z0-9+/]/g.test(req.body.id))
@@ -169,7 +244,7 @@ export class AppHandler {
       const id = req.body.id
       // now we check if the key is in our redis db
       const ex = await this.redis.exists('auth::' + id)
-      if (ex[0]) return res.status(400).send('unknown id')
+      if (!ex) return res.status(400).send('unknown id')
       console.log('redis publish for ', id, payload)
       // ok it is legitimate, so send it please to redis pubsub
       this.redis.publish('auth::' + id, JSON.stringify(payload))
@@ -178,10 +253,20 @@ export class AppHandler {
     })
 
     app.patch(path + '/lecture/course', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(400).send('unauthorized uuid') // supply valid data
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(400).send('unauthorized uuid') // supply valid data
 
       const details = await this.getLectureDetails(lectureuuid)
       if (!details) return res.status(404).send('not found')
@@ -194,7 +279,7 @@ export class AppHandler {
       try {
         const data = req.body
 
-        const lecturescol = this.mongo.collection('lectures')
+        const lecturescol = this.mongo.collection<Lecture>('lectures')
 
         if (data.appversion) {
           if (
@@ -223,7 +308,10 @@ export class AppHandler {
           const knownFeatures = ['avbroadcast', 'jupyter']
           if (
             !Array.isArray(data.features) ||
-            data.features.some((el) => !knownFeatures.includes(el))
+            data.features.some(
+              (el: unknown): el is string =>
+                typeof el !== 'string' || !knownFeatures.includes(el)
+            )
           )
             res.status(400).send('malformed request: features')
           await lecturescol.updateMany(
@@ -251,10 +339,20 @@ export class AppHandler {
     })
 
     app.patch(path + '/lecture', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(400).send('unauthorized uuid') // supply valid data
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(400).send('unauthorized uuid') // supply valid data
 
       const details = await this.getLectureDetails(lectureuuid)
       if (!details) return res.status(404).send('not found')
@@ -263,7 +361,7 @@ export class AppHandler {
       try {
         const data = req.body
 
-        const lecturescol = this.mongo.collection('lectures')
+        const lecturescol = this.mongo.collection<Lecture>('lectures')
 
         if (data.date) {
           // we like to change the date
@@ -284,25 +382,27 @@ export class AppHandler {
             return res.status(400).send('malformed request')
 
           const pendingupdates = []
-          const changes = {
+          const changes: UpdateFilter<Lecture> = {
             $currentDate: { lastaccess: true },
-            $set: {}
+            $set: {
+              ...(typeof data.ipynbs.presentDownload !== 'undefined' && {
+                'ipynbs.$[notebook].presentDownload':
+                  data.ipynbs.presentDownload
+              }),
+              ...(typeof data.ipynbs.name !== 'undefined' && {
+                'ipynbs.$[notebook].name': data.ipynbs.name
+              }),
+              ...('note' in data.ipynbs && {
+                'ipynbs.$[notebook].note': data.ipynbs.note
+              })
+            }
           }
-          let changed = false
-          if (typeof data.ipynbs.presentDownload !== 'undefined') {
-            changes.$set['ipynbs.$[notebook].presentDownload'] =
-              data.ipynbs.presentDownload
-            changed = true
-          }
-          if (typeof data.ipynbs.name !== 'undefined') {
-            changes.$set['ipynbs.$[notebook].name'] = data.ipynbs.name
-            changed = true
-          }
-          if ('note' in data.ipynbs) {
-            changes.$set['ipynbs.$[notebook].note'] = data.ipynbs.note
-            changed = true
-          }
-          if (changed) {
+
+          if (
+            typeof data.ipynbs.presentDownload !== 'undefined' ||
+            typeof data.ipynbs.name !== 'undefined' ||
+            'note' in data.ipynbs
+          ) {
             pendingupdates.push(
               lecturescol.updateOne({ uuid: lectureuuid }, changes, {
                 arrayFilters: [{ 'notebook.id': data.ipynbs.id }]
@@ -310,8 +410,8 @@ export class AppHandler {
             )
           }
 
-          if (data.ipynbs.applets) {
-            data.ipynbs.applets.forEach((applet) => {
+          if (Array.isArray(data.ipynbs?.applets)) {
+            data.ipynbs.applets.forEach((applet: any) => {
               if (
                 typeof applet.presentToStudents !== 'undefined' &&
                 applet.id
@@ -400,15 +500,19 @@ export class AppHandler {
               },
               { arrayFilters: [{ 'pollparchange.id': data.polls.parentid }] }
             )
-            const tochange = { $set: {}, $currentDate: { lastaccess: true } }
-            if (data.polls.name)
-              tochange.$set[
-                'polls.$[pollparchange].children.$[pollchange].name'
-              ] = data.polls.name
-            if ('multi' in data.polls)
-              tochange.$set[
-                'polls.$[pollparchange].children.$[pollchange].multi'
-              ] = data.polls.multi
+            const tochange: UpdateFilter<Lecture> = {
+              $set: {
+                ...(data.polls.name && {
+                  'polls.$[pollparchange].children.$[pollchange].name':
+                    data.polls.name
+                }),
+                ...('multi' in data.polls && {
+                  'polls.$[pollparchange].children.$[pollchange].multi':
+                    data.polls.multi
+                })
+              },
+              $currentDate: { lastaccess: true }
+            }
             await lecturescol.updateOne({ uuid: lectureuuid }, tochange, {
               arrayFilters: [
                 { 'pollparchange.id': data.polls.parentid },
@@ -420,13 +524,20 @@ export class AppHandler {
               { uuid: lectureuuid, 'polls.id': { $ne: data.polls.id } },
               { $addToSet: { polls: { id: data.polls.id } } }
             )
-            const tochange = { $set: {}, $currentDate: { lastaccess: true } }
-            if (data.polls.name)
-              tochange.$set['polls.$[pollchange].name'] = data.polls.name
-            if ('note' in data.polls)
-              tochange.$set['polls.$[pollchange].note'] = data.polls.note
-            if ('multi' in data.polls)
-              tochange.$set['polls.$[pollchange].multi'] = data.polls.multi
+            const tochange: UpdateFilter<Lecture> = {
+              $set: {
+                ...(data.polls.name && {
+                  'polls.$[pollchange].name': data.polls.name
+                }),
+                ...('note' in data.polls && {
+                  'polls.$[pollchange].note': data.polls.note
+                }),
+                ...('multi' in data.polls && {
+                  'polls.$[pollchange].multi': data.polls.multi
+                })
+              },
+              $currentDate: { lastaccess: true }
+            }
             await lecturescol.updateOne({ uuid: lectureuuid }, tochange, {
               arrayFilters: [{ 'pollchange.id': data.polls.id }]
             })
@@ -440,14 +551,13 @@ export class AppHandler {
             data.removepolls.id.length > 20
           )
             return res.status(400).send('malformed request')
-          const tochange = { $currentDate: { lastaccess: true } }
-          if (data.removepolls.parentid) {
-            // poll ids should be unique...
-            tochange.$pull = {
-              'polls.$[].children': { id: data.removepolls.id }
-            }
-          } else {
-            tochange.$pull = { polls: { id: data.removepolls.id } }
+          const tochange: UpdateFilter<Lecture> = {
+            $currentDate: { lastaccess: true },
+            $pull: data.removepolls.parentid
+              ? {
+                  'polls.$[].children': { id: data.removepolls.id }
+                }
+              : { polls: { id: data.removepolls.id } }
           }
           await lecturescol.updateOne({ uuid: lectureuuid }, tochange)
         }
@@ -455,12 +565,14 @@ export class AppHandler {
           if (
             !Array.isArray(data.editDisplaynames) ||
             !(data.editDisplaynames?.length >= 1) ||
-            !req.token?.user?.displayname ||
-            data.editDisplaynames.some((el) => typeof el !== 'string')
+            !authreq.token?.user?.displayname ||
+            data.editDisplaynames.some((el: unknown) => typeof el !== 'string')
           )
             return res.status(400).send('malformed request')
-          if (!data.editDisplaynames.includes(req.token?.user?.displayname)) {
-            data.editDisplaynames.shift(req.token?.user?.displayname)
+          if (
+            !data.editDisplaynames.includes(authreq.token?.user?.displayname)
+          ) {
+            data.editDisplaynames.shift(authreq.token?.user?.displayname)
           }
           await lecturescol.updateOne(
             { uuid: lectureuuid },
@@ -487,120 +599,140 @@ export class AppHandler {
     })
 
     app.get(path + '/lecture', async (req, res) => {
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
       // ok folks, we get the lecture id from the token
-      const lectureuuid = req.token.course.lectureuuid
+      const lectureuuid = authreq.token.course.lectureuuid
       // TODO code for administrators to overrule the token uuid
-      if (!isUUID(lectureuuid)) return res.status(401).send('unauthorized uuid') // supply valid data
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(401).send('unauthorized uuid') // supply valid data
       const details = await this.getLectureDetails(lectureuuid)
       // console.log('details', details)
 
       if (details) {
+        const instructor = authreq.token.role.includes('instructor')
         const toret = {
-          title: details.title,
-          uuid: details.uuid,
-          date: details.date
-        }
-        if (details.coursetitle) toret.coursetitle = details.coursetitle
-        if (details.ownersdisplaynames)
-          toret.ownersdisplaynames = details.ownersdisplaynames
-        if (details.running) toret.running = true
-        else toret.running = false
-        if (details.date) {
-          toret.date = details.date
-        }
-        if (details.ipynbs) {
-          // 'application/x-ipynb+json'
-          const instructor = req.token.role.includes('instructor')
-          const retipynbs = details.ipynbs
-            .map((el) => {
-              return {
-                name: el.name,
-                id: el.id,
-                sha: el.sha,
-                mimetype: el.mimetype,
-                filename: el.filename,
-                date: el.data,
-                presentDownload: el.presentDownload,
-                note: el.note,
-                applets: el.applets
-                  ?.map?.((applet) => ({
-                    appid: applet.appid,
-                    appname: applet.appname,
-                    presentToStudents: applet.presentToStudents
-                  }))
-                  ?.filter?.((applet) => applet.presentToStudents || instructor)
-              }
-            })
-            .filter(
-              (el) => instructor || el.presentDownload || el.applets?.length > 0
-            )
-            .map((el) => ({
-              sha: el.sha.buffer.toString('hex'),
-              ...el,
-              url: el.sha && this.getFileURL(el.sha.buffer, el.mimetype)
-            }))
-          toret.ipynbs = retipynbs
-        }
-        // add additional fields for instructor such as pools, pictures, pdfbackground etc.
-        if (req.token.role.includes('instructor')) {
-          // fields only available for the instructors
-          if (details.pictures) {
-            const retpict = details.pictures.map((el) => {
-              return {
-                name: el.name,
-                mimetype: el.mimetype,
-                sha: el.sha.buffer.toString('hex'),
-                url: this.getFileURL(el.sha.buffer, el.mimetype),
-                urlthumb: this.getFileURL(el.tsha.buffer, el.mimetype)
-              }
-            })
-            // console.log("pictures",details.pictures);
-            // console.log(retpict);
-            toret.pictures = retpict
-          }
-          const bgpdf = {}
-          if (details.backgroundpdfuse) {
-            // indicates that a lectures has already use the background pdf, no change possible
-            bgpdf.fixed = true
-            if (details.backgroundpdf && details.backgroundpdf.name)
-              bgpdf.name = details.backgroundpdf.name
-            // fill it with the name
-            else bgpdf.none = true
-          } else if (details.backgroundpdf) {
-            let none = true
-            if (details.backgroundpdf.name) {
-              bgpdf.name = details.backgroundpdf.name
-              none = false
-            }
-            if (details.backgroundpdf.sha) {
-              bgpdf.sha = details.backgroundpdf.sha.buffer.toString('hex')
-              none = false
-              bgpdf.url = this.getFileURL(
-                details.backgroundpdf.sha.buffer,
-                'application/pdf'
+          ...{
+            title: details.title,
+            uuid: details.uuid,
+            date: details.date,
+            running: !!details?.running
+          },
+          ...(details.coursetitle && { coursetitle: details.coursetitle }),
+          ...(details.ownersdisplaynames && {
+            ownersdisplaynames: details.ownersdisplaynames
+          }),
+          ...(details.date && {
+            date: details.date
+          }),
+          ...(details.ipynbs && {
+            ipynbs: details.ipynbs
+              .map((el) => {
+                return {
+                  name: el.name,
+                  id: el.id,
+                  sha: el.sha,
+                  mimetype: el.mimetype,
+                  filename: el.filename,
+                  date: el.date,
+                  presentDownload: el.presentDownload,
+                  note: el.note,
+                  applets: el.applets
+                    ?.map?.((applet) => ({
+                      appid: applet.appid,
+                      appname: applet.appname,
+                      presentToStudents: applet.presentToStudents
+                    }))
+                    ?.filter?.(
+                      (applet) => applet.presentToStudents || instructor
+                    )
+                }
+              })
+              .filter(
+                (el) =>
+                  instructor || el.presentDownload || el.applets?.length > 0
               )
-            }
-            if (none) bgpdf.none = true
-          } else bgpdf.none = true
-          toret.bgpdf = bgpdf
-          if (details.polls) toret.polls = details.polls
+              .map((el) => ({
+                ...el,
+                sha: el.sha.toString('hex'),
+                url: el.sha && this.getFileURL(el.sha, el.mimetype)
+              }))
+          }),
+          // add additional fields for instructor such as pools, pictures, pdfbackground etc.
+          ...(instructor &&
+            details.pictures && {
+              pictures: details.pictures.map((el) => {
+                return {
+                  name: el.name,
+                  mimetype: el.mimetype,
+                  sha: el.sha.toString('hex'),
+                  url: this.getFileURL(el.sha, el.mimetype),
+                  urlthumb: this.getFileURL(el.tsha, el.mimetype)
+                }
+              })
+            }),
+          ...(instructor &&
+            (details.backgroundpdfuse
+              ? {
+                  bgpdf: {
+                    ...{
+                      fixed: true
+                    },
+                    ...(details.backgroundpdf &&
+                      details.backgroundpdf.name && {
+                        name: details.backgroundpdf.name
+                      })
+                  }
+                }
+              : details.backgroundpdf
+                ? {
+                    ...{ none: true },
+                    ...(details.backgroundpdf.name && {
+                      name: details.backgroundpdf.name,
+                      none: false
+                    }),
+                    ...(details.backgroundpdf.sha && {
+                      sha: details.backgroundpdf.sha.toString('hex'),
+                      none: false,
+                      url: this.getFileURL(
+                        details.backgroundpdf.sha,
+                        'application/pdf'
+                      )
+                    })
+                  }
+                : { none: true })),
+          ...(instructor && details.polls && { polls: details.polls })
         }
-
         return res.status(200).json(toret)
       } else return res.status(404).send('not found')
     })
 
     app.get(path + '/lectures', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      if (!authreq.token.user)
+        return res.status(401).send('unauthorized no user')
       // ok folks, we get the user id and lecture id from the token
       // console.log('user data', req.token)
-      const lectureuuid = req.token.course.lectureuuid // used to identify the course
-      const useruuid = req.token.user.useruuid
+      const lectureuuid = authreq.token.course.lectureuuid // used to identify the course
+      const useruuid = authreq.token.user.useruuid
 
       const orquery = []
       try {
-        const lecturescol = this.mongo.collection('lectures')
+        const lecturescol = this.mongo.collection<Lecture>('lectures')
 
         if (lectureuuid) {
           const lect = await lecturescol.findOne({ uuid: lectureuuid })
@@ -649,24 +781,33 @@ export class AppHandler {
     })
 
     app.get(path + '/lecture/pdfdata', async (req, res) => {
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
       if (
-        !req.token.role.includes('instructor') &&
-        !req.token.role.includes('audience')
+        !Array.isArray(authreq.token.role) ||
+        (!authreq.token.role.includes('instructor') &&
+          !authreq.token.role.includes('audience'))
       )
         return res.status(401).send('unauthorized')
-      let lectureuuid = req.token.course.lectureuuid
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      if (!authreq.token.user)
+        return res.status(401).send('unauthorized no user')
+      let lectureuuid = authreq.token.course.lectureuuid
 
       let find
 
-      if (req.query.lectureuuid) {
-        const useruuid = req.token.user.useruuid
+      if (req.query.lectureuuid && !Array.isArray(req.query.lectureuuid)) {
+        const useruuid = authreq.token.user.useruuid
         // first check if it is allowed
-        if (!req.token.role.includes('instructor'))
+        if (!authreq.token.role.includes('instructor'))
           return res.status(401).send('unauthorized')
         if (!isUUID(req.query.lectureuuid))
           return res.status(400).send('unauthorized uuid') // supply valid data
         find = { uuid: req.query.lectureuuid, owners: useruuid }
-        lectureuuid = req.query.lectureuuid
+        lectureuuid = req.query.lectureuuid as string
       } else {
         if (!isUUID(lectureuuid))
           return res.status(400).send('unauthorized uuid') // supply valid data
@@ -674,8 +815,8 @@ export class AppHandler {
       }
 
       // ok, we have to get board data
-      const lecturescol = this.mongo.collection('lectures')
-      const boardscol = this.mongo.collection('lectureboards')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
+      const boardscol = this.mongo.collection<LectureBoard>('lectureboards')
       // ok we have green light, we can transfer the data from mongo to redis
       const lecturedoc = await lecturescol.findOne(find, {
         projection: {
@@ -695,45 +836,58 @@ export class AppHandler {
       let boards = cursor.toArray()
 
       // lecturedoc= await lecturedoc;
+      const nlecturedoc = {
+        ...lecturedoc,
 
-      if (
-        lecturedoc.backgroundpdfuse &&
-        lecturedoc.backgroundpdf &&
-        lecturedoc.backgroundpdf.sha
-      ) {
-        lecturedoc.backgroundpdf.url = this.getFileURL(
-          lecturedoc.backgroundpdf.sha,
-          'application/pdf'
-        )
-        lecturedoc.backgroundpdf.sha =
-          lecturedoc.backgroundpdf.sha.buffer.toString('hex')
+        ...(lecturedoc.backgroundpdfuse &&
+          lecturedoc.backgroundpdf &&
+          lecturedoc.backgroundpdf.sha && {
+            backgroundpdf: {
+              url: this.getFileURL(
+                lecturedoc.backgroundpdf.sha,
+                'application/pdf'
+              ),
+              sha: lecturedoc.backgroundpdf.sha.toString('hex')
+            }
+          }),
+        ...{
+          usedpictures:
+            lecturedoc.usedpictures?.map?.((el) => {
+              return {
+                name: el.name,
+                mimetype: el.mimetype,
+                sha: el.sha.toString('hex'),
+                url: this.getFileURL(el.sha, el.mimetype),
+                urlthumb: this.getFileURL(el.tsha, el.mimetype)
+              }
+            }) || []
+        }
       }
 
-      boards = (await boards)
+      const rboards = (await boards)
         .filter((el) => el.board && el.boarddata)
         .map((el) => ({ name: el.board, data: el.boarddata }))
 
-      if (!lecturedoc.usedpictures) lecturedoc.usedpictures = []
-
-      lecturedoc.usedpictures = lecturedoc.usedpictures.map((el) => {
-        return {
-          name: el.name,
-          mimetype: el.mimetype,
-          sha: el.sha.buffer.toString('hex'),
-          url: this.getFileURL(el.sha.buffer, el.mimetype),
-          urlthumb: this.getFileURL(el.tsha.buffer, el.mimetype)
-        }
-      })
       // console.log("check lecture doc for tranfer",lecturedoc);
 
-      res.status(200).json({ info: lecturedoc, boards: boards })
+      res.status(200).json({ info: nlecturedoc, boards: rboards })
     })
 
     app.post(path + '/lecture/copy', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(401).send('unauthorized uuid') // supply valid data
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(401).send('unauthorized uuid') // supply valid data
 
       if (!req.body.fromuuid || !isUUID(req.body.fromuuid))
         return res.status(401).send('unauthorized uuid')
@@ -741,33 +895,34 @@ export class AppHandler {
       if (req.body.fromuuid === lectureuuid)
         return res.status(401).send('unauthorized equal uuid')
 
-      let filter = { _id: 0 }
-
-      if (req.body.what === 'pictures' || req.body.what === 'all') {
-        filter = { ...filter, pictures: 1 }
-      }
-      if (req.body.what === 'polls' || req.body.what === 'all') {
-        filter = { ...filter, polls: 1 }
-      }
-      if (req.body.what === 'ipynbs' || req.body.what === 'all') {
-        filter = { ...filter, ipynbs: 1 }
-      }
-      if (req.body.what === 'lecture' || req.body.what === 'all') {
-        filter = {
-          ...filter,
+      let filter = {
+        ...{ _id: 0 },
+        ...((req.body.what === 'pictures' || req.body.what === 'all') && {
+          pictures: 1
+        }),
+        ...((req.body.what === 'polls' || req.body.what === 'all') && {
+          polls: 1
+        }),
+        ...((req.body.what === 'ipynbs' || req.body.what === 'all') && {
+          ipynbs: 1
+        }),
+        ...((req.body.what === 'lecture' || req.body.what === 'all') && {
           usedpictures: 1,
           usedipynbs: 1,
           backgroundpdfuse: 1,
           backgroundpdf: 1,
           boards: 1,
           boardsavetime: 1
-        }
+        })
       }
-      // perfect now we have to get the lecture, but not only the uuid but also the useruuid
-      const useruuid = req.token.user.useruuid
 
-      const lecturescol = this.mongo.collection('lectures')
-      const boardscol = this.mongo.collection('lectureboards')
+      if (!authreq.token.user)
+        return res.status(401).send('unauthorized no user')
+      // perfect now we have to get the lecture, but not only the uuid but also the useruuid
+      const useruuid = authreq.token.user.useruuid
+
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
+      const boardscol = this.mongo.collection<LectureBoard>('lectureboards')
       if (req.body.what === 'lecture' || req.body.what === 'all') {
         const lecturedocdest = await lecturescol.findOne(
           { uuid: lectureuuid },
@@ -832,15 +987,19 @@ export class AppHandler {
         }
       }
       if (req.body.what === 'lecture' || req.body.what === 'all') {
-        const set = {}
-        if (lecturedoc.backgroundpdfuse) set.backgroundpdfuse = 1
-        if (lecturedoc.backgroundpdf)
-          set.backgroundpdf = lecturedoc.backgroundpdf
-        if (lecturedoc.boardsavetime)
-          set.boardsavetime = lecturedoc.boardsavetime
-        if (lecturedoc.usedpictures) set.usedpictures = lecturedoc.usedpictures
-        if (lecturedoc.usedipynbs) set.usedipynbs = lecturedoc.ipynbs
-
+        const set = {
+          ...(lecturedoc.backgroundpdfuse && { backgroundpdfuse: 1 }),
+          ...(lecturedoc.backgroundpdf && {
+            backgroundpdf: lecturedoc.backgroundpdf
+          }),
+          ...(lecturedoc.boardsavetime && {
+            boardsavetime: lecturedoc.boardsavetime
+          }),
+          ...(lecturedoc.usedpictures && {
+            usedpictures: lecturedoc.usedpictures
+          }),
+          ...(lecturedoc.usedipynbs && { usedipynbs: lecturedoc.ipynbs })
+        }
         const boards = []
         if (lecturedoc.boards) {
           // ok we to iterate over all boards
@@ -849,7 +1008,7 @@ export class AppHandler {
             const boardinfo = await cursor.next()
             // console.log('boardinfo', boardinfo)
             // ok we have one document so push it to redis, TODO think of sending the documents directly to clients?
-            if (!boardinfo.board || !boardinfo.boarddata) continue // no valid data
+            if (!boardinfo?.board || !boardinfo?.boarddata) continue // no valid data
             boards.push(boardinfo.board)
             const update = boardscol.updateOne(
               { uuid: lectureuuid, board: boardinfo.board },
@@ -878,17 +1037,24 @@ export class AppHandler {
     })
 
     app.post(path + '/lecture/picture', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(401).send('unauthorized uuid') // supply valid data
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(401).send('unauthorized uuid') // supply valid data
 
       try {
-        const body = {}
-        const [
-          { sha256: pictsha256, mimeType: pictMimeType },
-          { sha256: thumbsha256 }
-        ] = await this.handleFileUpload(
+        const body: Record<string, string | undefined> = {}
+        const retup = await this.handleFileUpload(
           req,
           body,
           { filename: true },
@@ -897,6 +1063,18 @@ export class AppHandler {
           this.maxFileSize,
           ['image/jpeg', 'image/png']
         )
+        if (
+          typeof retup === 'undefined' ||
+          !Array.isArray(retup) ||
+          retup.length !== 2 ||
+          !retup[0] ||
+          !retup[1]
+        )
+          throw new Error('Problem in handleFileUpload')
+        const [
+          { sha256: pictsha256, mimeType: pictMimeType },
+          { sha256: thumbsha256 }
+        ] = retup
         if (!body.filename) return res.status(401).send('malformed request')
 
         const pictinfo = {
@@ -906,7 +1084,7 @@ export class AppHandler {
           tsha: thumbsha256
         } // attention field order matters for the addtoset operation!
 
-        const lecturescol = this.mongo.collection('lectures')
+        const lecturescol = this.mongo.collection<Lecture>('lectures')
 
         await lecturescol.updateOne(
           { uuid: lectureuuid },
@@ -924,10 +1102,20 @@ export class AppHandler {
     })
 
     app.post(path + '/lecture/bgpdf', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(401).send('unauthorized uuid') // supply valid data
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(401).send('unauthorized uuid') // supply valid data
 
       // first we have to check, if the pdf is already locked by the lecture system
       const details = await this.getLectureDetails(lectureuuid)
@@ -936,19 +1124,29 @@ export class AppHandler {
         return res.status(401).send('background pdf is in use')
 
       try {
-        const body = {}
-        const [{ sha256: pdfsha256 = undefined } = {}] =
-          await this.handleFileUpload(
-            req,
-            body,
-            { filename: true },
-            { none: true },
-            ['file'],
-            this.maxFileSize,
-            ['application/pdf']
-          )
+        const body: Record<string, string | undefined> = {}
 
-        const lecturescol = this.mongo.collection('lectures')
+        const retup = await this.handleFileUpload(
+          req,
+          body,
+          { filename: true },
+          { none: true },
+          ['file'],
+          this.maxFileSize,
+          ['application/pdf']
+        )
+
+        if (
+          typeof retup === 'undefined' ||
+          !Array.isArray(retup) ||
+          retup.length !== 1 ||
+          !retup[0]
+        )
+          throw new Error('Problem in handleFileUpload')
+
+        const [{ sha256: pdfsha256 = undefined } = {}] = retup
+
+        const lecturescol = this.mongo.collection<Lecture>('lectures')
         if (body.none) {
           // we have to reset
           /* if (details.backgroundpdf.name) {bgpdf.name=details.backgroundpdf.name; none=false;}
@@ -990,17 +1188,27 @@ export class AppHandler {
     })
 
     app.post(path + '/lecture/ipynb', async (req, res) => {
-      if (!req.token.role.includes('instructor'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('instructor')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
-      if (!isUUID(lectureuuid)) return res.status(401).send('unauthorized uuid') // supply valid data
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
+      if (!lectureuuid || !isUUID(lectureuuid))
+        return res.status(401).send('unauthorized uuid') // supply valid data
 
       // first we have to check, whether some information about the applets is already set
       const details = await this.getLectureDetails(lectureuuid)
       if (!details) return res.status(404).send('not found')
       try {
-        const body = {}
-        const [{ sha256, mimeType } = {}] = await this.handleFileUpload(
+        const body: Record<string, string | undefined> = {}
+        const retup = await this.handleFileUpload(
           req,
           body,
           { filename: true, id: true, applets: true, name: true },
@@ -1010,27 +1218,43 @@ export class AppHandler {
           ['application/x-ipynb+json']
         )
 
-        const applets = JSON.parse(body.applets)
+        if (
+          typeof retup === 'undefined' ||
+          !Array.isArray(retup) ||
+          retup.length !== 1 ||
+          !retup[0]
+        )
+          throw new Error('Problem in handleFileUpload')
+
+        const [{ sha256, mimeType } = {}] = retup
+
+        const applets = (body.applets && JSON.parse(body.applets)) || undefined
         let oldsha
         const oldNotebook = details?.ipynbs?.find((el) => el.id === body.id)
         if (oldNotebook?.sha) {
           oldsha = oldNotebook?.sha
         }
-        applets
-          ?.forEach?.((applet) => {
+        applets?.map?.(
+          (applet: {
+            presentToStudents?: boolean
+            appid?: string
+            appname?: string
+          }) => {
             if (typeof applet.presentToStudents !== 'undefined') return
             const oldApplet = oldNotebook?.applets?.find?.(
-              (appl) => appl.appid === applet.appid
+              (appl) => applet.appid && appl.appid === applet.appid
             )
             if (typeof oldApplet?.presentToStudents !== 'undefined')
               applet.presentToStudents = oldApplet.presentToStudents
             else applet.presentToStudents = false
-          })
-          ?.map?.((el) => ({
-            appid: el.appid,
-            appname: el.appname,
-            presentToStudents: el.presentToStudents
-          }))
+
+            return {
+              appid: applet.appid,
+              appname: applet.appname,
+              presentToStudents: applet.presentToStudents
+            }
+          }
+        )
         const pynb = {
           id: body.id,
           name: body.name,
@@ -1042,7 +1266,7 @@ export class AppHandler {
           note: oldNotebook?.note || '',
           applets
         }
-        const lecturescol = this.mongo.collection('lectures')
+        const lecturescol = this.mongo.collection<Lecture>('lectures')
         // date
         await lecturescol.updateOne(
           { uuid: lectureuuid, 'ipynbs.id': { $ne: pynb.id } },
@@ -1057,7 +1281,7 @@ export class AppHandler {
           { uuid: lectureuuid },
           {
             $set: {
-              'ipynbs.$[elem]': { id: pynb.id, ...pynb }
+              'ipynbs.$[elem]': { ...pynb, id: pynb.id }
             },
             $currentDate: { lastaccess: true }
           },
@@ -1076,16 +1300,25 @@ export class AppHandler {
       }
     })
     app.get(path + '/cloudstatus', async (req, res) => {
-      if (!req.token.role.includes('administrator'))
+      const authreq = req as AuthenticatedAppRequest
+      if (!authreq.token?.role) {
+        return res.status(401).send('unauthorized no role')
+      }
+      if (
+        !Array.isArray(authreq.token.role) ||
+        !authreq.token.role.includes('administrator')
+      )
         return res.status(401).send('unauthorized')
-      const lectureuuid = req.token.course.lectureuuid
+      if (!authreq.token.course)
+        return res.status(401).send('unauthorized no course')
+      const lectureuuid = authreq.token.course.lectureuuid
 
       let lectcursor = 0
       try {
         // ok, what do we need:
         // First status of all routers their capacity and their usage
         const getRouterDetails = async () => {
-          const routercol = this.mongo.collection('avsrouters')
+          const routercol = this.mongo.collection<RouterInfo>('avsrouters')
 
           const cursor = routercol.find(
             {},
@@ -1105,7 +1338,7 @@ export class AppHandler {
           )
 
           const routers = []
-          while (await cursor.hasNext()) {
+          for await (const el of cursor) {
             const {
               region,
               localClients,
@@ -1115,8 +1348,9 @@ export class AppHandler {
               maxClients,
               primaryRealms,
               url
-            } = await cursor.next()
-            const isPrimary = (primaryRealms || []).includes(lectureuuid)
+            } = el
+            const isPrimary =
+              lectureuuid && (primaryRealms || []).includes(lectureuuid)
 
             routers.push({
               url,
@@ -1136,77 +1370,85 @@ export class AppHandler {
 
         // second, status of all concurrently running lectures
         const getLectDetails = async () => {
-          const lecturescol = this.mongo.collection('lectures')
+          const lecturescol = this.mongo.collection<Lecture>('lectures')
           const lectureDetails = []
-          do {
-            const scanret = await this.redis.scan(lectcursor, {
-              MATCH: 'lecture:????????-????-????-????-????????????:notescreens',
-              COUNT: 40
-            })
-            const lectuuids = scanret.keys.map((el) => el.slice(8, 44))
-            const nowborder1 = Date.now() - 20 * 60 * 1000
-            const nowborder2 = Date.now() - 5 * 60 * 1000 - 10 * 1000
-            // perfect, we can now get the number of clients for each of them
-            const addLectureDetails = await Promise.all(
-              lectuuids.map(async (uuid) => {
-                const pnumberOfNotescreens = this.redis
-                  .sMembers('lecture:' + uuid + ':notescreens')
-                  .then((screens) => {
-                    return Promise.all(
-                      screens.map((screen) => {
-                        return this.redis.hmGet(
-                          'lecture:' + uuid + ':notescreen:' + screen,
-                          ['active', 'lastaccess']
-                        )
-                      })
-                    )
-                  })
-                  .then((screens) => {
-                    const scr = screens.filter((el) =>
-                      el
-                        ? nowborder1 - Number(el[1]) < 0 && el[0] !== '0'
-                        : false
-                    )
-                    return scr.length
-                  })
-                const pnumberOfIdents = this.redis
-                  .hGetAll('lecture:' + uuid + ':idents')
-                  .then((identobj) => {
-                    return Object.values(identobj)
-                      .map((value) => JSON.parse(value))
-                      .filter((el) => nowborder2 - Number(el.lastaccess) < 0)
-                      .length
-                  })
-
-                const plecturedoc = lecturescol.findOne(
-                  { uuid: uuid },
-                  {
-                    projection: {
-                      _id: 0,
-                      title: 1,
-                      coursetitle: 1
-                    }
-                  }
-                )
-                const [numberOfNotescreens, numberOfIdents, lecturedoc] =
-                  await Promise.all([
-                    pnumberOfNotescreens,
-                    pnumberOfIdents,
-                    plecturedoc
-                  ])
-                // Title and course name would also be great
-                return {
-                  uuid,
-                  numberOfNotescreens,
-                  numberOfIdents,
-                  title: lecturedoc.title,
-                  coursetitle: lecturedoc.coursetitle
-                }
+          const nodes =
+            'masters' in this.redis
+              ? await Promise.all(this.redis.masters.map((node) => node.client))
+              : [this.redis as RedisClientType]
+          for (const node of nodes) {
+            if (!node) continue
+            do {
+              const scanret = await node.scan(lectcursor, {
+                MATCH:
+                  'lecture:????????-????-????-????-????????????:notescreens',
+                COUNT: 40
               })
-            )
-            lectureDetails.push(...addLectureDetails)
-            lectcursor = scanret.cursor
-          } while (lectcursor !== 0)
+              const lectuuids = scanret.keys.map((el) => el.slice(8, 44))
+              const nowborder1 = Date.now() - 20 * 60 * 1000
+              const nowborder2 = Date.now() - 5 * 60 * 1000 - 10 * 1000
+              // perfect, we can now get the number of clients for each of them
+              const addLectureDetails = await Promise.all(
+                lectuuids.map(async (uuid) => {
+                  const pnumberOfNotescreens = this.redis
+                    .sMembers('lecture:' + uuid + ':notescreens')
+                    .then((screens) => {
+                      return Promise.all(
+                        screens.map((screen) => {
+                          return this.redis.hmGet(
+                            'lecture:' + uuid + ':notescreen:' + screen,
+                            ['active', 'lastaccess']
+                          )
+                        })
+                      )
+                    })
+                    .then((screens) => {
+                      const scr = screens.filter((el) =>
+                        el
+                          ? nowborder1 - Number(el[1]) < 0 && el[0] !== '0'
+                          : false
+                      )
+                      return scr.length
+                    })
+                  const pnumberOfIdents = this.redis
+                    .hGetAll('lecture:' + uuid + ':idents')
+                    .then((identobj) => {
+                      return Object.values(identobj)
+                        .map((value) => JSON.parse(value))
+                        .filter((el) => nowborder2 - Number(el.lastaccess) < 0)
+                        .length
+                    })
+
+                  const plecturedoc = lecturescol.findOne(
+                    { uuid: uuid },
+                    {
+                      projection: {
+                        _id: 0,
+                        title: 1,
+                        coursetitle: 1
+                      }
+                    }
+                  )
+                  const [numberOfNotescreens, numberOfIdents, lecturedoc] =
+                    await Promise.all([
+                      pnumberOfNotescreens,
+                      pnumberOfIdents,
+                      plecturedoc
+                    ])
+                  // Title and course name would also be great
+                  return {
+                    uuid,
+                    numberOfNotescreens,
+                    numberOfIdents,
+                    title: lecturedoc?.title,
+                    coursetitle: lecturedoc?.coursetitle
+                  }
+                })
+              )
+              lectureDetails.push(...addLectureDetails)
+              lectcursor = scanret.cursor
+            } while (lectcursor !== 0)
+          }
           return lectureDetails
         }
         const [routerDetails, lectureDetails] = await Promise.all([
@@ -1221,9 +1463,9 @@ export class AppHandler {
     })
   }
 
-  async getLectureDetails(uuid) {
+  async getLectureDetails(uuid: string) {
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
       const andquery = []
 
       andquery.push({ uuid: uuid })
