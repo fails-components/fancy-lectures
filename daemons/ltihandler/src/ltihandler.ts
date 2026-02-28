@@ -793,7 +793,7 @@ export class LtiHandler {
   }
 
   async handleGetUser(req: AuthenticatedLtiRequest, res: Response) {
-    const userscol = this.mongo.collection('users')
+    const userscol = this.mongo.collection<FailsUser>('users')
     const orquery = []
 
     if (!req.token)
@@ -836,8 +836,8 @@ export class LtiHandler {
       return res.status(401).send('malformed request: missing uuid')
     const useruuid = req.body.uuid
     try {
-      const userscol = this.mongo.collection('users')
-      const lecturescol = this.mongo.collection('lectures')
+      const userscol = this.mongo.collection<FailsUser>('users')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
 
       const deleted = await userscol.deleteMany({ uuid: useruuid })
 
@@ -867,7 +867,7 @@ export class LtiHandler {
     if (Number.isNaN(courseid))
       return res.status(401).send('malformed request: courseid not a number')
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
       const mods = await lecturescol.updateMany(
         { 'lms.iss': req.token.iss, 'lms.course_id': courseid.toString() },
         { $rename: { 'lms.resource_id': 'lms.resource_id_deleted' } }
@@ -897,7 +897,7 @@ export class LtiHandler {
     if (Number.isNaN(resourceid))
       return res.status(401).send('malformed request: resourceid not a number')
     try {
-      const lecturescol = this.mongo.collection('lectures')
+      const lecturescol = this.mongo.collection<Lecture>('lectures')
       const mods = await lecturescol.updateMany(
         {
           'lms.iss': req.token.iss,
