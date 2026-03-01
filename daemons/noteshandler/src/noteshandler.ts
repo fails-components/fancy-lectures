@@ -603,7 +603,7 @@ export class NotesConnection extends CommonConnection {
   async getPollinfo(args: { lectureuuid: string }) {
     try {
       const pollinfo = await this.redis.hGetAll(
-        'lecture:' + args.lectureuuid + ':pollstate'
+        'lecture:{' + args.lectureuuid + '}:pollstate'
       )
       if (pollinfo.command && pollinfo.data) {
         const limited = !!(pollinfo.limited === 'true')
