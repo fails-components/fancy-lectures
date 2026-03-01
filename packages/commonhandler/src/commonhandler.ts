@@ -214,7 +214,7 @@ export interface GeoJSONPoint {
 
 export interface Region {
   name: string
-  hmac: Buffer | Binary
+  hmac: Binary
   ipfilter?: string[]
   geopos: GeoJSONPoint[]
   changedAt: Date

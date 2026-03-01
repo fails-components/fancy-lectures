@@ -20,7 +20,7 @@
 import { webcrypto } from 'crypto'
 import { expressjwt as jwtexpress } from 'express-jwt'
 import type { Request, Express } from 'express'
-import type { Db as MongoDb } from 'mongodb'
+import { type Db as MongoDb, Binary } from 'mongodb'
 import type {
   FailsJWTSigner,
   FailsJWTVerifier
@@ -34,11 +34,13 @@ interface AuthenticatedRegionRequest extends Request {
   }
 }
 
+export type BufferRegion = Omit<Region, 'hmac'> & { hmac: Buffer }
+
 export class AVSDispatcher {
   protected mongo: MongoDb
   protected signAvsJwt: FailsJWTSigner['signToken']
   protected verifier: FailsJWTVerifier
-  protected regions: Partial<Record<string, Region>> | undefined
+  protected regions: Partial<Record<string, BufferRegion>> | undefined
 
   constructor(args: {
     mongo: MongoDb
@@ -92,10 +94,14 @@ export class AVSDispatcher {
       const regioncol = this.mongo.collection<Region>('avsregion')
       const insertprom = regions.map(async (el) => {
         try {
+          const nel = {
+            ...el,
+            hmac: new Binary(el.hmac)
+          }
           await regioncol.updateOne(
             { name: el.name },
             {
-              $set: el
+              $set: nel
             },
             { upsert: true }
           )
@@ -105,7 +111,7 @@ export class AVSDispatcher {
       })
 
       await Promise.all(insertprom)
-      const regionByName: Record<string, Region> = {}
+      const regionByName: Record<string, BufferRegion> = {}
       regions.forEach((el) => {
         const nel = { ...el, fetchTime: Date.now() }
         regionByName[el.name] = nel
@@ -120,12 +126,14 @@ export class AVSDispatcher {
     const regioncol = this.mongo.collection<Region>('avsregion')
     const regdoc = await regioncol.findOne({ name: region })
     if (regdoc) {
-      if (regdoc.hmac && 'buffer' in regdoc.hmac)
-        (regdoc as any).hmac = regdoc.hmac.buffer
+      const nregdoc: BufferRegion = {
+        ...regdoc,
+        ...{ hmac: Buffer.from(regdoc.hmac.buffer) }
+      }
       if (!this.regions) {
         throw new Error('Regions are not defined')
       }
-      this.regions[region] = regdoc
+      this.regions[region] = nregdoc
       this.regions[region].fetchTime = Date.now()
     }
   }
@@ -139,11 +147,12 @@ export class AVSDispatcher {
       if (token.payload.region !== token.header.kid)
         throw new Error('kid region mismatch')
       if (!region) throw new Error('no region provided')
-      if (!this.regions) throw new Error('')
+      if (!this.regions) throw new Error('No regions available')
       if (
         !this.regions[region] ||
         (this.regions[region].fetchTime &&
-          this.regions[region].fetchTime + 1000 * 60 * 2 < Date.now())
+          this.regions[region].fetchTime + 1000 * 60 * 2 < Date.now()) ||
+        !this.regions[region].fetchTime
       ) {
         // ok, may be another handler installed the region
         await this.fetchRegion(region)
@@ -152,12 +161,7 @@ export class AVSDispatcher {
         throw new Error('unknown region')
       }
 
-      const hmacSource = this.regions[region].hmac
-
-      if (hmacSource && 'buffer' in hmacSource) {
-        return Buffer.from(hmacSource.buffer as any)
-      }
-      return Buffer.from(hmacSource as any)
+      return this.regions[region].hmac
     }
     return jwtexpress({
       secret: secretCallback,
