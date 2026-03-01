@@ -11,6 +11,15 @@ export default [
   js.configs.recommended,
   eslintPluginPrettierRecommended,
   {
+    ignores: [
+      '**/build/**',
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/.snapshots/**',
+      '**/*.min.js'
+    ]
+  },
+  {
     plugins: {
       promise,
       import: importplug
@@ -26,13 +35,6 @@ export default [
         requireConfigFile: false
       }
     },
-    ignores: [
-      'build/*',
-      'dist/*',
-      'node_modules/*',
-      '.snapshots/*',
-      '*.min.js'
-    ],
     settings: {
       react: {
         version: '16'
@@ -61,7 +63,8 @@ export default [
       parserOptions: {}
     },
     plugins: {
-      '@typescript-eslint': tseslint.plugin
+      '@typescript-eslint': tseslint.plugin,
+      import: importplug
     },
     rules: {
       ...tseslint.configs.recommended.rules,
