@@ -17,14 +17,15 @@
   "scripts": {
     "start": "node src/server.ts",
     "test": "run-s test:lint",
-    "test:lint": "eslint ."
+    "test:lint": "eslint .",
+    "docker:build": "docker build -t ghcr.io/fails-components/authhandler:master --secret id=GH_TOKEN -f Dockerfile ../.."
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
     "cross-env": "^7.0.3"
   },
   "files": [
-    "src/*.js",
+    "src/*.ts",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],

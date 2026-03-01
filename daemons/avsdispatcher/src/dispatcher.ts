@@ -20,12 +20,12 @@
 import { webcrypto } from 'crypto'
 import { expressjwt as jwtexpress } from 'express-jwt'
 import type { Request, Express } from 'express'
-import { type Db as MongoDb } from 'mongodb'
+import type { Db as MongoDb } from 'mongodb'
 import type {
   FailsJWTSigner,
   FailsJWTVerifier
 } from '@fails-components/security'
-import { type Region } from '@fails-components/commonhandler'
+import type { Region } from '@fails-components/commonhandler'
 import jwt from 'jsonwebtoken'
 
 interface AuthenticatedRegionRequest extends Request {

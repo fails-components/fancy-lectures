@@ -24,10 +24,10 @@ import { expressjwt as jwtexpress } from 'express-jwt'
 import ky from 'ky'
 import Jwk from 'rasha'
 import moment from 'moment'
-import { type Db as MongoDb } from 'mongodb'
+import type { Db as MongoDb } from 'mongodb'
 import type { FailsJWTSigner } from '@fails-components/security'
 import type { Request, Response } from 'express'
-import { type Lecture } from '@fails-components/commonhandler'
+import type { Lecture } from '@fails-components/commonhandler'
 
 type FailsLtiJwt = jwt.Jwt & {
   payload: {

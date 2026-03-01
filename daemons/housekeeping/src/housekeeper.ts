@@ -19,17 +19,17 @@
 
 import { NodeRedisAdapter, createLock } from 'redlock-universal'
 import { commandOptions } from 'redis'
-import { type UpdateResult, type Db as MongoDb } from 'mongodb'
-import { type RedisClusterType, type RedisClientType } from 'redis'
-import { type Transporter } from 'nodemailer'
-import { type FailsAssets } from '@fails-components/assets'
-import {
-  type Lecture,
-  type LectureBoard,
-  type Region,
-  type MongoFile,
-  type PyNotebook,
-  type RouterInfo
+import type { UpdateResult, Db as MongoDb } from 'mongodb'
+import type { RedisClusterType, RedisClientType } from 'redis'
+import type { Transporter } from 'nodemailer'
+import type { FailsAssets } from '@fails-components/assets'
+import type {
+  Lecture,
+  LectureBoard,
+  Region,
+  MongoFile,
+  PyNotebook,
+  RouterInfo
 } from '@fails-components/commonhandler'
 
 export class Housekeeping {

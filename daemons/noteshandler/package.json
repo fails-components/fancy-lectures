@@ -27,6 +27,7 @@
     "docker:build": "docker build -t ghcr.io/fails-components/noteshandler:master --secret id=GH_TOKEN -f Dockerfile ../.."
   },
   "dependencies": {
+    "@fails-components/assets": "^1.4.1",
     "@fails-components/commonhandler": "^1.2.18",
     "@fails-components/config": "^1.3.0",
     "@fails-components/security": "^1.4.1",
