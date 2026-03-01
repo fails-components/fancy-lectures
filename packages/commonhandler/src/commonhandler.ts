@@ -197,6 +197,7 @@ export interface RouterInfo {
   changedAt: Date
   region: string
   hashSalt: string
+  transHash: Partial<Record<string, string>>
 }
 
 export interface TransportInfo {
@@ -968,7 +969,7 @@ export abstract class CommonConnection {
       update.$set['transHash.' + frealmhash] = args.lectureuuid
       update.$set['transHash.' + fclienthash] = args.clientid
 
-      let token: TokenType = {
+      token = {
         // todo hash table
         accessRead: [frealmhash.replace(/[+/]/g, '\\$&') + ':[a-zA-Z0-9-/+=]+'],
         realm: frealmhash,
@@ -983,8 +984,10 @@ export abstract class CommonConnection {
         ]
       }
       if (setprimary) {
-        if (!update.$addToSet)
-          (update.$addToSet as any).primaryRealms = args.lectureuuid
+        if (!update.$addToSet) {
+          update.$addToSet = {}
+        }
+        ;(update.$addToSet as any).primaryRealms = args.lectureuuid
       }
       if (setprimary || primary) token.primaryRealm = await realmhash
 

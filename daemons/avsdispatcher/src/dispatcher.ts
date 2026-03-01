@@ -25,7 +25,7 @@ import type {
   FailsJWTSigner,
   FailsJWTVerifier
 } from '@fails-components/security'
-import type { Region } from '@fails-components/commonhandler'
+import type { RouterInfo, Region } from '@fails-components/commonhandler'
 import jwt from 'jsonwebtoken'
 
 interface AuthenticatedRegionRequest extends Request {
@@ -298,7 +298,7 @@ export class AVSDispatcher {
 
       toinsert.changedAt = new Date()
       // we should update this every 30 seconds, the token should also live only 30 seconds
-      const routercol = this.mongo.collection('avsrouters')
+      const routercol = this.mongo.collection<RouterInfo>('avsrouters')
 
       try {
         const hashtable = await routercol.findOne(
@@ -351,7 +351,8 @@ export class AVSDispatcher {
           { upsert: true }
         )
 
-        if (upres.matchedCount === 0) return res.status(500).send('db error')
+        if (upres.matchedCount === 0 && upres.upsertedCount === 0)
+          return res.status(500).send('db error')
         if (upres.upsertedCount !== 0) {
           const hSA = await webcrypto.getRandomValues(new Uint8Array(16))
           const hashSalt = Buffer.from(
