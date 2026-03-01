@@ -1393,6 +1393,10 @@ export class DrawObjectContainer implements Sink {
     }
   }
 
+  get yoffset() {
+    return this.yoffset_
+  }
+
   get objects() {
     return this.objects_
   }

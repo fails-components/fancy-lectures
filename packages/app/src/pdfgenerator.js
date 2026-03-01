@@ -17,7 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Collection, MemContainer, Dispatcher } from '@fails-components/data'
+import {
+  RedrawCollection,
+  MemContainer,
+  Dispatcher
+} from '@fails-components/data'
 import { DrawObjectContainer, DrawArea3 } from '@fails-components/drawobjects'
 import {
   PDFDocument,
@@ -71,7 +75,7 @@ export class PDFGenerator extends DrawObjectContainer {
       this.backgroundpdf = args.info.backgroundpdf.url
     }
 
-    this.collection = new Collection(
+    this.collection = new RedrawCollection(
       (num, dummy) => new MemContainer(num, dummy),
       {}
     )
@@ -82,7 +86,7 @@ export class PDFGenerator extends DrawObjectContainer {
     })
 
     if (args.boardsnotes) {
-      this.collectionnotes = new Collection(
+      this.collectionnotes = new RedrawCollection(
         (num, dummy) => new MemContainer(num, dummy),
         {}
       )
@@ -195,8 +199,7 @@ export class PDFGenerator extends DrawObjectContainer {
       // unclips
       popGraphicsState()
     ) */
-    this.objects = []
-    this.workobj = {}
+    this.resetDrawing()
   }
 
   // eslint-disable-next-line no-unused-vars
