@@ -246,7 +246,6 @@ export class NoteScreenConnection extends CommonConnection {
       {
         writeData: async (obj, id, data, append) => {
           await loadlectprom
-          console.log('inspect write data', id, data, append)
           ;(obj as { writeData: ContainerWriteData }).writeData(
             notepadscreenid.lectureuuid,
             id,
