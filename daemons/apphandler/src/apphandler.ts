@@ -1390,12 +1390,12 @@ export class AppHandler {
               const addLectureDetails = await Promise.all(
                 lectuuids.map(async (uuid) => {
                   const pnumberOfNotescreens = this.redis
-                    .sMembers('lecture:' + uuid + ':notescreens')
+                    .sMembers('lecture:{' + uuid + '}:notescreens')
                     .then((screens) => {
                       return Promise.all(
                         screens.map((screen) => {
                           return this.redis.hmGet(
-                            'lecture:' + uuid + ':notescreen:' + screen,
+                            'lecture:{' + uuid + '}:notescreen:' + screen,
                             ['active', 'lastaccess']
                           )
                         })
@@ -1410,7 +1410,7 @@ export class AppHandler {
                       return scr.length
                     })
                   const pnumberOfIdents = this.redis
-                    .hGetAll('lecture:' + uuid + ':idents')
+                    .hGetAll('lecture:{' + uuid + '}:idents')
                     .then((identobj) => {
                       return Object.values(identobj)
                         .map((value) => JSON.parse(value))
@@ -1476,7 +1476,7 @@ export class AppHandler {
       if (lecturedoc) {
         // now ask redis, if it is running
         const numberclients = await this.redis.sCard(
-          'lecture:' + uuid + ':notescreens'
+          'lecture:{' + uuid + '}:notescreens'
         ) // TODO fix me inactive clients! and notescreens
 
         if (numberclients > 0) lecturedoc.running = true
