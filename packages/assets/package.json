@@ -27,6 +27,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "build": "tsc",
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
   },

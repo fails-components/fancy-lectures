@@ -675,18 +675,17 @@ export class AppHandler {
                 }
               })
             }),
-          ...(instructor &&
-            (details.backgroundpdfuse
+          ...(instructor && {
+            bgpdf: details.backgroundpdfuse
               ? {
-                  bgpdf: {
-                    ...{
-                      fixed: true
-                    },
-                    ...(details.backgroundpdf &&
-                      details.backgroundpdf.name && {
+                  ...{
+                    fixed: true
+                  },
+                  ...(details.backgroundpdf && details.backgroundpdf.name
+                    ? {
                         name: details.backgroundpdf.name
-                      })
-                  }
+                      }
+                    : { none: true })
                 }
               : details.backgroundpdf
                 ? {
@@ -704,7 +703,8 @@ export class AppHandler {
                       )
                     })
                   }
-                : { none: true })),
+                : { none: true }
+          }),
           ...(instructor && details.polls && { polls: details.polls })
         }
         return res.status(200).json(toret)
@@ -1139,8 +1139,7 @@ export class AppHandler {
         if (
           typeof retup === 'undefined' ||
           !Array.isArray(retup) ||
-          retup.length !== 1 ||
-          !retup[0]
+          retup.length !== 1
         )
           throw new Error('Problem in handleFileUpload')
 
