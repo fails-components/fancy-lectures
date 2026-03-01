@@ -36,7 +36,9 @@ export enum FormType {
 export type ToolType = number
 export type FormType = number
 
-export type StorageType = number
+export type DrawContainerId = number
+export type SpecialContainerId = 'command' | 'jupyter'
+export type ContainerId = SpecialContainerId | DrawContainerId
 export type ClientType = string
 export type ColorType = number // rgb int number
 export type Time = number
@@ -103,7 +105,7 @@ export interface Sink {
     time: OptTime,
     objnum: number,
     curclient: OptClientNum,
-    storagenum: StorageType | null | undefined
+    storagenum: DrawContainerId | null | undefined
   ): void
 
   moveObject(
@@ -200,7 +202,7 @@ export class DummySink implements Sink {
     time: OptTime,
     objnum: number,
     curclient: OptClientNum,
-    storagenum: StorageType | null | undefined
+    storagenum: DrawContainerId | null | undefined
   ): void {}
 
   moveObject(
@@ -292,7 +294,7 @@ export interface StrictSink {
     time: Time,
     objnum: number,
     curclient: ClientNum,
-    storagenum: StorageType | null | undefined
+    storagenum: DrawContainerId | null | undefined
   ): void
 
   moveObject(
@@ -560,7 +562,7 @@ export class Container implements StrictSink {
     time: Time,
     objnum: number,
     curclient: ClientNum,
-    _storagenum: StorageType
+    _storagenum: DrawContainerId
   ) {
     const tempbuffer = new ArrayBuffer(16)
     const dataview = new DataView(tempbuffer)
@@ -751,9 +753,9 @@ export class Container implements StrictSink {
 }
 
 export class MemContainer extends Container {
-  constructor(num: StorageType, _dummy: any) {
+  constructor(id: DrawContainerId, _dummy: any) {
     super()
-    this.number = num
+    this.id_ = id
   }
 
   getContainerData() {
@@ -793,7 +795,7 @@ export class MemContainer extends Container {
     new Uint8Array(this.storage).set(new Uint8Array(data)) // copy data
   }
 
-  getElementTime(position: StorageType, lasttime: number) {
+  getElementTime(position: DrawContainerId, lasttime: number) {
     if (position + 8 > this.storageSize) return 0 // should never happen
     const dataview = new DataView(this.storage)
     const command = dataview.getUint8(position)
@@ -1076,7 +1078,7 @@ export class MemContainer extends Container {
     return pos + length
   }
 
-  reparseCommand(pos: StorageType, commandstate: CommandStateType) {
+  reparseCommand(pos: DrawContainerId, commandstate: CommandStateType) {
     // First Check size
     const dataview = new DataView(this.storage)
     if (2 + pos > this.storageSize) {
@@ -1119,7 +1121,7 @@ export class MemContainer extends Container {
     return commandstate
   }
 
-  reparseJupyter(datasink: Sink, pos: StorageType) {
+  reparseJupyter(datasink: Sink, pos: number) {
     // First Check size
     const dataview = new DataView(this.storage)
     if (2 + pos > this.storageSize) {
@@ -1252,7 +1254,7 @@ export class MemContainer extends Container {
   protected storage: ArrayBuffer = new ArrayBuffer(6400)
   protected storageAllocSize: number = 6400
   protected storageSize: number = 0
-  protected number: number
+  protected id_: DrawContainerId
 }
 
 type CallbackContainerConfig = {
@@ -1262,13 +1264,13 @@ type CallbackContainerConfig = {
 
 export type ContainerWriteData = (
   obj: {},
-  number: StorageType,
+  id: ContainerId,
   data: ArrayBuffer,
   append: boolean
 ) => void
 
 export class CallbackContainer extends Container {
-  constructor(num: StorageType, config: CallbackContainerConfig) {
+  constructor(num: ContainerId, config: CallbackContainerConfig) {
     super()
     this.writeData = config.writeData
     this.obj = config.obj
@@ -1285,11 +1287,8 @@ export class CallbackContainer extends Container {
 
   protected writeData: ContainerWriteData
   protected obj: {}
-  protected number: StorageType
+  protected number: ContainerId
 }
-
-type SpecialContainerId = 'command' | 'jupyter'
-type ContainerId = SpecialContainerId | number
 
 type CollectionContainerConfig = {
   obj: {}
@@ -1330,7 +1329,7 @@ export class Collection implements StrictSink {
     }
   }
 
-  checkContainerExistsAndDirty(storagenum: StorageType) {
+  checkContainerExistsAndDirty(storagenum: DrawContainerId) {
     if (!(storagenum in this.containers_)) {
       // TODO for the network case sync with server
       this.containers_[storagenum] = this.containertype_(
@@ -1476,7 +1475,7 @@ export class Collection implements StrictSink {
     time: Time,
     objnum: number,
     curclient: ClientNum,
-    storagenum: StorageType
+    storagenum: DrawContainerId
   ) {
     if (!Number.isInteger(storagenum)) return
     this.checkContainerExistsAndDirty(storagenum)
@@ -1562,6 +1561,14 @@ export class Collection implements StrictSink {
 
   get dirty() {
     return this.dirty_
+  }
+
+  get commandcontainer() {
+    return this.commandcontainer_
+  }
+
+  get jupytercontainer() {
+    return this.jupytercontainer_
   }
 
   protected lastcontainer: {
@@ -1889,7 +1896,7 @@ export class Dispatcher<SinkType extends Sink | StrictSink> {
     time: DisTimeType<SinkType>,
     objnum: number,
     curclient: DisClientNum<SinkType>,
-    storagenum: StorageType
+    storagenum: DrawContainerId
   ) {
     if (this.blocked) return
     let client = curclient ?? this.curclientnum
@@ -2063,7 +2070,7 @@ type NetDeleteObject = {
   time: OptTime
   objnum: number
   clientnum: number
-  storagenum: StorageType
+  storagenum: DrawContainerId
 }
 
 type NetMoveObject = {
@@ -2252,7 +2259,7 @@ export class NetworkSink implements Sink {
     time: OptTime,
     objnum: number,
     curclient: number,
-    storagenum: StorageType
+    storagenum: DrawContainerId
   ) {
     const outobj: NetDeleteObject = {
       task: 'deleteObject',

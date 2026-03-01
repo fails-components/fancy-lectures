@@ -239,15 +239,17 @@ export class NoteScreenConnection extends CommonConnection {
     const collection = new Collection(
       function (id, data) {
         const nid = Number(id)
-        if (nid !== id) throw new Error('Id is not numerical for container')
-        return new CallbackContainer(nid, data)
+        if (nid !== id && id !== 'command' && id !== 'jupyter')
+          throw new Error('Id is not numerical for container')
+        return new CallbackContainer(id, data)
       },
       {
-        writeData: async (obj, number, data, append) => {
+        writeData: async (obj, id, data, append) => {
           await loadlectprom
+          console.log('inspect write data', id, data, append)
           ;(obj as { writeData: ContainerWriteData }).writeData(
             notepadscreenid.lectureuuid,
-            number,
+            id,
             data,
             append
           )
