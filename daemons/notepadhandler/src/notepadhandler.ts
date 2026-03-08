@@ -340,28 +340,27 @@ export class NoteScreenConnection extends CommonConnection {
     this.emitVideoquestions(socket, notepadscreenid)
 
     socket.on('reauthor', async () => {
+      if (
+        typeof notepadscreenid.userhash === 'undefined' ||
+        typeof notepadscreenid.signKey === 'undefined' ||
+        typeof notepadscreenid.cryptKey === 'undefined'
+      ) {
+        console.log(
+          'reautor failed userhash, signKey or userHash not set',
+          notepadscreenid
+        )
+        return
+      }
       // we use the information from the already present authtoken
       const token = await this.getLectureToken(curtoken)
-      if (!token.decoded) {
-        console.log('error in reauthor', token.error)
-        return
-      }
-      curtoken = token.decoded
-      const { cryptKey, signKey, userhash } = notepadscreenid
-      if (
-        typeof cryptKey !== 'string' ||
-        typeof signKey !== 'string' ||
-        typeof userhash !== 'string'
-      ) {
-        console.log('error in reauthor , no sign, userhash or crypt key')
-        return
-      }
-      this.updateNotescreenActive({
-        ...notepadscreenid,
-        cryptKey,
-        signKey,
-        userhash
-      })
+      if (token.decoded) curtoken = token.decoded
+      this.updateNotescreenActive(
+        notepadscreenid as NotepadScreenIdType & {
+          cryptKey: string
+          signKey: string
+          userhash: string
+        }
+      )
       socket.emit('authtoken', { token: token.token })
     })
     let rurl: string | undefined
@@ -915,28 +914,27 @@ export class NoteScreenConnection extends CommonConnection {
     this.emitVideoquestions(socket, purescreen)
 
     socket.on('reauthor', async () => {
+      if (
+        typeof purescreen.userhash === 'undefined' ||
+        typeof purescreen.signKey === 'undefined' ||
+        typeof purescreen.cryptKey === 'undefined'
+      ) {
+        console.log(
+          'reautor failed userhash, signKey or userHash not set',
+          purescreen
+        )
+        return
+      }
       // we use the information from the already present authtoken
       const token = await this.getScreenToken(curtoken)
-      const { cryptKey, signKey, userhash } = purescreen
-      if (
-        typeof cryptKey !== 'string' ||
-        typeof signKey !== 'string' ||
-        typeof userhash !== 'string'
-      ) {
-        console.log('error in reauthor , no sign, userhash or crypt key')
-        return
-      }
-      this.updateNotescreenActive({
-        ...purescreen,
-        cryptKey,
-        signKey,
-        userhash
-      })
-      if (!token.decoded) {
-        console.log('error in reauthor', token.error)
-        return
-      }
-      curtoken = token.decoded
+      this.updateNotescreenActive(
+        purescreen as NotepadScreenIdType & {
+          cryptKey: string
+          signKey: string
+          userhash: string
+        }
+      )
+      if (token.decoded) curtoken = token.decoded
       socket.emit('authtoken', { token: token.token })
     })
 
@@ -1017,6 +1015,7 @@ export class NoteScreenConnection extends CommonConnection {
     })
 
     socket.on('keyInfo', (cmd) => {
+      console.log('debug keyinfo', cmd)
       if (cmd.cryptKey && cmd.signKey) {
         purescreen.cryptKey = cmd.cryptKey
         purescreen.signKey = cmd.signKey
@@ -1137,6 +1136,7 @@ export class NoteScreenConnection extends CommonConnection {
     oldtoken?: ScreenLectureToken
     error?: string
   }> {
+    console.log('getLectureToken mark 1')
     const newtoken: ScreenLectureToken = {
       user: oldtoken.user,
       purpose: 'notepad',
@@ -1148,8 +1148,10 @@ export class NoteScreenConnection extends CommonConnection {
       name: oldtoken.name,
       maxrenew: oldtoken.maxrenew - 1
     }
+    console.log('getLectureToken mark 2')
     if (!oldtoken.maxrenew || !(oldtoken.maxrenew > 0))
       return { error: 'maxrenew token failed', oldtoken: oldtoken }
+    console.log('getLectureToken mark 3')
     try {
       this.redis.hSet(
         'lecture:{' +
@@ -1165,6 +1167,7 @@ export class NoteScreenConnection extends CommonConnection {
     } catch (error) {
       console.log('redis problem in getNotepadToken', error)
     }
+    console.log('getLectureToken mark 4')
     return { token: await this.signNotepadJwt(newtoken), decoded: newtoken }
   }
 

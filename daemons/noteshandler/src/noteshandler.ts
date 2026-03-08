@@ -19,6 +19,7 @@
 import { createHash } from 'crypto'
 import {
   CommonConnection,
+  type AddUpdateCryptoIdentArgs,
   type NotesIdType,
   type RouterInfo,
   type TokenType
@@ -149,24 +150,21 @@ export class NotesConnection extends CommonConnection {
     this.emitVideoquestions(socket, purenotes)
 
     socket.on('reauthor', async () => {
-      // we use the information from the already present authtoken
-      const token = await this.getNotesToken(curtoken)
-      if (!token.decoded) {
-        console.log('error in reauthor', token.error)
-        return
-      }
-      curtoken = token.decoded
-      const { cryptKey, signKey, userhash } = purenotes
       if (
-        typeof cryptKey !== 'string' ||
-        typeof signKey !== 'string' ||
-        typeof userhash !== 'string'
+        typeof purenotes.userhash === 'undefined' ||
+        typeof purenotes.signKey === 'undefined' ||
+        typeof purenotes.cryptKey === 'undefined'
       ) {
-        console.log('error in reauthor , no sign, userhash or crypt key')
+        console.log(
+          'reautor failed userhash, signKey or userHash not set',
+          purenotes
+        )
         return
       }
-      this.addUpdateCryptoIdent({ ...purenotes, cryptKey, signKey, userhash })
-
+      // we use the information from the already present authtoken
+      this.addUpdateCryptoIdent(purenotes as AddUpdateCryptoIdentArgs)
+      const token = await this.getNotesToken(curtoken)
+      if (token.decoded) curtoken = token.decoded
       socket.emit('authtoken', { token: token.token })
     })
 

@@ -1571,6 +1571,14 @@ export class Collection implements StrictSink {
     return this.jupytercontainer_
   }
 
+  get containers() {
+    return this.containers_
+  }
+
+  get contdirty() {
+    return this.contdirty_
+  }
+
   protected lastcontainer: {
     [key: number]: ContainerId
   } = {}
