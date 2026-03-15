@@ -41,8 +41,5 @@
       "files/*"
     ],
     "delay": 2500
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   }
 }

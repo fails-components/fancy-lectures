@@ -41,8 +41,5 @@
     "express-jwt": "^8.2.0",
     "jsonwebtoken": "^9.0.0",
     "redlock-universal": "^0.8.2"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   }
 }

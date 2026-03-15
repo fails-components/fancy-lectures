@@ -32,8 +32,5 @@
   },
   "dependencies": {
     "color": "^5.0.3"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   }
 }

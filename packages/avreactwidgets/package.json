@@ -26,8 +26,5 @@
   "scripts": {
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   }
 }
