@@ -11,4 +11,10 @@ daemons/*/dist
 .env
 daemons/staticserver/oss-attribution/*
 tsconfig.tsbuildinfo
+.env-file
+*.pem
+*.key
+*.crt
+deploy/docker-compose/.env
+deploy/helmchart/configexamples
 

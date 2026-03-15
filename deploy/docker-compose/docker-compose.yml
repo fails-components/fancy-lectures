@@ -1,0 +1,311 @@
+version: "3.9"
+services:
+  ltihandler: 
+    image: "ghcr.io/fails-components/ltihandler:${FAILS_TAG:-master}"
+    restart: always
+    expose:
+      - "8080"
+    depends_on:
+      - "redis"
+      - "mongo"
+    environment:
+# secret for generation of jwt keys
+      - FAILS_KEYS_SECRET
+# secret for generation of generation of securing hashes for user uploaded content
+      - FAILS_STATIC_SECRET="dummy"
+# list of configured LMS in the format "NAME OF LMS|https://path.to.lms.lti.keys/lti/certs.php|https://path.to.lms.lti.tokenurl/lti/token.php|https://path.to.lms.lti.authurl/lti/auth.php|LMSidentifier_in_db" you can include multiple LMS separated by a space
+      - FAILS_LMS_LIST
+# white list of courses, that have access to the service, useful for limited release
+      - FAILS_LMS_COURSE_WHITELIST
+      - FAILS_ONLY_LEARNERS
+      - FAILS_ADDL_ADMINS
+      - REDIS_HOST=redis
+      - REDIS_PASS
+      - FAILS_MONGO_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongo:27017
+
+  apphandler: 
+    image: "ghcr.io/fails-components/apphandler:${FAILS_TAG:-master}"
+    restart: always
+    expose:
+      - "8080"
+    depends_on:
+      - "redis"
+      - "mongo"    
+    environment:
+# secret for generation of jwt keys
+      - FAILS_KEYS_SECRET
+# secret for generation of generation of securing hashes for user uploaded content
+      - FAILS_STATIC_SECRET
+      - REDIS_HOST=redis
+      - REDIS_PASS
+      - FAILS_MONGO_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongo:27017
+      - FAILS_STATIC_WEBSERV_TYPE=${FAILS_STATIC_WEBSERV_TYPE:-nginx}
+      - FAILS_STATIC_SAVE_TYPE=${FAILS_STATIC_SAVE_TYPE:-fs}
+# needed if swift is used
+      - FAILS_SWIFT_ACCOUNT
+      - FAILS_SWIFT_CONTAINER
+      - FAILS_SWIFT_KEY
+      - FAILS_SWIFT_BASEURL
+      - FAILS_SWIFT_AUTH_BASEURL
+      - FAILS_SWIFT_USERNAME
+      - FAILS_SWIFT_PASSWORD
+      - FAILS_SWIFT_DOMAIN
+      - FAILS_SWIFT_PROJECT
+# needed if s3 is used
+      - FAILS_S3_AK
+      - FAILS_S3_SK
+      - FAILS_S3_REGION
+      - FAILS_S3_BUCKET
+      - FAILS_S3_HOST
+      - FAILS_S3_ALTURL
+    volumes:
+      - type: bind
+# directory to store the user uploaded files (images, pdf), backup required, if fs is used
+        source: ${ASSETS_DATA_DIR}
+        target: /usr/src/fails/daemons/apphandler/files
+
+  authhandler: 
+    image: "ghcr.io/fails-components/authhandler:${FAILS_TAG:-master}"
+    restart: always
+    expose:
+      - "8080"
+    depends_on:
+      - "redis"
+    environment:
+# secret for generation of jwt keys
+      - FAILS_KEYS_SECRET
+# secret for generation of generation of securing hashes for user uploaded content
+      - FAILS_STATIC_SECRET="dummy"
+      - REDIS_HOST=redis
+      - REDIS_PASS
+
+  notepadhandler: 
+    image: "ghcr.io/fails-components/notepadhandler:${FAILS_TAG:-master}"
+    restart: always
+    expose:
+      - "8080"
+    depends_on:
+      - "redis"
+      - "mongo"
+    environment:
+# secret for generation of jwt keys
+      - FAILS_KEYS_SECRET
+# secret for generation of generation of securing hashes for user uploaded content
+      - FAILS_STATIC_SECRET
+      - REDIS_HOST=redis
+      - REDIS_PASS
+      - FAILS_MONGO_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongo:27017
+      - FAILS_STATIC_WEBSERV_TYPE=${FAILS_STATIC_WEBSERV_TYPE:-nginx}
+      - FAILS_STATIC_SAVE_TYPE=${FAILS_STATIC_SAVE_TYPE:-fs}
+# needed if swift is used
+      - FAILS_SWIFT_ACCOUNT
+      - FAILS_SWIFT_CONTAINER
+      - FAILS_SWIFT_KEY
+      - FAILS_SWIFT_BASEURL
+      - FAILS_SWIFT_AUTH_BASEURL
+      - FAILS_SWIFT_USERNAME
+      - FAILS_SWIFT_PASSWORD
+      - FAILS_SWIFT_DOMAIN
+      - FAILS_SWIFT_PROJECT
+# needed if s3 is used
+      - FAILS_S3_AK
+      - FAILS_S3_SK
+      - FAILS_S3_REGION
+      - FAILS_S3_BUCKET
+      - FAILS_S3_HOST
+      - FAILS_S3_ALTURL
+    volumes:
+      - type: bind
+# directory to store the user uploaded files (images, pdf), backup required, if fs is used
+        source: ${ASSETS_DATA_DIR}
+        target: /usr/src/fails/daemons/notepadhandler/files
+
+  noteshandler: 
+    image: "ghcr.io/fails-components/noteshandler:${FAILS_TAG:-master}"
+    restart: always
+    expose:
+      - "8080"
+    depends_on:
+      - "redis"
+      - "mongo"
+    environment:
+# secret for generation of jwt keys
+      - FAILS_KEYS_SECRET
+# secret for generation of generation of securing hashes for user uploaded content
+      - FAILS_STATIC_SECRET
+      - REDIS_HOST=redis
+      - REDIS_PASS
+      - FAILS_MONGO_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongo:27017
+      - FAILS_STATIC_WEBSERV_TYPE=${FAILS_STATIC_WEBSERV_TYPE:-nginx}
+# needed if swift is used
+      - FAILS_SWIFT_ACCOUNT
+      - FAILS_SWIFT_CONTAINER
+      - FAILS_SWIFT_KEY
+      - FAILS_SWIFT_BASEURL
+# needed if s3 is used
+      - FAILS_S3_AK
+      - FAILS_S3_SK
+      - FAILS_S3_REGION
+      - FAILS_S3_BUCKET
+      - FAILS_S3_HOST
+      - FAILS_S3_ALTURL
+
+  housekeeping: 
+    image: "ghcr.io/fails-components/housekeeping:${FAILS_TAG:-master}"
+    restart: always
+    depends_on:
+      - "redis"
+      - "mongo"
+    environment:
+      - FAILS_STATIC_SECRET="dummy"
+      - FAILS_KEYS_SECRET="dummy"
+      - REDIS_HOST=redis
+      - REDIS_PASS
+      - FAILS_MONGO_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongo:27017
+      - FAILS_STATIC_WEBSERV_TYPE=${FAILS_STATIC_WEBSERV_TYPE:-nginx}
+      - FAILS_STATIC_SAVE_TYPE=${FAILS_STATIC_SAVE_TYPE:-fs}
+# needed if swift is used
+      - FAILS_SWIFT_ACCOUNT
+      - FAILS_SWIFT_CONTAINER
+      - FAILS_SWIFT_KEY
+      - FAILS_SWIFT_BASEURL
+      - FAILS_SWIFT_AUTH_BASEURL
+      - FAILS_SWIFT_USERNAME
+      - FAILS_SWIFT_PASSWORD
+      - FAILS_SWIFT_DOMAIN
+      - FAILS_SWIFT_PROJECT
+# needed if s3 is used
+      - FAILS_S3_AK
+      - FAILS_S3_SK
+      - FAILS_S3_REGION
+      - FAILS_S3_BUCKET
+      - FAILS_S3_HOST
+      - FAILS_S3_ALTURL
+# needed if admin emails  are sent
+      - FAILS_ADMIN_EMAIL_SERVER
+      - FAILS_ADMIN_EMAIL_SERVER_PORT
+      - FAILS_ADMIN_EMAIL_SENDER_ADDRESS
+      - FAILS_ADMIN_EMAIL_ROOT_ADDRESSES
+      - FAILS_ADMIN_EMAIL_ACCOUNT_NAME
+      - FAILS_ADMIN_EMAIL_ACCOUNT_PASSWORD
+      - FAILS_ADMIN_EMAIL_SECURE
+    volumes:
+      - type: bind
+# directory to store the user uploaded files (images, pdf), backup required
+        source: ${ASSETS_DATA_DIR}
+        target: /usr/src/fails/daemons/housekeeping/files
+        
+
+  avsdispatcher: 
+    image: "ghcr.io/fails-components/avsdispatcher:${FAILS_TAG:-master}"
+    restart: always
+    expose:
+      - "8080"
+    depends_on:
+      - "redis"
+      - "mongo"
+    environment:
+# secret for generation of jwt keys
+      - FAILS_KEYS_SECRET
+# secret for generation of generation of securing hashes for user uploaded content
+      - FAILS_STATIC_SECRET
+      - REDIS_HOST=redis
+      - REDIS_PASS
+      - FAILS_MONGO_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongo:27017
+      - REGIONS
+
+  staticserver:
+    image: "ghcr.io/fails-components/staticserver:${FAILS_TAG:-master}"
+    restart: always
+    expose:
+      - "80"
+    environment:
+# secret for generation of generation of securing hashes for user uploaded content
+      - FAILS_STATIC_SECRET
+      - FAILS_APP_CONFIG_JSON
+      - FAILS_JUPYTER_PROXY_CONFIG
+    volumes:
+      - type: bind
+# directory to store the user uploaded files (images, pdf), backup required
+        source: ${ASSETS_DATA_DIR}
+        target: /usr/share/nginx/htmlsecuredfiles
+        
+
+
+  redis:
+    image: "redis:8.0-bookworm"
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASS}
+    volumes:
+      - type: bind
+# directory to store the redis database (includes no permanent data, backup not necessary)
+        source: ${REDIS_DATA_DIR}
+        target: /data
+    expose:
+      - "6379"
+# for development, should be commented for production
+#    ports:
+#      - "127.0.0.1:6379:6379"
+
+  mongo:
+    image: "mongo:${MONGO_VERSION:-8.0-noble}"
+    command: ${MONGO_OPTIONS}
+    restart: always
+    volumes:
+      - type: volume
+        source: mongo_data_volume
+        target: /data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+
+    expose:
+      - "27017"
+# for development , should be commented for production
+ #   ports:
+ #     - "127.0.0.1:27017:27017"
+
+  mongo-backup:
+    container_name: mongo-backup
+    image: tiredofit/db-backup
+    restart: always
+    links:
+     - mongo
+    volumes:
+      - type: bind
+# directory to store the mongo database backup, contains important data, back it up!
+        source: ${MONGO_BACKUP_DIR}
+        target: /backup
+    environment:
+      - DB_TYPE=mongo
+      - DB_HOST=mongo
+      - DB_USER=${MONGO_USER}
+      - DB_PASS=${MONGO_PASS}
+      - DB_DUMP_FREQ=1440
+      - DB_DUMP_BEGIN=0000
+      - DB_CLEANUP_TIME=8640
+      - MD5=TRUE
+      - COMPRESSION=GZ
+      - SPLIT_DB=FALSE
+
+  haproxy:
+    build: ./loadbalancer
+    restart: always
+    environment:
+# secret for generation of cookie hash to allow sticky session with the loadbalancer
+     - FAILS_COOKIE_KEY
+    ports: 
+      - "${FAILS_HTTP_PORT:-80}:80"
+      - "${FAILS_HTTPS_PORT:-443}:443"
+    volumes:
+      - type: bind
+        source: ${CERT_FILE}
+# path to the certificate file of your webserver
+        target: /usr/local/etc/haproxy/cert.pem
+
+volumes:
+  mongo_data_volume:
+    external: 
+# data volume to store the mongo db files
+      name: ${MONGO_DATA_VOLUME}
+
