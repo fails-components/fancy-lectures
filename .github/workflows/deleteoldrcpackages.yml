@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - 'master'
-      - 'next'
   workflow_dispatch:
     inputs:
       logLevel:

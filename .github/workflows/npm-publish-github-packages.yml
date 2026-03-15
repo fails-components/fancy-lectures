@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - 'master'
-      - 'next'
 
   workflow_dispatch:
     inputs:
@@ -73,15 +72,6 @@ jobs:
         run: |
           npm publish --tag stable
           npm dist-tag add @fails-components/${{ matrix.name }}@${{ steps.check.outputs.version }} latest
-        working-directory: packages/${{ matrix.path }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish Next (Next branch)
-        if: steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/next'
-        run: |
-          npm publish --tag next
-          npm dist-tag add @fails-components/${{ matrix.name }}@${{ steps.check.outputs.version }} latestunstable
         working-directory: packages/${{ matrix.path }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

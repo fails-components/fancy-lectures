@@ -5,12 +5,12 @@ on:
   schedule:
     - cron: '30 3,12 * * *'
   push:
-    branches: [ master, next ]
+    branches: [ master ]
     # Publish semver tags as releases.
     tags: [ '*-v*.*.*' ]
     paths: [ 'daemons/**' ]
   pull_request:
-    branches: [ master, next ]
+    branches: [ master ]
     paths: [ 'daemons/**' ]
   workflow_dispatch:
     inputs:
