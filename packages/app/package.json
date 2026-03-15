@@ -11,8 +11,8 @@
   },
   "homepage": "/static/app/",
   "dependencies": {
-    "@fails-components/config": "^1.5.4",
-    "@fails-components/data": "^1.4.1",
+    "@fails-components/config": "^1.7.0",
+    "@fails-components/data": "1.4.3",
     "@fails-components/drawobjects": "^1.4.1",
     "@fails-components/jupyter-react-edit": "^0.0.4",
     "axios": "^1.12.0",

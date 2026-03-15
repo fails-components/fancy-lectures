@@ -31,7 +31,7 @@
     "@fails-components/commonhandler": "^1.2.18"
   },
   "dependencies": {
-    "@fails-components/config": "^1.3.0",
+    "@fails-components/config": "^1.7.0",
     "@fails-components/security": "^1.5.1",
     "@fails-components/assets": "^1.5.1",
     "cors": "^2.8.5",
