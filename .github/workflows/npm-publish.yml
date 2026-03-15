@@ -67,11 +67,21 @@ jobs:
 #      - run: npm test
 #        env:
 #          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish Stable (Master)
+      - name: Publish github packages
         if: steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/master'
         run: |
-          npm publish --tag stable
+          npm publish --tag stable --workspace packages/${{ matrix.name }}
           npm dist-tag add @fails-components/${{ matrix.name }}@${{ steps.check.outputs.version }} latest
-        working-directory: packages/${{ matrix.path }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish npm packages
+        if: steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/master'
+        run: |
+          npm publish --tag stable --workspace packages/${{ matrix.name }}
+      - name: Tag mark npm packages
+        if: steps.check.outputs.changed == 'true' && github.ref == 'refs/heads/master'
+        run: |
+          npm publish --tag stable --workspace packages/${{ matrix.name }}
+          npm dist-tag add @fails-components/${{ matrix.name }}@${{ steps.check.outputs.version }} latest
+        env:  
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
