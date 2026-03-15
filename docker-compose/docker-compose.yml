@@ -62,7 +62,7 @@ services:
       - type: bind
 # directory to store the user uploaded files (images, pdf), backup required, if fs is used
         source: ${ASSETS_DATA_DIR}
-        target: /usr/src/apphandler/files
+        target: /usr/src/fails/daemons/apphandler/files
 
   authhandler: 
     image: "ghcr.io/fails-components/authhandler:${FAILS_TAG:-master}"
@@ -118,7 +118,7 @@ services:
       - type: bind
 # directory to store the user uploaded files (images, pdf), backup required, if fs is used
         source: ${ASSETS_DATA_DIR}
-        target: /usr/src/notepadhandler/files
+        target: /usr/src/fails/daemons/notepadhandler/files
 
   noteshandler: 
     image: "ghcr.io/fails-components/noteshandler:${FAILS_TAG:-master}"
@@ -193,7 +193,8 @@ services:
       - type: bind
 # directory to store the user uploaded files (images, pdf), backup required
         source: ${ASSETS_DATA_DIR}
-        target: /usr/src/housekeeping/files
+        target: /usr/src/fails/daemons/housekeeping/files
+        
 
   avsdispatcher: 
     image: "ghcr.io/fails-components/avsdispatcher:${FAILS_TAG:-master}"

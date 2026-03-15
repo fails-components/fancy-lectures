@@ -98,9 +98,9 @@ FAILS_TAG="master" # optional tag of fails container, either a version tag or a 
 FAILS_KEYS_SECRET="YOURKEYFORJWTKEYGENERATION"
 # Static secret only required, if the assets are served via nginx
 FAILS_STATIC_SECRET="ASECRETFORUSERUPLOADEDASSETSWITHSECUREDURLS"
-# Choose the type of storage for your assets "nginx" (default) or "openstackswift"
+# Choose the type of storage for your assets "nginx" (default), "s3" or "openstackswift"
 FAILS_STATIC_WEBSERV_TYPE="nginx"
-# were to save your static file, "fs" (default) for filesystem, or "openstackswift"
+# were to save your static file, "fs" (default) for filesystem, "s3" or "openstackswift"
 FAILS_STATIC_SAVE_TYPE="fs"
 
 # If you use swift storage set the following variables
