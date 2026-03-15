@@ -32,7 +32,7 @@ jobs:
     env:
       NEEDS_BROWSERSLIST: ${{ contains(fromJSON('["lectureapp", "app"]'), github.event.inputs.package) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GH_PUSH_TO_GIT }}
       - name: Git Config
