@@ -7,7 +7,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fails-components/apphandler.git"
+    "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
   "main": "src/server.ts",
   "files": [
