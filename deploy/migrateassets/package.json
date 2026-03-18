@@ -37,6 +37,6 @@
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "@fails-components/security": "github:fails-components/security#master"
+    "@fails-components/security": "^1.5.1"
   }
 }
