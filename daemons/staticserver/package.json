@@ -2,6 +2,7 @@
   "name": "@fails-components/staticserver",
   "version": "1.2.73",
   "description": "fails static webpages served through nginx",
+  "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "docker:build": "docker build -t ghcr.io/fails-components/staticserver:master --progress=plain --secret id=GH_TOKEN -f Dockerfile ../.."
