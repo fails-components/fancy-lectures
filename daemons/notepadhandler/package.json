@@ -24,7 +24,7 @@
     "start": "node src/server.ts",
     "test": "run-s test:lint",
     "test:lint": "eslint .",
-    "docker:build": "docker build -t ghcr.io/fails-components/notepadhandler:master --secret id=GH_TOKEN -f Dockerfile ../.."
+    "docker:build": "docker build -t ghcr.io/fails-components/notepadhandler:master -f Dockerfile ../.."
   },
   "devDependencies": {
     "cross-env": "^7.0.3",

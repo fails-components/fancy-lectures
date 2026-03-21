@@ -23,7 +23,7 @@
     "start": "node src/server.js",
     "test": "run-s  test:lint",
     "test:lint": "eslint .",
-    "docker:build": "docker build -t ghcr.io/fails-components/ltihandler:master --secret id=GH_TOKEN -f Dockerfile ../.."
+    "docker:build": "docker build -t ghcr.io/fails-components/ltihandler:master -f Dockerfile ../.."
   },
   "devDependencies": {
     "@types/rasha": "^1.2.5",

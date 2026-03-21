@@ -23,7 +23,7 @@
     "start": "node src/main.ts",
     "test": "run-s test:lint",
     "test:lint": "eslint .",
-    "docker:build": "docker build -t ghcr.io/fails-components/housekeeping:master --secret id=GH_TOKEN -f Dockerfile ../.."
+    "docker:build": "docker build -t ghcr.io/fails-components/housekeeping:master -f Dockerfile ../.."
   },
   "devDependencies": {
     "@fails-components/commonhandler": "^2.0.0-dev.0",

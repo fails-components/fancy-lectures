@@ -14,7 +14,7 @@
     "start": "node src/server.ts",
     "test": "run-s test:lint",
     "test:lint": "eslint .",
-    "docker:build": "docker build -t ghcr.io/fails-components/avsdispatcher:master --secret id=GH_TOKEN -f Dockerfile ../.."
+    "docker:build": "docker build -t ghcr.io/fails-components/avsdispatcher:master -f Dockerfile ../.."
   },
   "repository": {
     "type": "git",
