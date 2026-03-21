@@ -10,7 +10,6 @@
     "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
   "main": "src/server.ts",
-  "source": "src/server.ts",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -22,7 +21,6 @@
     "docker:build": "docker build -t ghcr.io/fails-components/authhandler:master -f Dockerfile ../.."
   },
   "devDependencies": {
-    "@types/node": "^25.3.0",
     "cross-env": "^7.0.3"
   },
   "files": [
