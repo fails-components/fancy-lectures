@@ -4,6 +4,7 @@
   "description": "Handles authentification using codes",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fails-components/fancy-lectures.git"

@@ -4,6 +4,7 @@
   "description": "Migrate data from/to object storage to directory storage",
   "main": "migrate.js",
   "type": "module",
+  "private": true,
   "engines": {
     "node": ">=16"
   },
