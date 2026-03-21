@@ -22,7 +22,7 @@
     "serve": "lerna run serve --parallel",
     "serve:app": "lerna run serve --scope @fails-components/app",
     "serve:lectureapp": "lerna run serve --scope @fails-components/lectureapp",
-    "docker:build": "lerna run docker:build --stream",
+    "docker:build": "lerna run docker:build  --concurrency 1 --stream",
     "version:new": "lerna version --no-push",
     "publish:start": "lerna publish from-git"
   },
