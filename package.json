@@ -23,8 +23,8 @@
     "serve:app": "lerna run serve --scope @fails-components/app",
     "serve:lectureapp": "lerna run serve --scope @fails-components/lectureapp",
     "docker:build": "lerna run docker:build --stream",
-    "version": "lerna version --no-push",
-    "publish": "lerna publish from-git"
+    "version:new": "lerna version --no-push",
+    "publish:start": "lerna publish from-git"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",
