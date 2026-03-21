@@ -50,7 +50,7 @@
     "dev:clean": "npm run dev -- --force",
     "build": "vite build",
     "serve": "vite preview --port 1001 --host",
-    "version": "npx browserslist@latest --update-db --yes && git add ../../package-lock.json"
+    "version": "cd ../.. && npx update-browserslist-db@latest --yes && git add package-lock.json"
   },
   "eslintConfig": {
     "extends": [
