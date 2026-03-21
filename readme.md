@@ -1,4 +1,9 @@
 !["FAILS logo"](failslogo.svg)
+# Migration warning
+This monorepo will be soon the main home of ** FAILS ** - components.
+We are currently in the process of migrating all packages and container images.
+The change will be reflected in the components version number 2.
+
 # Fancy automated internet lecture system (**FAILS**) - components
 
 This is main monorepo of FAILS components. (Created as consolidation of the multiple repos used before for FAILS)
@@ -30,3 +35,8 @@ Some packages have a more permissive license to enable their use outside of FAIL
 
 ## Installation
 For installation instructions for a containerized envoironment, please see the  `deploy` directory.
+
+## Changes for upcoming version 2
+ * Move to monorepo with new structure
+ * All daemons are converted to typescript
+ * Packages now deployed on npm registry instead of github packages, though container images remain on github container registry.
