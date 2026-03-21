@@ -22,7 +22,7 @@
   "license": "AGPL-3.0-or-later",
   "homepage": "https://github.com/fails-components/staticserver#readme",
   "dependencies": {
-    "@fails-components/appstable": "npm:@fails-components/app@^1.2.24",
+    "@fails-components/appstable": "npm:@fails-components/app@^1.2.25",
     "@fails-components/appexperimental": "npm:@fails-components/app@^1.2.25",
     "@fails-components/apphandler": "*",
     "@fails-components/authhandler": "*",
