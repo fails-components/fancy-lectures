@@ -10,10 +10,8 @@ WORKDIR /usr/src/fails
 
 COPY . .
 
-RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`;\
-       npx update-browserslist-db@latest
-RUN --mount=type=secret,id=GH_TOKEN export GH_TOKEN=`cat /run/secrets/GH_TOKEN`;\
-      npm ci
+RUN npx update-browserslist-db@latest
+RUN npm ci
 
 #build the app
 ARG BASE_WORK
