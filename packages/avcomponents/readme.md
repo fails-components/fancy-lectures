@@ -2,11 +2,11 @@
 # Fancy automated internet lecture system (**FAILS**) - components
 
 This package is part of FAILS.
-A web-based system developed out of university lectures.
+A web-based system lecture systems developed from the exprience  of real university lectures.
 
-This package is part of the audio, video stack of **FAILS**,
-which may be useful outside of FAILS.
+FAILS is licensed via GNU Affero GPL version 3.0 
 
+## Package avcomponents
 It provides multiple components that process in a streaming way,
 audio and video data. For decoding and encoding Webcodecs are used.
 
@@ -16,4 +16,4 @@ FAILS is licensed via GNU Affero GPL version 3.0
 
 
 ## Installation
-For installation instructions for a containerized environment, please see the [fails-components/compositions](https://github.com/fails-components/compositions "fails-components/compositions") repository.
+For installation instructions for a containerized envoironment, please see the readme and documentation in the main monorepo [fails-components/fancy-lectures](https://github.com/fails-components/fancy-lecture "fails-components/fancy-lecture").
