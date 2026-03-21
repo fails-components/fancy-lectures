@@ -7,8 +7,6 @@ RUN npm install -g isolate-package
 
 COPY . .
 
-COPY .npmrc ./
-
 RUN if [ "$ENV" = "debug" ] ; then \
         npm install --no-workspaces; \
     else  \
