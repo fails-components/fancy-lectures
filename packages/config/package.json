@@ -8,8 +8,8 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
-  "main": "dist/config.ts",
-  "module": "dist/config.ts",
+  "main": "dist/config.js",
+  "module": "dist/config.js",
   "types": "dist/config.d.ts",
   "exports": {
     ".": {
