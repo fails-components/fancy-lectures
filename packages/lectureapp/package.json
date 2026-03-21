@@ -16,7 +16,8 @@
     "dev": "vite --host",
     "dev:clean": "npm run dev -- --force",
     "build": "vite build",
-    "serve": "vite preview --port 3000 --host"
+    "serve": "vite preview --port 3000 --host",
+    "version": "npx browserslist@latest --update-db --yes && git add ../../package-lock.json"
   },
   "dependencies": {
     "@fails-components/avcore": "^1.2.57",
