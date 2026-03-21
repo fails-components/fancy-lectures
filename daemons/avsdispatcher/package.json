@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/avsdispatcher",
-  "version": "1.2.14",
+  "version": "2.0.0-dev.0",
   "description": "Audio, Video, Screensharing dispatcher",
   "main": "src/server.ts",
   "files": [
@@ -35,8 +35,8 @@
   },
   "homepage": "https://github.com/fails-components/avsdispatcher#readme",
   "dependencies": {
-    "@fails-components/config": "^1.7.0",
-    "@fails-components/security": "^1.5.1",
+    "@fails-components/config": "^2.0.0-dev.0",
+    "@fails-components/security": "^2.0.0-dev.0",
     "cors": "^2.8.5",
     "express": "^4.22.1",
     "express-jwt": "^8.2.0",

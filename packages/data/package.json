@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/data",
-  "version": "1.4.3",
+  "version": "2.0.0-dev.0",
   "description": "Supplies data format classes for use within the fails ecosystem",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -32,5 +32,8 @@
   },
   "dependencies": {
     "color": "^5.0.3"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

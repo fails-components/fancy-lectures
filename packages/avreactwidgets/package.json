@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/avreactwidgets",
-  "version": "1.2.57",
+  "version": "2.0.0-dev.0",
   "description": "The audio/video React widgets build on top of FAILS audio video functionality",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -20,11 +20,14 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@fails-components/avcore": "^1.2.57",
+    "@fails-components/avcore": "^2.0.0-dev.0",
     "react": "^17.0.2"
   },
   "scripts": {
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

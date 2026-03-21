@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/authhandler",
-  "version": "1.2.11",
+  "version": "2.0.0-dev.0",
   "description": "Handles authentification using codes",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -31,8 +31,8 @@
     "failslogolicensereadme.txt"
   ],
   "dependencies": {
-    "@fails-components/config": "^1.7.0",
-    "@fails-components/security": "^1.5.1",
+    "@fails-components/config": "^2.0.0-dev.0",
+    "@fails-components/security": "^2.0.0-dev.0",
     "redis": "^4.0.6",
     "socket.io": "^4.8.3",
     "uuid": "^13.0.0"
