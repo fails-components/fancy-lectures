@@ -23,14 +23,14 @@
   "license": "AGPL-3.0-or-later",
   "homepage": "https://github.com/fails-components/staticserver#readme",
   "dependencies": {
-    "@fails-components/appexperimental": "file:../../packages/app",
+    "@fails-components/appexperimental": "npm:@fails-components/app@2.0.0-dev.0",
     "@fails-components/apphandler": "^2.0.0-dev.0",
-    "@fails-components/appstable": "file:../../packages/app",
+    "@fails-components/appstable": "npm:@fails-components/app@2.0.0-dev.0",
     "@fails-components/authhandler": "^2.0.0-dev.0",
     "@fails-components/avsdispatcher": "^2.0.0-dev.0",
     "@fails-components/housekeeping": "^2.0.0-dev.0",
-    "@fails-components/lectureappexperimental": "file:../../packages/lectureapp",
-    "@fails-components/lectureappstable": "file:../../packages/lectureapp",
+    "@fails-components/lectureappexperimental": "npm:@fails-components/lectureapp@^2.0.0-dev.0",
+    "@fails-components/lectureappstable": "npm:@fails-components/lectureapp@^2.0.0-dev.0",
     "@fails-components/ltihandler": "^2.0.0-dev.0",
     "@fails-components/notepadhandler": "^2.0.0-dev.0",
     "@fails-components/noteshandler": "^2.0.0-dev.0"
