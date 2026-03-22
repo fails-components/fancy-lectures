@@ -15,6 +15,8 @@ RUN npm ci
 
 #debug code, to be removed
 RUN ls -la
+RUN ls -la node_modules/@fails-components/config
+RUN cat node_modules/@fails-components/config/package.json
 RUN ls -la node_modules/@fails-components/config/dist
 #build the app
 ARG BASE_WORK
@@ -106,7 +108,7 @@ RUN ~/miniconda3/bin/conda run -n failscomponents jupyter lite build
 FROM nginx:stable AS staticserver-noassets
 ARG BASE_WORK
 COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/appstable/build/ /usr/share/nginx/html/static/app
-COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureapp/build/ /usr/share/nginx/html/static/lecture
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureappstable/build/ /usr/share/nginx/html/static/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/lecture/sw.js /usr/share/nginx/html/static/lecture/service-worker.js
 
@@ -128,7 +130,7 @@ COPY --from=jupyter-build /usr/src/jupyterlite/jupyterLiteFailsOut/ /usr/share/n
 FROM nginx:stable
 ARG BASE_WORK
 COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/appstable/build/ /usr/share/nginx/html/static/app
-COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureapp/build/ /usr/share/nginx/html/static/lecture
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureappstable/build/ /usr/share/nginx/html/static/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/lecture/sw.js /usr/share/nginx/html/static/lecture/service-worker.js
 
