@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/noteshandler",
-  "version": "2.0.0-dev.1",
+  "version": "2.0.0-dev.2",
   "description": "Supplies server side notes handling",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -27,10 +27,10 @@
     "docker:build": "docker build -t ghcr.io/fails-components/noteshandler:master -f Dockerfile ../.."
   },
   "dependencies": {
-    "@fails-components/assets": "^2.0.0-dev.1",
-    "@fails-components/commonhandler": "^2.0.0-dev.1",
-    "@fails-components/config": "^2.0.0-dev.1",
-    "@fails-components/security": "^2.0.0-dev.1",
+    "@fails-components/assets": "^2.0.0-dev.2",
+    "@fails-components/commonhandler": "^2.0.0-dev.2",
+    "@fails-components/config": "^2.0.0-dev.2",
+    "@fails-components/security": "^2.0.0-dev.2",
     "@socket.io/redis-adapter": "^7.1.0",
     "mongodb": "^7.1.0",
     "redis": "^4.0.6",
