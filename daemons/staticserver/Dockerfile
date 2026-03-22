@@ -13,6 +13,8 @@ COPY . .
 RUN npx update-browserslist-db@latest
 RUN npm ci
 
+#debug code, to be removed
+RUN ls -la node_modules/@fails-components/config/dist
 #build the app
 ARG BASE_WORK
 WORKDIR ${BASE_WORK}/node_modules/@fails-components/appstable
