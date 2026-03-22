@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/commonhandler",
-  "version": "2.0.0-dev.0",
+  "version": "2.0.0-dev.1",
   "description": "Common server side handling for notepads and notes",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",

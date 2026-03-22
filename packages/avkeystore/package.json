@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/avkeystore",
-  "version": "2.0.0-dev.0",
+  "version": "2.0.0-dev.1",
   "description": "Keystore for end2end encryption of audio video transmission of fails",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",

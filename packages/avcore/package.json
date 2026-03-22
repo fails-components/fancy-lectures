@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/avcore",
-  "version": "2.0.0-dev.0",
+  "version": "2.0.0-dev.1",
   "description": "The core audio video worker system build on the backbone of FAILS audio video functionality",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -20,8 +20,8 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@fails-components/avcomponents": "^2.0.0-dev.0",
-    "@fails-components/avkeystore": "^2.0.0-dev.0",
+    "@fails-components/avcomponents": "^2.0.0-dev.1",
+    "@fails-components/avkeystore": "^2.0.0-dev.1",
     "@fails-components/webtransport": "^1.5.2",
     "bson": "^4.7.0"
   },

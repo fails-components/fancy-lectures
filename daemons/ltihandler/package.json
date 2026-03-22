@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/ltihandler",
-  "version": "2.0.0-dev.0",
+  "version": "2.0.0-dev.1",
   "description": "Supplies server side lti handling",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -30,8 +30,8 @@
     "cross-env": "^7.0.3"
   },
   "dependencies": {
-    "@fails-components/config": "^2.0.0-dev.0",
-    "@fails-components/security": "^2.0.0-dev.0",
+    "@fails-components/config": "^2.0.0-dev.1",
+    "@fails-components/security": "^2.0.0-dev.1",
     "express": "^4.22.1",
     "express-jwt": "^8.2.0",
     "jsonwebtoken": "^9.0.0",

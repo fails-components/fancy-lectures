@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/app",
-  "version": "2.0.0-dev.0",
+  "version": "2.0.0-dev.1",
   "description": "Fails app",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -11,9 +11,9 @@
   },
   "homepage": "/static/app/",
   "dependencies": {
-    "@fails-components/config": "^2.0.0-dev.0",
-    "@fails-components/data": "^2.0.0-dev.0",
-    "@fails-components/drawobjects": "^2.0.0-dev.0",
+    "@fails-components/config": "^2.0.0-dev.1",
+    "@fails-components/data": "^2.0.0-dev.1",
+    "@fails-components/drawobjects": "^2.0.0-dev.1",
     "@fails-components/jupyter-react-edit": "^0.0.4",
     "axios": "^1.12.0",
     "dexie": "^3.2.2",

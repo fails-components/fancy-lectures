@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/housekeeping",
-  "version": "2.0.0-dev.0",
+  "version": "2.0.0-dev.1",
   "description": "Supplies database housekeeping",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -26,14 +26,14 @@
     "docker:build": "docker build -t ghcr.io/fails-components/housekeeping:master -f Dockerfile ../.."
   },
   "devDependencies": {
-    "@fails-components/commonhandler": "^2.0.0-dev.0",
+    "@fails-components/commonhandler": "^2.0.0-dev.1",
     "@types/cron": "^2.0.1",
     "@types/nodemailer": "^7.0.11",
     "cross-env": "^7.0.3"
   },
   "dependencies": {
-    "@fails-components/assets": "^2.0.0-dev.0",
-    "@fails-components/config": "^2.0.0-dev.0",
+    "@fails-components/assets": "^2.0.0-dev.1",
+    "@fails-components/config": "^2.0.0-dev.1",
     "cron": "^1.8.2",
     "mongodb": "^7.1.0",
     "nodemailer": "^7.0.11",
