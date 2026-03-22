@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/staticserver",
-  "version": "2.0.0-dev.3",
+  "version": "2.0.0-dev.4",
   "description": "fails static webpages served through nginx",
   "private": true,
   "scripts": {
@@ -24,15 +24,15 @@
   "homepage": "https://github.com/fails-components/staticserver#readme",
   "dependencies": {
     "@fails-components/appexperimental": "npm:@fails-components/app@2.0.0-dev.2",
-    "@fails-components/apphandler": "^2.0.0-dev.2",
+    "@fails-components/apphandler": "^2.0.0-dev.4",
     "@fails-components/appstable": "npm:@fails-components/app@2.0.0-dev.2",
-    "@fails-components/authhandler": "^2.0.0-dev.2",
-    "@fails-components/avsdispatcher": "^2.0.0-dev.2",
-    "@fails-components/housekeeping": "^2.0.0-dev.2",
+    "@fails-components/authhandler": "^2.0.0-dev.4",
+    "@fails-components/avsdispatcher": "^2.0.0-dev.4",
+    "@fails-components/housekeeping": "^2.0.0-dev.4",
     "@fails-components/lectureappexperimental": "npm:@fails-components/lectureapp@^2.0.0-dev.2",
     "@fails-components/lectureappstable": "npm:@fails-components/lectureapp@^2.0.0-dev.2",
-    "@fails-components/ltihandler": "^2.0.0-dev.2",
-    "@fails-components/notepadhandler": "^2.0.0-dev.2",
-    "@fails-components/noteshandler": "^2.0.0-dev.2"
+    "@fails-components/ltihandler": "^2.0.0-dev.4",
+    "@fails-components/notepadhandler": "^2.0.0-dev.4",
+    "@fails-components/noteshandler": "^2.0.0-dev.4"
   }
 }

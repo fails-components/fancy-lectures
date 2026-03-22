@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/lectureapp",
-  "version": "2.0.0-dev.2",
+  "version": "2.0.0-dev.4",
   "description": "Lecture app of fails",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -23,7 +23,7 @@
     "@fails-components/avcore": "^2.0.0-dev.2",
     "@fails-components/avkeystore": "^2.0.0-dev.2",
     "@fails-components/avreactwidgets": "^2.0.0-dev.2",
-    "@fails-components/config": "^2.0.0-dev.2",
+    "@fails-components/config": "^2.0.0-dev.4",
     "@fails-components/data": "^2.0.0-dev.2",
     "@fails-components/drawobjects": "^2.0.0-dev.2",
     "@fails-components/jupyter-react-edit": "^0.0.4",
