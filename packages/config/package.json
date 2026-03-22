@@ -13,7 +13,7 @@
   "types": "dist/config.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/config.d.js",
+      "types": "./dist/config.d.ts",
       "import": "./dist/config.js",
       "default": "./dist/config.js"
     }
