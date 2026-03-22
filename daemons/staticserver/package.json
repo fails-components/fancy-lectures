@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/staticserver",
-  "version": "2.0.0-dev.2",
+  "version": "2.0.0-dev.3",
   "description": "fails static webpages served through nginx",
   "private": true,
   "scripts": {
