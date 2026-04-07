@@ -9,9 +9,6 @@ on:
     # Publish semver tags as releases.
     tags: [ '*-v*.*.*' ]
     paths: [ 'daemons/**' ]
-  pull_request:
-    branches: [ master ]
-    paths: [ 'daemons/**' ]
   workflow_dispatch:
     inputs:
       logLevel:
