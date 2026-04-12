@@ -15,7 +15,7 @@
     "@fails-components/data": "^2.0.0-dev.2",
     "@fails-components/drawobjects": "^2.0.0-dev.2",
     "@fails-components/jupyter-react-edit": "^0.0.4",
-    "axios": "^1.12.0",
+    "axios": "^1.15.0",
     "dexie": "^3.2.2",
     "image-blob-reduce": "^3.0.1",
     "js-file-download": "^0.4.12",
