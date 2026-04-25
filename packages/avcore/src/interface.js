@@ -138,21 +138,25 @@ export class AVVideoInputStream extends AVDeviceInputStream {
 
   async switchCamera(id, nosave) {
     if (this.track) this.track.stop()
+    const deviceId = id !== '' && typeof id !== 'undefined' ? { exact: id } : id
     const mstream = await navigator.mediaDevices.getUserMedia({
       video: {
-        deviceId: { exact: id },
+        deviceId,
         width: 1280,
         height: 720,
         aspectRatio: { ideal: 16 / 9 }
       }
     })
-    this.deviceId = id
-    if (!nosave) setSetting('failsvideodeviceid', id)
-    console.log('mstream object', mstream)
 
     const track = mstream.getTracks()[0]
     console.log('mtrackobject', track)
-    console.log('track settings', track.getSettings())
+    const tsettings = track.getSettings()
+    console.log('track settings', tsettings)
+
+    this.deviceId = tsettings.deviceId || id
+    if (!nosave && this.deviceId && this.deviceId !== 'default')
+      setSetting('failsvideodeviceid', this.deviceId)
+    console.log('mstream object', mstream)
     await track.applyConstraints({
       frameRate: 30.0
     })
@@ -357,9 +361,10 @@ export class AVMicrophoneStream extends AVDeviceInputStream {
 
   async switchMicrophone(id, nosave) {
     if (this.track) this.track.stop()
+    const deviceId = id !== '' && typeof id !== 'undefined' ? { exact: id } : id
     const mstream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        deviceId: { exact: id },
+        deviceId,
         sampleRate: 48000,
         echoCancellation: true,
         autoGainControl: true,
@@ -368,13 +373,16 @@ export class AVMicrophoneStream extends AVDeviceInputStream {
         channelCount: 1 // mono is enough
       }
     })
-    this.deviceId = id
-    if (!nosave) setSetting('failsaudiodeviceid', id)
     console.log('audio mstream object', mstream)
 
     const track = mstream.getTracks()[0]
     console.log('audio mtrackobject', track)
-    console.log('audio track settings', track.getSettings())
+    const tsettings = track.getSettings()
+    console.log('audio track settings', tsettings)
+    this.deviceId = tsettings.deviceId || id
+    if (!nosave & this.deviceId && this.deviceId !== 'default')
+      setSetting('failsaudiodeviceid', this.deviceId)
+
     await track.applyConstraints({
       sampleRate: 48000
     })
