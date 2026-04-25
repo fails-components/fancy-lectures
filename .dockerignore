@@ -1,7 +1,7 @@
 node_modules
 **/node_modules
 **/build
-**/dist
+daemons/*/dist
 **/*.tsbuildinfo
 npm-debug.log
 .env
