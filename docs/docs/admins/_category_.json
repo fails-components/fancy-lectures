@@ -1,0 +1,8 @@
+{
+  "label": "Adminstrator setup guide and reference",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "An overview over the different ways to setup FAILS, and the different necessary components"
+  }
+}

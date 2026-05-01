@@ -1,5 +1,5 @@
 ## Migration script
-The node package in this directory transfer files from a local asset directory to an openstack based object storage and vice versa.
+The node package in this directory transfers files from a local asset directory to an openstack based object storage and vice versa.
 It is useful for migrating to the cloud or for backup.
 
 # Setup
@@ -16,7 +16,7 @@ FILEDIR="C:\\PrivateDaten\\Projekte\\failscomponents\\failslib\\apphandler\\file
 
 
 # where to save your static file, "fs" (default) for filesystem,"s3",
-# or "openstackswift" usually "openstack swift"
+# or "openstackswift" usually "openstackswift"
 CLOUD_TYPE="openstackswift"
 
 # If you use swift storage set the following variables

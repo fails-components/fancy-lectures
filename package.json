@@ -5,16 +5,20 @@
   "workspaces": [
     "packages/*",
     "daemons/*",
-    "deploy/migrateassets"
+    "deploy/migrateassets",
+    "docs/"
   ],
   "type": "module",
   "scripts": {
     "test": "lerna run test --concurrency 1",
     "build": "lerna run build --stream",
     "buildts": "tsc --build",
-    "start": "lerna run start --parallel",
+    "build:docs": "lerna run build --scope @fails-components/docs",
+    "start": "lerna run start --parallel --scope @fails-components/app",
+    "start:apps": "lerna run start --scope @fails-components/app --scope @fails-components/lectureapp --parallel",
     "start:app": "lerna run start --scope @fails-components/app",
     "start:lectureapp": "lerna run start --scope @fails-components/lectureapp",
+    "start:docs": "lerna run start --scope @fails-components/docs",
     "lint": "eslint .",
     "syncpack:lint": "syncpack lint --dependency-types prod,dev",
     "syncpack:lint:fix": "syncpack fix --dependency-types prod,dev",
@@ -22,6 +26,7 @@
     "serve": "lerna run serve --parallel",
     "serve:app": "lerna run serve --scope @fails-components/app",
     "serve:lectureapp": "lerna run serve --scope @fails-components/lectureapp",
+    "serve:docs": "lerna run serve --scope @fails-components/docs",
     "docker:build": "lerna run docker:build  --concurrency 1 --stream",
     "version:new": "lerna version --no-push",
     "publish:start": "lerna publish from-git"

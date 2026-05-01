@@ -1,0 +1,15 @@
+# Specific AI Crawlers, prevent from using brand identity, see recreate.ai terms and conditions.
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: Google-Extended
+User-agent: CCBot
+User-agent: Omgilibot
+User-agent: Omgili
+User-agent: FacebookBot
+User-agent: Diffbot
+User-agent: Bytespider
+User-agent: Anthropic-ai
+User-agent: Claude-Web
+User-agent: ClaudeBot
+User-agent: PerplexityBot
+Disallow: /img/brand/

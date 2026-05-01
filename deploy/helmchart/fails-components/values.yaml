@@ -70,6 +70,11 @@ swift:
 #  container: "failsassets"
   secretName: "fails-secrets"
   secretKeySwiftKey: "swift_key"
+#  username: "OpenShiftUserName"
+#  secretKeySwiftPassword: "swift_password"
+#  authbaseurl: "https://auth.yourprovider.net"
+#  domain: "default"
+#  project: "yourproject"
 
 s3:
 #  AK: "yourak"
@@ -80,11 +85,6 @@ s3:
 #  host: "yourstorage.com"
 #  alturl: "alternativeurl"
 
-#  username: "OpenShiftUserName"
-#  secretKeySwiftPassword: "swift_password"
-#  authbaseurl: "https://auth.yourprovider.net"
-#  domain: "default"
-#  project: "yourproject"
 
 redis:
   host: "redis"

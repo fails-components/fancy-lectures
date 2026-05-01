@@ -1,0 +1,63 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #0077bb;
+  --ifm-color-primary-dark: #006ba8;
+  --ifm-color-primary-darker: #00659f;
+  --ifm-color-primary-darkest: #005383;
+  --ifm-color-primary-light: #0083ce;
+  --ifm-color-primary-lighter: #0089d7;
+  --ifm-color-primary-lightest: #009bf3;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+ --ifm-color-primary: #caf0f8;
+  --ifm-color-primary-dark: #a2e5f3;
+  --ifm-color-primary-darker: #8edff0;
+  --ifm-color-primary-darkest: #53cee8;
+  --ifm-color-primary-light: #f2fbfd;
+  --ifm-color-primary-lighter: #ffffff;
+  --ifm-color-primary-lightest: #ffffff;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+
+.lazy-video-container {
+    background: #f9fafb;
+}
+
+
+.video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.video-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.consent-disclosure-box h3 {
+    color: var(--color-primary, #1e90ff); /* Uses Docusaurus primary color */
+}
+
+/* Placeholder styling */
+.placeholder-content {
+    align-items: center;
+    justify-content: center;
+    color: #6b7280; /* Gray text color */
+}

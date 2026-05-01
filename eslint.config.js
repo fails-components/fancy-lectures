@@ -57,7 +57,12 @@ export default [
     }
   },
   {
-    files: ['packages/**/*.ts', 'packages/**/*.tsx', 'daemons/**/*.ts'],
+    files: [
+      'packages/**/*.ts',
+      'packages/**/*.tsx',
+      'daemons/**/*.ts',
+      'docs/**/*.tsx'
+    ],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {}
@@ -87,7 +92,8 @@ export default [
       'packages/avcore/**',
       'packages/avcomponents/**',
       'packages/avkeystore/**',
-      'packages/avreactwidgets/**'
+      'packages/avreactwidgets/**',
+      'docs/**'
     ],
     languageOptions: {
       globals: {

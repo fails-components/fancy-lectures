@@ -1,0 +1,72 @@
+---
+sidebar_position: 3
+---
+
+import LazyYouTubeEmbed from '@site/src/components/LazyYouTubeEmbed';
+
+# Enhancing Interaction: Media, Jupyter Notebooks, and Polls
+FAILS offers advanced features to keep students engaged and facilitate deeper learning.
+
+## 🖼️ Managing Lecture Pictures
+The process for using images is divided into preparation (LMS) and execution (Live).
+
+### Preparation (Uploading via LMS)
+1.  **Access:** Navigate to the "Pictures" module in the FAILS activity app's cockpit panel.
+2.  **Upload:** Use the `Upload picture` button. Supported formats are PNG and JPEG. *Note: File size should be kept under 20 MB.*
+3.  **Reusing Assets:** If pictures were used previously, select the source lecture in the "Other Lectures" panel and press **`Get Pictures Button`**.
+
+### Live Usage (Adding/Editing)
+1.  **Insertion:** During a running lecture, use the toolbar's **`Add Form or Picture` button** then select the **`Add picture` button**. Select the image from the gallery, then click `Add to lecture`.
+2.  **Placement & Adjustment:** Click on the upper left corner of the desired area. The picture can be resized by dragging its move handle. You can either confirm the added picture (green button) or cancel the picture (red button).
+3.  **Manipulation (The Magic Wand):** Use the wand around a picture to select it and then either move or delete it from the board.  To remove it, use the trash icon.
+
+## 💻 Integrating Jupyter Notebooks (Advanced Content)
+A key update allows for dynamic, executable content:
+
+1.  **Notebook Upload/Creation:** In the lms activity, the FAILS app, use the Jupyter notebook management feature to upload or create **Jupyter Notebooks**. 
+
+2. **Notebook editing/applet creation** You can edit the notebook directly by pressing the edit button. To create an applet use a right click on the cell's context menu and add the selected cells to the applet views on the right side of the Jupyter dialog.
+These cells can be arranged within the applet views on the right side. Additional applet view can be create on the right side applet view.
+
+3. **Test applets**: you can also test the applets by the main drop-down menu of the jupyter editor.
+
+4.  **Execution:** During a lecture, you can press the **Start activity** button in the tool bar, press the **Jupyter lite** button and select either the prepared Jupyter lite activity (Note all cells are pre excuted in this case) or run the Jupyter lite notebook with all its cells in front of the audience (Note the Jupyter lite notebook mode's edits are not transmitted to the students, to allow individual edits. The Jupyter applet's state is transmitted to the students, however they can choose to interact with widget independently). 
+
+5. **Share with your students**: You can toggle, if you students can access the applets outside the lecture. You can even allow that the students edit, run and download the notebook.
+
+## 📊 Polls and Interactive Questions (The Chat Feature)
+These features provide real-time feedback:
+
+### Creating Polling Quizzes (LMS Preparation)
+1.  **Access:** Navigate to the "Polls" panel in the Cockpit.
+2.  **Creation:** Type a poll title into the editing box and click **`plus` icon**.
+3.  **Question Details:** Add answers by typing them into the edit box and pressing plus. Toggle between **single selection** and **multiple selections** for answer constraints.
+
+### Running Polls (Live Lecture)
+1.  **Initiation:** From the toolbar, select the poll button, choose the desired poll (optionally restrict the poll to a part of the students), and press **"Start poll"**.
+2.  **Monitoring:** While active, you can manually show or hide incoming results.
+3.  **Completion:** Pressing **"finish poll"** closes voting, displaying final results on all connected screens.
+
+A polling report is available, that allows you to verify, if every poll is counted without breaking the bollot secrecy.
+
+### Chat Question Functionality
+*   **Submission:** Students use the message button to submit questions (including LaTeX math). The name is anonymized by default. 
+*   **Moderation:** Lecturer can deanonymize the name by clicking the eye symbol. 
+The chat message can repostet by the lecturer to all students.
+Lecturers can moderate posts using the block icon for inappropriate content. 
+ A forensic report function is available to download to identify students if necessary by the administrators.
+
+ ## Getting Started with FAILS with interactivity
+To help you start, we highly recommend watching this introductory video.
+
+<LazyYouTubeEmbed videoId="4O7BAMhCtjw" videoTitle="Using FAILS components' interactive features to increase student engagement" />
+
+ ## Getting Started with FAILS and picture upload
+To help you start, we highly recommend watching this introductory video.
+
+<LazyYouTubeEmbed videoId="byS-th1ZWPw" videoTitle="Adding and managing pictures in FAILS components" />
+
+---
+[The next section covers advanced streaming.](media-streaming.md)
+
+{/* The text is generated by the suite of Gemma 4 models based in the youtube videos for fails and then manually edited*/}

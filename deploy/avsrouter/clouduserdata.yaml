@@ -8,6 +8,13 @@ write_files:
     AVSDOMAIN=hostnameofyourrouter.example.com
     # optionally you can set the timezone, defaults to Europe/Berlin, required to find a restart time in the night
     # AVSTIMEZONE=
+    # Set the maximum number of clients per router, default is 50.
+    # AVSMAXCLIENTS=50
+    # Set the maximum number of lectures per router, default is 10
+    # AVSMAXREALMS=10
+    # Set the urls for webtransport and websocket, the defaults are constructed from AVSDOMAIN
+    # AVSROUTERURL=https://${AVSDOMAIN}/avfails
+    # AVSROUTERWSURL=wss://${AVSDOMAIN}/avfails
     #turns of staging, comment if you would like to use cert-bot staging environment
     STAGING=
   path: /home/linux/.env

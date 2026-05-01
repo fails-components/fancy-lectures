@@ -1,4 +1,4 @@
-You can use the files in this directory to easily setup an installation of fails on a kubernetes cluster using the HELM. (Consider it as pre alpha stage, since it is currently only deployed on the development machine)
+You can use the files in this directory to easily setup an installation of fails on a kubernetes cluster using the HELM.
 You need to have prepared a redis and mongo database (database name "fails"), a openshift based object storage for assets (such as user uploaded pictures, pdf etc., make sure to set CORS headers correclty) beforehand.
 
 First step is to create a values.yaml file based on the values.yaml of the helm chart.
