@@ -34,7 +34,8 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Interactive hybrid lectures',
-    Svg: require('@site/static/img/brand/undraw_fails_hybrid_lecture.svg').default,
+    Svg: require('@site/static/img/brand/undraw_fails_hybrid_lecture.svg')
+      .default,
     description: (
       <>
         Students follow the lecture on their devices with independent scrolling,

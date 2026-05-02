@@ -15,7 +15,8 @@ export default defineConfig(() => {
   const dirname = path.dirname(fileURLToPath(import.meta.url))
   return {
     build: {
-      outDir: 'build'
+      outDir: 'build',
+      target: 'es2022'
     },
     resolve: {
       alias: {

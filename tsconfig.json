@@ -12,6 +12,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "types": ["node"]
   },
   "exclude": ["**/node_modules", "**/dist", "docs"],
   "references": [
