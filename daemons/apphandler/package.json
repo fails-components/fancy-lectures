@@ -38,7 +38,7 @@
     "moment": "^2.29.4",
     "mongodb": "^7.1.0",
     "redis": "^4.0.6",
-    "uuid": "^13.0.0"
+    "uuid": "^14.0.0"
   },
   "nodemonConfig": {
     "ignore": [
