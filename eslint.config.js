@@ -108,7 +108,8 @@ export default [
       'packages/assets/**',
       'packages/commonhandler/**',
       'packages/security/**',
-      'daemons/**'
+      'daemons/**',
+      'deploy/migrateassets/**'
     ],
     languageOptions: {
       globals: {
