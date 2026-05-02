@@ -26,10 +26,6 @@
     "test:lint": "eslint .",
     "docker:build": "docker build -t ghcr.io/fails-components/notepadhandler:master -f Dockerfile ../.."
   },
-  "devDependencies": {
-    "cross-env": "^7.0.3",
-    "dotenv": "^10.0.0"
-  },
   "dependencies": {
     "@fails-components/assets": "^2.0.0-dev.6",
     "@fails-components/commonhandler": "^2.0.0-dev.6",

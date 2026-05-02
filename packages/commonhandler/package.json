@@ -31,7 +31,7 @@
     "test:lint": "eslint ."
   },
   "dependencies": {
-    "bson": "^4.7.0",
+    "bson": "^7.2.0",
     "cidr-matcher": "^2.1.1",
     "redis": "^4.0.6"
   },

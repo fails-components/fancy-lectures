@@ -23,7 +23,7 @@
     "@fails-components/avcomponents": "^2.0.0-dev.6",
     "@fails-components/avkeystore": "^2.0.0-dev.6",
     "@fails-components/webtransport": "^1.5.2",
-    "bson": "^4.7.0"
+    "bson": "^7.2.0"
   },
   "scripts": {
     "test": "run-s  test:lint",
