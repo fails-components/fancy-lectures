@@ -173,7 +173,6 @@ export class PDFGenerator extends DrawObjectContainer {
     this.drawpath = []
   }
 
-  // eslint-disable-next-line no-unused-vars
   endPage(ystart, yend) {
     const page = this.page
 
@@ -202,7 +201,6 @@ export class PDFGenerator extends DrawObjectContainer {
     this.resetDrawing()
   }
 
-  // eslint-disable-next-line no-unused-vars
   finalize(callback) {
     this.doc.end()
     // console.log('finalize called');

@@ -486,7 +486,7 @@ export class Welcome extends Component {
             className='p-mb-2 p-as-center'
             style={{ fontSize: '0.8vw', color: '#023e8a', textAlign: 'center' }}
           >
-            <br/>
+            <br />
             {this.state.dataProcessingAgreementURL && (
               <React.Fragment>
                 <a

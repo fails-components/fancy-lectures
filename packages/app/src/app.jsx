@@ -1004,6 +1004,9 @@ class App extends Component {
         }
         this.tokenrenewing = false
       })
+      .catch((error) => {
+        console.log('Problem in renewToken:', error)
+      })
   }
 
   async doCopy(para) {
@@ -1789,6 +1792,7 @@ class App extends Component {
                       this.setState({
                         jupyterDocument: {
                           ...(await response.json()),
+                          // eslint-disable-next-line camelcase
                           nbformat_minor: 5
                         },
                         jupyterFilename: node.filename,
@@ -1949,16 +1953,20 @@ class App extends Component {
                     this.setState({
                       jupyterDocument: {
                         metadata: {
+                          // eslint-disable-next-line camelcase
                           orig_nbformat: 4,
                           kernelspec: {
+                            // eslint-disable-next-line camelcase
                             display_name: 'Python (XPython)',
                             language: 'python',
                             name: 'xpython'
                           },
+                          // eslint-disable-next-line camelcase
                           language_info: {
                             name: 'python'
                           }
                         },
+                        // eslint-disable-next-line camelcase
                         nbformat_minor: 5,
                         nbformat: 4,
                         cells: []

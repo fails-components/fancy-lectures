@@ -203,7 +203,6 @@ export class FormHelper extends Component {
       style.left = Math.round(this.props.x - 10 - width) + 'px'
     if (this.props.height < 0)
       style.top = Math.round(this.props.y - 10 - height) + 'px'
-    // eslint-disable-next-line default-case
     switch (this.props.type) {
       case 1: // line
         {

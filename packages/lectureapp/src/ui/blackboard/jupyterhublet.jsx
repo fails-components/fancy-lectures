@@ -124,8 +124,7 @@ class DictCompressor extends Dict {
       this._dictNum++
       this._dictId = parseInt(
         '0x' +
-            sha1(this._compressorId + this._dictNum.toString(36))
-            .substr(0, 8)
+          sha1(this._compressorId + this._dictNum.toString(36)).substr(0, 8)
       )
     }
     // header
@@ -1198,7 +1197,6 @@ export class JupyterHublet extends Component {
           <div style={{ position: 'absolute', right: '0px', bottom: '0px' }}>
             {!this.props.isnotepad && (
               <AppletButton
-                // eslint-disable-next-line no-constant-condition
                 icon={!this.state.appLocked ? 'pi pi-lock-open' : 'pi pi-lock'}
                 key='lockbutton'
                 tooltip='Unlock/Lock to instructors applet state'
@@ -1501,8 +1499,8 @@ export class JupyterHublet extends Component {
                 alt='powered by jupyter logo'
               />
               <div style={{ marginLeft: '10px', textAlign: 'left' }}>
-                FAILS' apps and jupyter notebook support are powered by Jupyter
-                Lite{' '}
+                FAILS&apos; apps and jupyter notebook support are powered by
+                Jupyter Jupyter Lite{' '}
               </div>
             </div>
           </h3>

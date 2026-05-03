@@ -389,7 +389,7 @@ export class ToolBox extends ToolHandling {
       const brand =
         navigator.userAgentData.brands.filter(
           (b) => b.brand !== 'Not(A:Brand'
-        ) || uaData.brands[0]
+        ) || navigator.userAgentData.brands[0]
       browser = brand.map((el) => el.brand).join(' ')
       version = brand[0].version
       engine = 'Blink'
@@ -1109,12 +1109,14 @@ export class ToolBox extends ToolHandling {
               Chromium, Edge, etc. consider using another browser.
             </React.Fragment>
           )}{' '}
-          {(this.props.dataProcessingAgreementURL || this.props.imprintURL) && <React.Fragment>
-             <br />
-             <br />
-             Legal Notes for This Instance of FAILS:
-             <br />
-          </React.Fragment> }
+          {(this.props.dataProcessingAgreementURL || this.props.imprintURL) && (
+            <React.Fragment>
+              <br />
+              <br />
+              Legal Notes for This Instance of FAILS:
+              <br />
+            </React.Fragment>
+          )}
           {this.props.dataProcessingAgreementURL && (
             <React.Fragment>
               <a
@@ -1124,7 +1126,8 @@ export class ToolBox extends ToolHandling {
               >
                 {this.props.dataProcessingAgreementLabel ||
                   'Data Processing Agreement'}
-              </a>&nbsp;
+              </a>
+              &nbsp;
             </React.Fragment>
           )}
           {this.props.imprintURL && (

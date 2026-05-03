@@ -15,7 +15,6 @@ interface PrivacyInfo {
 }
 
 export default function MultiColumnWrapper(props: Props): ReactNode {
-  console.log('MultiColumnWrapper peak', props)
   const columns = [...(props?.columns || [])]
 
   const [privacyInfo, setPrivacyInfo] = useState<PrivacyInfo | null>(null)
@@ -62,7 +61,6 @@ export default function MultiColumnWrapper(props: Props): ReactNode {
     }
     columns.push(newLink)
   }
-  console.log('newprops', newprops)
   return (
     <>
       <MultiColumn {...newprops} />

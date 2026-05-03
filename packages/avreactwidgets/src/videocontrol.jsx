@@ -582,7 +582,8 @@ export class VideoControl extends Component {
         <React.Fragment>
           {this.props.numUsers > 1 && (
             <React.Fragment>
-              <i className='coninfoicon pi pi-user'></i> {this.props.numUsers}{' '}
+              <i className='coninfoicon pi pi-user'></i>{' '}
+              {this.props.numUsers}{' '}
             </React.Fragment>
           )}
           {ts?.status === 'connecting' && (

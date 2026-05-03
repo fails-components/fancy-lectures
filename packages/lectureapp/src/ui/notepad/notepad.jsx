@@ -542,7 +542,9 @@ export class NoteScreenBase extends Component {
             startUpAVBroadcast={this.props.startUpAVBroadcast}
             sendChatMessage={this.props.sendChatMessage}
             dataProcessingAgreementURL={this.props.dataProcessingAgreementURL}
-            dataProcessingAgreementLabel={this.props.dataProcessingAgreementLabel}
+            dataProcessingAgreementLabel={
+              this.props.dataProcessingAgreementLabel
+            }
             imprintURL={this.props.imprintURL}
             imprintLabel={this.props.imprintLabel}
           />

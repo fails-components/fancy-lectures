@@ -94,7 +94,7 @@ export class ChannelEdit extends Component {
         notescreens.reverse()
 
         return (
-          <div className='p-mr-2 p-shadow-1'>
+          <div className='p-mr-2 p-shadow-1' key={'chan-' + ind}>
             <div className='p-d-flex p-flex-column p-jc-center'>
               <div className='p-m-2 p-p-1' key='haeding'>
                 <h3>

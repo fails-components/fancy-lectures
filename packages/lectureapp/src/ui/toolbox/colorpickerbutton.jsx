@@ -17,7 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 import { Button } from 'primereact/button'
-import { Component } from 'react'
+import React, { Component } from 'react'
 
 export class ColorPickerButton extends Component {
   constructor(props) {

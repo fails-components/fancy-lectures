@@ -43,18 +43,18 @@ import { faUser } from '@fortawesome/free-solid-svg-icons'
 async function calcThumbnail(pictureBlob) {
   const bitmap = await createImageBitmap(pictureBlob, {
     resizeWidth: 100,
-    resizeQuality: 'high' 
-  });
+    resizeQuality: 'high'
+  })
 
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext('bitmaprenderer');
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+  const ctx = canvas.getContext('bitmaprenderer')
 
-  ctx.transferFromImageBitmap(bitmap);
+  ctx.transferFromImageBitmap(bitmap)
 
   return await canvas.convertToBlob({
     type: 'image/jpeg',
     quality: 0.8
-  });
+  })
 }
 
 export class FailsBoard extends FailsBasis {
@@ -820,15 +820,15 @@ export class FailsBoard extends FailsBasis {
             this.state.bgpdf
               ? '#FFFFFF'
               : blackbackground
-              ? '#505050'
-              : '#efefef'
+                ? '#505050'
+                : '#efefef'
           }
           backclass={
             this.state.bgpdf
               ? ''
               : blackbackground
-              ? 'blackboardBlackNote'
-              : 'blackboardWhiteNote'
+                ? 'blackboardBlackNote'
+                : 'blackboardWhiteNote'
           }
           screennumbercolor={blackbackground ? '#FFFFFF' : '#000000'}
           screennumber={this.state.notescreenid}

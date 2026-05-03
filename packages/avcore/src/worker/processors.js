@@ -965,7 +965,7 @@ export class AVVideoInputProcessor extends AVInputProcessor {
     if (this.sceneDetect) {
       outputlevel.unshift('scene') // scene detector
 
-      outputwidth['scene'] = 160
+      outputwidth.scene = 160
       outputlevelmain++
     }
     this.multscaler = new AVOneFrameToManyScaler({
@@ -1006,7 +1006,7 @@ export class AVVideoInputProcessor extends AVInputProcessor {
   buildOutgoingPipeline() {
     super.buildOutgoingPipeline()
     if (this.sceneDetect) {
-      const curstream = this.multscaler.readable['scene']
+      const curstream = this.multscaler.readable.scene
       // encoder
       const pipeTos = []
       pipeTos.push(curstream.pipeTo(this.sceneDetector.writable))

@@ -30,7 +30,7 @@ function iconMakerInl(
   const msize = size || '40px'
   const tobjs =
     typeof objs === 'function' ? objs({ customColor1, customColor2 }) : objs
-  return (args) => {
+  const iconMaker = (args) => {
     return (
       <svg
         viewBox='0 0 200 200'
@@ -43,6 +43,8 @@ function iconMakerInl(
       </svg>
     )
   }
+  iconMaker.displayName = 'iconMakerGenerated'
+  return iconMaker
 }
 
 // inlined icons by icon_xpert786 or petedesignworks or martenrichter, modified for integration by Marten Richter, see readme

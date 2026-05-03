@@ -22,7 +22,11 @@ import { OverlayPanel } from 'primereact/overlaypanel'
 import { Sidebar } from 'primereact/sidebar'
 import { Toast } from 'primereact/toast'
 import React from 'react'
-import { AVVideoRender, FloatingVideo, VideoControl } from '@fails-components/avreactwidgets'
+import {
+  AVVideoRender,
+  FloatingVideo,
+  VideoControl
+} from '@fails-components/avreactwidgets'
 import { FailsBasis } from './failsbasis'
 import { fiBroadcastStart } from './icons/icons'
 import failsLogoLong from './logo/logo1.svg'
@@ -273,15 +277,15 @@ export class FailsScreen extends FailsBasis {
             this.state.bgpdf
               ? '#FFFFFF'
               : this.state.blackbackground
-              ? '#505050'
-              : '#efefef'
+                ? '#505050'
+                : '#efefef'
           }
           backclass={
             this.state.bgpdf
               ? ''
               : this.state.blackbackground
-              ? 'blackboardBlack'
-              : 'blackboardWhite'
+                ? 'blackboardBlack'
+                : 'blackboardWhite'
           }
           hidden={this.state.channeltype !== 'notebooks'}
           screennumbercolor={

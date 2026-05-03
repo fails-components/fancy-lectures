@@ -212,27 +212,22 @@ export class BlackboardNotepad extends Component {
     console.log('calcObjId', pointerId)
     const res = parseInt(
       '0x' +
-          sha1(
-            this.clientId +
-              this.pointerobjnum[pointerId].toString(36) +
-              pointerId
-          )
-          .substr(0, 8)
+        sha1(
+          this.clientId + this.pointerobjnum[pointerId].toString(36) + pointerId
+        ).substr(0, 8)
     )
     console.log('inspect objid', res)
     return res
   }
 
   recycleObjId(oldid) {
-    console.log('recycleObjId', pointerId)
     const res = parseInt(
       '0x' +
-          sha1(
-            this.clientId + oldid + Math.random().toString(36).substr(2, 9) // we need something random
-          )
-          .substr(0, 8)
+        sha1(
+          this.clientId + oldid + Math.random().toString(36).substr(2, 9) // we need something random
+        ).substr(0, 8)
     )
-      console.log('inspect recycle objid', res)
+    console.log('inspect recycle objid', res)
     return res
   }
 

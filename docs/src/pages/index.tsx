@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
+import React from 'react'
 import clsx from 'clsx'
 import Link from '@docusaurus/Link'
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext'
 import Layout from '@theme/Layout'
+/* eslint-disable import/extensions */
 import HomepageFeatures from '@site/src/components/HomepageFeatures'
 import Heading from '@theme/Heading'
 

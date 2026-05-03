@@ -3,13 +3,12 @@ import promise from 'eslint-plugin-promise'
 import babelParser from '@babel/eslint-parser'
 import tseslint from 'typescript-eslint'
 import importplug from 'eslint-plugin-import'
-// eslint-disable-next-line import/extensions
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import globals from 'globals'
+import react from 'eslint-plugin-react'
 
 export default [
   js.configs.recommended,
-  eslintPluginPrettierRecommended,
   {
     ignores: [
       '**/build/**',
@@ -23,12 +22,17 @@ export default [
   {
     plugins: {
       promise,
-      import: importplug
+      import: importplug,
+      react
     },
+    files: ['**/*.js', '**/*.jsx', '*.js'],
     languageOptions: {
       parser: babelParser,
       ecmaVersion: 2021,
       parserOptions: {
+        babelOptions: {
+          presets: ['@babel/preset-react']
+        },
         ecmaFeatures: {
           legacyDecorators: true,
           jsx: true
@@ -38,21 +42,26 @@ export default [
     },
     settings: {
       react: {
-        version: '16'
+        version: '17.0'
       }
     },
     rules: {
+      ...react.configs.recommended.rules,
+      'react/jsx-uses-react': 'error',
+      'react/jsx-uses-vars': 'error',
+      'react/prop-types': 0,
       'space-before-function-paren': 0,
       'import/export': 0,
       'promise/catch-or-return': 'error',
       'no-useless-return': 1,
+      'no-constant-condition': 1,
+      'dot-notation': 1,
       camelcase: 1,
-      'import/extensions': [
+      'no-unused-vars': [
         'error',
-        'always',
         {
-          js: 'always',
-          jsx: 'always'
+          args: 'none',
+          caughtErrors: 'none'
         }
       ]
     }
@@ -70,12 +79,31 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
-      import: importplug
+      import: importplug,
+      react
+    },
+    settings: {
+      react: {
+        version: '17.0'
+      }
     },
     rules: {
+      ...react.configs.recommended.rules,
+      'react/jsx-uses-react': 'error',
+      'react/jsx-uses-vars': 'error',
+      'react/prop-types': 0,
       ...tseslint.configs.recommended.rules,
       'import/extensions': ['error', 'always', { js: 'always', ts: 'always' }],
-      'no-unused-vars': 'off', // Standard-Regel ausschalten
+      'no-unused-vars': [
+        'error',
+        {
+          args: 'none',
+          caughtErrors: 'none'
+        }
+      ],
+      camelcase: 1,
+      'no-constant-condition': 1,
+      'dot-notation': 1,
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -146,5 +174,6 @@ export default [
     rules: {
       'no-undef': 0
     }
-  }
+  },
+  eslintPluginPrettierRecommended
 ]

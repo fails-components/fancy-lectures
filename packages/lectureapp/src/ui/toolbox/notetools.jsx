@@ -26,6 +26,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Button } from 'primereact/button'
 import { fiMagicwand } from '../icons/icons'
 import { ToolHandling } from './toolhandling'
+import React from 'react'
 
 export class NoteTools extends ToolHandling {
   constructor(args) {

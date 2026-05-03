@@ -20,7 +20,7 @@
 import React, { Component } from 'react'
 import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 
-const pdfjs = await import('pdfjs-dist');
+const pdfjs = await import('pdfjs-dist')
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
 export class BackgroundPDFPage extends Component {
