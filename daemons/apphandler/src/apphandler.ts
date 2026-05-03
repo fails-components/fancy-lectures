@@ -105,6 +105,9 @@ export class AppHandler {
     } catch (error) {
       console.log('We troubles to determine status of avs routers', error)
     }
+    // for now activate Jupyter for everyone, it is stable
+    // only if required add options to not autoadd it
+    newfeatures.push('jupyter')
     return newfeatures
   }
 

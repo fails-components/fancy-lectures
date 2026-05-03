@@ -576,8 +576,7 @@ export class ToolBox extends ToolHandling {
     if (this.state.canundo) maintools.push(undobutton)
     maintools.push(addformpictbutton)
     maintools.push(laserbutton)
-    if (!this.props.experimental) maintools.push(pollbutton)
-    else maintools.push(startactivitybutton)
+    maintools.push(startactivitybutton)
     maintools.push(endbutton)
     maintools.push(scrollbutton)
 
@@ -1038,7 +1037,7 @@ export class ToolBox extends ToolHandling {
 
     let activitywheel = []
     activitywheel.push(pollbutton)
-    if (this.props.experimental) activitywheel.push(ipynbbutton)
+    activitywheel.push(ipynbbutton)
 
     let activitywheelcpos = false
     if (this.state.selectedButtonid === 11) {

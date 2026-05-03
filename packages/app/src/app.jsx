@@ -2189,7 +2189,7 @@ class App extends Component {
         id: 'avbroadcast'
       },
       {
-        name: 'Jupytersupport (Development only)',
+        name: 'Jupytersupport (deprecated)',
         id: 'jupyter'
       }
     ]
@@ -2298,7 +2298,7 @@ class App extends Component {
       displayname = this.state.decodedtoken.user.displayname
       // coursename=this.state.decodedtoken.course.coursetitle; // may be move to lecture details
       // lecturename=this.state.decodedtoken.course.title; // may be move to lecture details
-      if (experimental && this.state.requestfeatures.includes('jupyter')) {
+      if (this.state.requestfeatures.includes('jupyter')) {
         jupyter = true
       }
       if (this.state.decodedtoken.role.includes('instructor')) {
@@ -2722,7 +2722,10 @@ class App extends Component {
                             window.open(helpurl, '_blank')
                           }}
                         ></Button>
-                        {<div>{this.state.support.text} </div> || ''}
+                        {(this.state.support?.text && (
+                          <div>{this.state.support?.text} </div>
+                        )) ||
+                          ''}
                         {this.state.support?.url && (
                           <div>
                             <Button

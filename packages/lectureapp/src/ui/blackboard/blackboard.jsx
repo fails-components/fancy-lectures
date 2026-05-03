@@ -1051,7 +1051,7 @@ export class Blackboard extends Component {
               bbwidth={this.props.bbwidth}
               zIndex={152 + zoffset}
             ></SVGSpotlight>
-            {this.props.experimental && this.state.appon && (
+            {this.state.appon && (
               <JupyterHublet
                 pos={this.state.apppos}
                 scrollpos={this.state.curscrollpos + this.state.scrolloffset}

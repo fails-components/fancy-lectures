@@ -431,14 +431,13 @@ export class LtiHandler {
             .status(400)
             .send({ status: 400, error: 'resource can not be identified' })
         // console.log('failscourse', failscourse)
-
         const token = {
           course: { lectureuuid: failscourse.lectureuuid },
           user: failsuser,
           role: role,
           context: 'lti',
           appversion: failscourse.appversion,
-          features: failscourse.features,
+          features: [...failscourse.features, 'jupyter'], // autoadd jupyter feature
           maxrenew: 22
         } // 12 times 10 minutes should be enough
         const jwttoken = await this.signJwt(token)
