@@ -236,6 +236,37 @@ export class VideoControl extends Component {
     AVInterface.getInterface().addTransportStateListener(
       this.transportStateUpdate
     )
+    if (navigator.permissions) {
+      // We query the microphone and camera permissions, so that we can inform the user
+      navigator.permissions
+        .query({ name: 'camera' })
+        .then((result) => {
+          console.log('initial camera permissions', result.state)
+          this.setState({ cameraPermit: result.state })
+
+          result.addEventListener('change', () => {
+            console.log('camera permissions changed', result.state)
+            this.setState({ cameraPermit: result.state })
+          })
+        })
+        .catch((error) => {
+          console.log('Problem querying camera permissions')
+        })
+      navigator.permissions
+        .query({ name: 'microphone' })
+        .then((result) => {
+          console.log('initial microphone permissions', result.state)
+          this.setState({ microPermit: result.state })
+
+          result.addEventListener('change', () => {
+            console.log('microphone permissions changed', result.state)
+            this.setState({ microPermit: result.state })
+          })
+        })
+        .catch((error) => {
+          console.log('Problem querying camera permissions')
+        })
+    }
   }
 
   componentWillUnmount() {
@@ -821,6 +852,25 @@ export class VideoControl extends Component {
               />
             </React.Fragment>
           )}
+          {this.state.cameraPermit === 'prompt' && (
+            <div style={{ width: '10vw', minWidth: '200px' }}>
+              <b>Please grant in the browser prompt access to the camera!</b>
+              <br />
+              (The icon left in the address bar opens a pop-up, where you can
+              manually grant FAILS permissions)
+            </div>
+          )}
+          {this.state.cameraPermit === 'denied' && (
+            <div style={{ width: '10vw', minWidth: '200px' }}>
+              <b>
+                Access to the camera is currently denied! Please change the
+                setting for this page.
+              </b>{' '}
+              <br />
+              (The icon left in the address bar opens a pop-up, where you can
+              manually grant FAILS permissions)
+            </div>
+          )}
         </OverlayPanel>
         <OverlayPanel
           ref={(el) => (this.audioop = el)}
@@ -840,6 +890,27 @@ export class VideoControl extends Component {
             placeholder='Select an audio source'
             style={{ maxWidth: '10vw' }}
           />
+          {this.state.microPermit === 'prompt' && (
+            <div style={{ width: '10vw', minWidth: '200px' }}>
+              <b>
+                Please grant in the browser prompt access to the microphone!
+              </b>
+              <br />
+              (The icon left in the address bar opens a pop-up, where you can
+              manually grant FAILS permissions)
+            </div>
+          )}
+          {this.state.microPermit === 'denied' && (
+            <div style={{ width: '10vw', minWidth: '200px' }}>
+              <b>
+                Access to the microphone is currently denied! Please change the
+                setting for this page.
+              </b>{' '}
+              <br />
+              (The icon left in the address bar opens a pop-up, where you can
+              manually grant FAILS permissions)
+            </div>
+          )}
         </OverlayPanel>
         <OverlayPanel
           ref={(el) => (this.audiooutop = el)}
