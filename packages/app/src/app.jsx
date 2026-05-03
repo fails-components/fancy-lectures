@@ -381,6 +381,31 @@ class App extends Component {
           error
         )
       })
+    axios({ url: '/config/privacy.json', baseURL: '/' })
+      .then((res) => {
+        const config = res.data
+        console.log('We got a privacy config', config)
+        if (config?.dataProcessingAgreementURL || config?.imprintURL) {
+          const {
+            dataProcessingAgreementURL,
+            dataProcessingAgreementLabel,
+            imprintURL,
+            imprintLabel
+          } = config
+          this.setState({
+            dataProcessingAgreementURL,
+            dataProcessingAgreementLabel,
+            imprintURL,
+            imprintLabel
+          })
+        }
+      })
+      .catch((error) => {
+        console.log(
+          'Get config/privacy.json problem/not found, this must not be an error',
+          error
+        )
+      })
   }
 
   onChangeCalendar(e) {
@@ -2916,6 +2941,29 @@ class App extends Component {
                     onClick={(e) => this.copyingop.toggle(e)}
                   />
                 </div>
+                {this.state.dataProcessingAgreementURL && (
+                  <div className='legalURL'>
+                    <a
+                      href={this.state.dataProcessingAgreementURL}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    >
+                      {this.state.dataProcessingAgreementLabel ||
+                        'Data Processing Agreement'}
+                    </a>
+                  </div>
+                )}
+                {this.state.imprintURL && (
+                  <div className='legalURL'>
+                    <a
+                      href={this.state.imprintURL}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    >
+                      {this.state.imprintLabel || 'Imprint'}
+                    </a>
+                  </div>
+                )}
               </div>
               <OverlayPanel ref={(el) => (this.copyingop = el)}>
                 <div className='p-grid'>

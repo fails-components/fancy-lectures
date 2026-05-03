@@ -387,9 +387,10 @@ export class ToolBox extends ToolHandling {
     let engine = 'Unknown'
     if (navigator.userAgentData) {
       const brand =
-        navigator.userAgentData.brands.filter((b) => b.brand !== 'Not(A:Brand') ||
-        uaData.brands[0]
-      browser = brand.map((el)=> el.brand).join(' ')
+        navigator.userAgentData.brands.filter(
+          (b) => b.brand !== 'Not(A:Brand'
+        ) || uaData.brands[0]
+      browser = brand.map((el) => el.brand).join(' ')
       version = brand[0].version
       engine = 'Blink'
     } else {
@@ -1104,10 +1105,39 @@ export class ToolBox extends ToolHandling {
           {engine !== 'Blink' && (
             <React.Fragment>
               <br /> <br />
-              Fails is developed for browsers with Blink engine like Chrome,
+              FAILS is developed for browsers with Blink engine such as Chrome,
               Chromium, Edge, etc. consider using another browser.
             </React.Fragment>
           )}{' '}
+          {(this.props.dataProcessingAgreementURL || this.props.imprintURL) && <React.Fragment>
+             <br />
+             <br />
+             Legal Notes for This Instance of FAILS:
+             <br />
+          </React.Fragment> }
+          {this.props.dataProcessingAgreementURL && (
+            <React.Fragment>
+              <a
+                href={this.props.dataProcessingAgreementURL}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                {this.props.dataProcessingAgreementLabel ||
+                  'Data Processing Agreement'}
+              </a>&nbsp;
+            </React.Fragment>
+          )}
+          {this.props.imprintURL && (
+            <React.Fragment>
+              <a
+                href={this.props.imprintURL}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                {this.props.imprintLabel || 'Imprint'}
+              </a>
+            </React.Fragment>
+          )}
         </OverlayPanel>
         <OverlayPanel
           className='tbChild'

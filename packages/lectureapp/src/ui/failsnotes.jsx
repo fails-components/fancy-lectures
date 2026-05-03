@@ -30,7 +30,11 @@ import { OverlayPanel } from 'primereact/overlaypanel'
 import { ChatMessage } from './widgets/chatmessage'
 import { Toast } from 'primereact/toast'
 import React from 'react'
-import { FloatingVideo, AVVideoRender, VideoControl } from '@fails-components/avreactwidgets'
+import {
+  FloatingVideo,
+  AVVideoRender,
+  VideoControl
+} from '@fails-components/avreactwidgets'
 import { FailsBasis } from './failsbasis'
 import {
   fiScreenCast,
@@ -740,6 +744,37 @@ export class FailsNotes extends FailsBasis {
           <br /> <br />
           Build upon the shoulders of giants, see{' '}
           <a href='/static/oss'> OSS attribution and licensing.</a> <br />
+          {(this.state.dataProcessingAgreementURL || this.state.imprintURL) && (
+            <React.Fragment>
+              <br />
+              Legal Notes for This Instance of FAILS:
+              <br />
+            </React.Fragment>
+          )}
+          {this.state.dataProcessingAgreementURL && (
+            <React.Fragment>
+              <a
+                href={this.state.dataProcessingAgreementURL}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                {this.state.dataProcessingAgreementLabel ||
+                  'Data Processing Agreement'}
+              </a>
+              &nbsp;
+            </React.Fragment>
+          )}
+          {this.state.imprintURL && (
+            <React.Fragment>
+              <a
+                href={this.state.imprintURL}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                {this.state.imprintLabel || 'Imprint'}
+              </a>
+            </React.Fragment>
+          )}
           {this.state.identobj?.masterdigest && (
             <React.Fragment>
               <h4> Masterkey for E2E encryption:</h4>
@@ -786,15 +821,15 @@ export class FailsNotes extends FailsBasis {
             this.state.bgpdf
               ? '#FFFFFF'
               : this.state.blackbackground
-              ? '#505050'
-              : '#efefef'
+                ? '#505050'
+                : '#efefef'
           }
           backclass={
             this.state.bgpdf
               ? ''
               : this.state.blackbackground
-              ? 'blackboardBlack'
-              : 'blackboardWhite'
+                ? 'blackboardBlack'
+                : 'blackboardWhite'
           }
           screennumbercolor={
             this.state.blackbackground && this.state.casttoscreens

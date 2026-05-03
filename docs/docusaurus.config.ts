@@ -127,11 +127,27 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Documentation',
           items: [
             {
-              label: 'Tutorial',
+              label: 'Overview',
               to: '/docs/intro'
+            },
+            {
+              label: 'Lecturer Guide',
+              to: '/docs/docents/intro'
+            },
+            {
+              label: 'Student Guide',
+              to: '/docs/students/intro'
+            },
+            {
+              label: 'Administrator infos',
+              to: '/docs/admins/intro'
+            },
+            {
+              label: 'Developer Guide',
+              to: '/docs/developer/intro'
             }
           ]
         },

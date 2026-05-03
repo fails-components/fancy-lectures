@@ -1,15 +1,15 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 .appscroll .p-scrollpanel-wrapper {
@@ -19,9 +19,8 @@ code {
 .appscroll .p-scrollpanel-bar {
   background-color: #aaaaaa;
   opacity: 1;
-  transition: background-color .3s;
+  transition: background-color 0.3s;
 }
-
 
 .appscroll .p-scrollpanel-bar:hover {
   background-color: #135ba1;
@@ -54,7 +53,7 @@ code {
 .p-button.p-button-danger.p-button-text:hover {
   background: rgba(182, 63, 0, 0.04);
   border-color: transparent;
-  color: #B63F00;
+  color: #b63f00;
 }
 
 .urlTableEntry {
@@ -62,3 +61,22 @@ code {
   word-break: break-word;
 }
 
+.legalURL {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.legalURL a {
+  color: black;
+  text-decoration: none;
+}
+
+.legalUrl a:hover {
+  color: black;
+  text-decoration: none;
+}
+
+.legalUrl a:active {
+  color: black;
+  text-decoration: none;
+}

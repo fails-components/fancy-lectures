@@ -14,6 +14,9 @@ image:
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+privacyConfig: ""
+# Configuration of your privacy and other legal information
+# privacyConfig: "{\"dataProcessingAgreementURL\": \"https://your.school.edu/dpa\",\"dataProcessingAgreementLabe\l": \"Data Processing Agreement\", \"imprintURL\": \"https://your.school.edu/imprint\", \"imprintLabel\": \"Imprint\"}"
 
 app:
   config: ""

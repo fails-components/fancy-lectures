@@ -166,9 +166,9 @@ If setting `storage: "openstackswift"`, you must populate the nested `swift:` bl
 *   `project`: A project identifier required by the storage backend for proper resource scoping.
 
 
-### 💡 Messaging Configuration (Helm Values)
+### 💡 Site Specific Configuration (Helm Values)
 
-These JSON configuration blocks allow administrators to customize the messaging displayed within the LMS application itself, guiding users during support or maintenance periods.
+These JSON configuration blocks allow administrators to customize messages links, and allowed sites for their deployment.
 
 *   **Application Message Config (`app:config`)**:
     This key accepts a single JSON string that controls two primary message types: **Support Contact** and **System Maintenance**. The structure is `{ \"support\": { \"text\": \"\", \"url\": \"\" }, \"maintenance\": {\"message\": \"\"} }`. When setting this value, ensure all internal quotes are correctly escaped using backslashes (`\"`) for the shell environment.
@@ -192,6 +192,34 @@ These JSON configuration blocks allow administrators to customize the messaging 
     ---
     ***Structure Breakdown:***
     The structure requires listing one or more allowed domain names, each wrapped in quotes and separated by commas within the main JSON object.
+
+
+*   **Privacy & Legal Configuration (`privacyConfig`)**: 
+    *(Example: `{\"dataProcessingAgreementURL\": \"https://your.school.edu/dpa\",\"dataProcessingAgreementLabel\": \"Data Processing Agreement\", \"imprintURL\": \"https://your.school.edu/imprint\", \"imprintLabel\": \"Imprint\"}`)*
+
+    This JSON configuration block is used to manage legal compliance and transparency links within the LMS application (e.g., Data Processing Agreements, Imprint notices). This variable allows for optional customization of critical legal links. It must be a single JSON string passed into the Helm values file.  When defining this variable, ensure all internal quotes are correctly escaped using backslashes (`\"`) for shell compatibility.
+
+    **Required Format:** The structure is a single object containing pairs of key-value statements:
+    *   `key`: The unique internal field name (e.g., `"dataProcessingAgreementURL"`).
+    *   `value`: The URL that should be linked to (e.g., `"https://..."`).
+    *   **Labeling:** For human readability, a corresponding label key and value can follow the URL pair:
+        *   `"fieldName": "url_value", "fieldNameLabel": "Display Label", if it is not provided a default label is used.
+
+    ---
+    ***Structure Breakdown:***
+    The configuration groups related legal information using these keys:
+
+    1.  **Data Processing Agreement (DPA):** Defines the link and label for your DPA document.
+        *   `"dataProcessingAgreementURL"`: **(Optional)** The full URL of the Data Processing Agreement.
+        *   `"dataProcessingAgreementLabel"`: **(Optional)** The human-readable label displayed for the link.
+
+    2.  **Imprint:** Defines the link and label for your legal notice or imprint page.
+        *   `"imprintURL"`: **(Optional)** The full URL of the legal imprint page.
+        *   `"imprintLabel"`: **(Optional)** The human-readable label displayed for the link.
+
+**Optional Keys:** All fields are optional. You only need to include keys and values for the legal documentation required by your organization's jurisdiction. If a label is omitted, the application uses its default fallback label.
+If an URL is omitted, no link is included in the UI.
+
 
 ### 🗄️ Database Settings (Helm Values)
 

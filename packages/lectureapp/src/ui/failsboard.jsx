@@ -856,6 +856,10 @@ export class FailsBoard extends FailsBasis {
               showSendername: true
             })
           }}
+          dataProcessingAgreementURL={this.state.dataProcessingAgreementURL}
+          dataProcessingAgreementLabel={this.state.dataProcessingAgreementLabel}
+          imprintURL={this.state.imprintURL}
+          imprintLabel={this.state.imprintLabel}
         ></NoteScreenBase>
         {!this.state.casttoscreens && (
           <div

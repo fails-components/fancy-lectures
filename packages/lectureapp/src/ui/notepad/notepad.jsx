@@ -541,6 +541,10 @@ export class NoteScreenBase extends Component {
             features={this.props.features}
             startUpAVBroadcast={this.props.startUpAVBroadcast}
             sendChatMessage={this.props.sendChatMessage}
+            dataProcessingAgreementURL={this.props.dataProcessingAgreementURL}
+            dataProcessingAgreementLabel={this.props.dataProcessingAgreementLabel}
+            imprintURL={this.props.imprintURL}
+            imprintLabel={this.props.imprintLabel}
           />
         )}
         {this.props.isnotepad && (

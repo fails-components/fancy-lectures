@@ -8,3 +8,7 @@ if [[ -n "${FAILS_JUPYTER_PROXY_CONFIG}" ]]; then
   echo ${FAILS_JUPYTER_PROXY_CONFIG} > /usr/share/nginx/html/config/proxy.json
   chmod gou+r /usr/share/nginx/html/config/proxy.json
 fi
+if [[ -n "${FAILS_PRIVACY_CONFIG}" ]]; then
+  echo ${FAILS_PRIVACY_CONFIG} > /usr/share/nginx/html/config/privacy.json
+  chmod gou+r /usr/share/nginx/html/config/privacy.json
+fi

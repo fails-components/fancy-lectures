@@ -104,6 +104,40 @@ export class Welcome extends Component {
     this.socket.on('error', this.networkerror)
     window.addEventListener('message', this.messageHandle)
     this.sendRequests()
+
+    fetch(new URL('/config/privacy.json', window.location.origin), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error('HTTP error! status:' + res.status)
+        }
+        const config = await res.json()
+        console.log('We got a privacy config', config)
+        if (config?.dataProcessingAgreementURL || config?.imprintURL) {
+          const {
+            dataProcessingAgreementURL,
+            dataProcessingAgreementLabel,
+            imprintURL,
+            imprintLabel
+          } = config
+          this.setState({
+            dataProcessingAgreementURL,
+            dataProcessingAgreementLabel,
+            imprintURL,
+            imprintLabel
+          })
+        }
+      })
+      .catch((error) => {
+        console.log(
+          'Get config/privacy.json problem/not found, this must not be an error',
+          error
+        )
+      })
   }
 
   componentWillUnmount() {
@@ -331,7 +365,8 @@ export class Welcome extends Component {
                   <h1>You are currently not logged in. </h1>
                   <p>
                     Please start FAILS directly from your LMS or authorize this
-                    window in your LMS using the QR code or code on this page.{' '}
+                    window in your LMS using the QR code or code on this
+                    page.{' '}
                   </p>
                 </div>
                 <div className='p-mb-2 p-as-center'>
@@ -446,6 +481,40 @@ export class Welcome extends Component {
           {!this.state.fullscreen && <h1> Enter fullscreen </h1>}
           {fullscreensbuttons}
         </div>
+        {(this.state.dataProcessingAgreementURL || this.state.imprintURL) && (
+          <div
+            className='p-mb-2 p-as-center'
+            style={{ fontSize: '0.8vw', color: '#023e8a', textAlign: 'center' }}
+          >
+            <br/>
+            {this.state.dataProcessingAgreementURL && (
+              <React.Fragment>
+                <a
+                  href={this.state.dataProcessingAgreementURL}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  style={{ color: '#023e8a', textDecoration: 'none' }}
+                >
+                  {this.state.dataProcessingAgreementLabel ||
+                    'Data Processing Agreement'}
+                </a>
+                &nbsp;
+              </React.Fragment>
+            )}
+            {this.state.imprintURL && (
+              <React.Fragment>
+                <a
+                  href={this.state.imprintURL}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  style={{ color: '#023e8a', textDecoration: 'none' }}
+                >
+                  {this.state.imprintLabel || 'Imprint'}
+                </a>
+              </React.Fragment>
+            )}
+          </div>
+        )}
       </div>
     )
   }

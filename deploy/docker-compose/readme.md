@@ -129,6 +129,9 @@ FAILS_APP_CONFIG_JSON="{\"support\": { \"text\": \"Please contact our support at
 # furthermore you can configure the jupyter proxy with (allowed sites are sites that are 
 # not blocked for access in jupyter, typically you should include domains of your school)
 FAILS_JUPYTER_PROXY_CONFIG="{\"allowedSites\": [\"https://domain.of.your-school.edu\"]}"
+# Next line, let's configure links and url for legal and privacy related information
+FAILS_PRIVACY_CONFIG="{\"dataProcessingAgreementURL\": \"https://your.school.edu/dpa\",\"dataProcessingAgreementLabel\": \"Data Processing Agreement\", \"imprintURL\": \"https://your.school.edu/imprint\", \"imprintLabel\": \"Imprint\"}"
+
 # Next line downgrades access to learners, effective readonly mode, e.g. for maintenance or phasing in or out fails
 #FAILS_ONLY_LEARNERS="1"
 # The next line adds admin privileges to a list of users, which are not already admins in the LMS

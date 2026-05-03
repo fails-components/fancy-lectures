@@ -45,6 +45,9 @@ spec:
             - name: FAILS_JUPYTER_PROXY_CONFIG
               value: |
               {{ .Values.jupyter.proxy | indent 2}}
+            - name: FAILS_PRIVACY_CONFIG
+              value: |
+              {{ .Values.privacyConfig | indent 2}}
           ports:
             - name: http
               containerPort: 80

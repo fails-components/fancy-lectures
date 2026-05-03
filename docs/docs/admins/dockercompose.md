@@ -113,7 +113,6 @@ These variables configure communication with external systems like educational m
         *   `"message"`: The text displayed explaining the maintenance window and expected return time (e.g., "The system is going for maintenance at 3 AM UTC").
 
 
-
 *   **Jupyter Proxy Whitelist (`FAILS_JUPYTER_PROXY_CONFIG`)** 
     *(Example: `{"allowedSites": ["https://domain.of.your-school.edu"]}`)*
 
@@ -148,6 +147,28 @@ These variables configure communication with external systems like educational m
 
     ---
     ***Guidance on Empty Fields:*** The structure requires four fields separated by pipes (`|`). If any field is optional (like the IP Filter or Coordinates), simply leave that corresponding slot **empty** in your string, but ensure you keep the pipe separators intact. This maintains the correct reading order for all data types.
+
+### 🌐 Privacy & Legal Configuration (`FAILS_PRIVACY_CONFIG`)
+
+This JSON configuration block is used to manage legal compliance and transparency links within the LMS application (e.g., Data Processing Agreements, Imprint). This section is **optional** but highly recommended for institutional deployments.
+
+*   **`FAILS_PRIVACY_CONFIG`**: The entire value must be a valid, single JSON object containing key-value pairs that define the legal notices visible to the user. When defining this variable in your `.env` file, ensure all internal quotes are correctly escaped using backslashes (`\"`) for shell compatibility.
+*(Example: `{\"dataProcessingAgreementURL\": \"https://your.school.edu/dpa\",\"dataProcessingAgreementLabel\": \"Data Processing Agreement\", \"imprintURL\": \"https://your.school.edu/imprint\", \"imprintLabel\": \"Imprint\"}`)*
+
+    ---
+    ***Structure Breakdown:***
+    The configuration defines various links and their display labels. The system is flexible: if you omit a label, the platform will apply a default generic title.
+
+    *   **Data Processing Agreement (DPA):** Controls the link to the DPA document.
+        *   `"dataProcessingAgreementURL"`: **(Optional)** The full URL of the Data Processing Agreement.
+        *   `"dataProcessingAgreementLabel"`: **(Optional)** The human-readable label displayed next to the link. If omitted, a default descriptive title will be used by the system.
+
+    *   **Imprint:** Controls the link to your institutional legal imprint or notice.
+        *   `"imprintURL"`: **(Optional)** The full URL of the legal imprint page.
+        *   `"imprintLabel"`: **(Optional)** The human-readable label displayed next to this critical legal link. If omitted, a default descriptive title will be used by the system.
+
+**Key Flexibility:** Because these variables are optional, you only need to include keys for the documentation links that are relevant to your organization's regulatory requirements.
+
 
 ### 🌐 Database and Service Endpoints
 These variables configure connections to persistent backend services.

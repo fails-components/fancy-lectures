@@ -829,8 +829,9 @@ export class FailsBasis extends Component {
         document.featurePolicy.getAllowlistForFeature('camera')
       )
     }
-    const isBlink = (navigator.userAgentData?.brands?.some(b => b.brand === 'Chromium')) || 
-                (window.chrome !== undefined);
+    const isBlink =
+      navigator.userAgentData?.brands?.some((b) => b.brand === 'Chromium') ||
+      window.chrome !== undefined
     if (!isBlink) {
       confirmDialog({
         message:
@@ -852,6 +853,40 @@ export class FailsBasis extends Component {
       expmedia
     this.hasMediaSend =
       (supportedMedia.videoout || supportedMedia.audioout) && expmedia
+
+    fetch(new URL('/config/privacy.json', window.location.origin), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error('HTTP error! status:' + res.status)
+        }
+        const config = await res.json()
+        console.log('We got a privacy config', config)
+        if (config?.dataProcessingAgreementURL || config?.imprintURL) {
+          const {
+            dataProcessingAgreementURL,
+            dataProcessingAgreementLabel,
+            imprintURL,
+            imprintLabel
+          } = config
+          this.setState({
+            dataProcessingAgreementURL,
+            dataProcessingAgreementLabel,
+            imprintURL,
+            imprintLabel
+          })
+        }
+      })
+      .catch((error) => {
+        console.log(
+          'Get config/privacy.json problem/not found, this must not be an error',
+          error
+        )
+      })
   }
 
   commonDidUpdate(prevProps, prevState, snapshot) {
