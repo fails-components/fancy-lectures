@@ -16,7 +16,8 @@ export default [
       '**/dist/**',
       '**/node_modules/**',
       '**/.snapshots/**',
-      '**/*.min.js'
+      '**/*.min.js',
+      '**/.docusaurus/**'
     ]
   },
   {
@@ -83,6 +84,14 @@ export default [
           ignoreRestSiblings: true
         }
       ]
+    }
+  },
+  {
+    files: ['docs/**/*.tsx'],
+    languageOptions: {
+      globals: {
+        require: 'readonly'
+      }
     }
   },
   {
