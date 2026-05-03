@@ -6,7 +6,7 @@
     "packages/*",
     "daemons/*",
     "deploy/migrateassets",
-    "docs/"
+    "docs"
   ],
   "type": "module",
   "scripts": {
