@@ -576,6 +576,15 @@ export class FailsNotes extends FailsBasis {
             updateSizes={this.updateSizes}
           />
         )}
+        <Button
+          icon='pi pi-question'
+          className='p-button-raised p-button-rounded p-m-2'
+          tooltip='Lock/unlock scrolling screencast switching to follow lecturer'
+          tooltipOptions={ttopts}
+          onClick={() => {
+            window.open('/static/docs/docs/students/intro/', '_blank')
+          }}
+        />
 
         <OverlayPanel ref={(el) => (this.chatop = el)}>
           <div className='p-grid p-align-end'>
@@ -676,8 +685,8 @@ export class FailsNotes extends FailsBasis {
     }
 
     if (this.state.polltask === 1 && this.state.curpoll) {
-      pollsels = this.state.curpoll.children.map((el) => (
-        <div className='p-col-12'>
+      pollsels = this.state.curpoll.children.map((el, ind) => (
+        <div className='p-col-12' key={'pt' + ind}>
           <Checkbox
             inputId='cb2'
             value={el.id}

@@ -710,7 +710,7 @@ export class ToolBox extends ToolHandling {
         tooltip='Send comment to students'
         tooltipOptions={ttopts}
         className={setclass}
-        key={17}
+        key={18}
         aria-haspopup
         aria-controls='overlay_panel'
       />
@@ -881,6 +881,19 @@ export class ToolBox extends ToolHandling {
       />
     )
 
+    const helpbutton = (
+      <Button
+        icon='pi pi-question'
+        tooltip='Lock/unlock scrolling screencast switching to follow lecturer'
+        tooltipOptions={ttopts}
+        key={19}
+        onClick={() => {
+          window.open('/static/docs/docs/docents/intro/', '_blank')
+        }}
+        className={setclass}
+      />
+    )
+
     settingswheel.push(arrangebutton)
     settingswheel.push(fsbutton)
     settingswheel.push(casttoscreenbutton)
@@ -904,6 +917,7 @@ export class ToolBox extends ToolHandling {
     settingswheel.push(chatbutton)
     if (this.props.startUpAVBroadcast) settingswheel.push(avstartupbutton)
     settingswheel.push(infobutton)
+    settingswheel.push(helpbutton)
 
     let setwheelpcpos = false
     if (this.state.selectedButtonid === 1) {

@@ -2179,6 +2179,7 @@ class App extends Component {
     let bgpdfrem = false
     let bgpdfup = true
     let bgpdfname = 'loading...'
+    let helpurl = '/static/docs/docs/students/intro/'
 
     let date = new Date()
 
@@ -2301,6 +2302,7 @@ class App extends Component {
         jupyter = true
       }
       if (this.state.decodedtoken.role.includes('instructor')) {
+        helpurl = '/static/docs/docs/docents/intro/'
         startlecture = true
         editlecturers = true
         if (this.state.lectures && this.state.lectures.length > 1)
@@ -2708,90 +2710,93 @@ class App extends Component {
                         </Card>
                       </div>
                     )}
-                    {this.state.support && (
-                      <div className='p-col-12 p-md-6'>
-                        <Card title='Support information'>
-                          {<div>{this.state.support.text} </div> || ''}
-                          {this.state.support.url && (
+                    <div className='p-col-12 p-md-6'>
+                      <Card title='Help and support'>
+                        Read the documentation to get started: <br />
+                        <Button
+                          icon='pi pi-question'
+                          href={helpurl}
+                          label='Documentation'
+                          className='p-m-2'
+                          onClick={(event) => {
+                            window.open(helpurl, '_blank')
+                          }}
+                        ></Button>
+                        {<div>{this.state.support.text} </div> || ''}
+                        {this.state.support?.url && (
+                          <div>
+                            <Button
+                              icon='pi pi-info-circle'
+                              href={this.state.support.url}
+                              label='Support page'
+                              className='p-m-2'
+                              onClick={(event) => {
+                                if (event.ctrlKey || event.metaKey) {
+                                  this.setState({ hiddensupport: true })
+                                } else {
+                                  window.open(this.state.support.url, '_blank')
+                                }
+                              }}
+                            ></Button>
+                          </div>
+                        )}
+                        {this.state.hiddensupport && (
+                          <Fragment>
+                            <div>
+                              Uuid:{' '}
+                              {this.state?.decodedtoken?.course?.lectureuuid}
+                            </div>
                             <div>
                               <Button
-                                icon='pi pi-info-circle'
-                                href={this.state.support.url}
-                                label='Support page'
+                                icon='pi pi-cloud-download'
+                                label='RAW data'
                                 className='p-m-2'
-                                onClick={(event) => {
-                                  if (event.ctrlKey || event.metaKey) {
-                                    this.setState({ hiddensupport: true })
-                                  } else {
-                                    window.open(
-                                      this.state.support.url,
-                                      '_blank'
-                                    )
-                                  }
-                                }}
+                                onClick={() => this.downloadRawData({})}
                               ></Button>
                             </div>
-                          )}
-                          {this.state.hiddensupport && (
-                            <Fragment>
-                              <div>
-                                Uuid:{' '}
-                                {this.state?.decodedtoken?.course?.lectureuuid}
-                              </div>
-                              <div>
-                                <Button
-                                  icon='pi pi-cloud-download'
-                                  label='RAW data'
-                                  className='p-m-2'
-                                  onClick={() => this.downloadRawData({})}
-                                ></Button>
-                              </div>
-                              <div>
-                                <ToggleButton
-                                  onLabel='Experimental app'
-                                  offLabel='Stable app'
-                                  checked={
-                                    this.state.requestappversion ===
-                                    'experimental'
-                                  }
-                                  onChange={(e) =>
-                                    this.setToggleRequestAppversion()
-                                  }
-                                />{' '}
-                                <br />
-                                Features:
-                                <br />
-                                <MultiSelect
-                                  value={this.state.requestfeatures}
-                                  onChange={(e) => this.changeFeatures(e.value)}
-                                  options={availFeatures}
-                                  optionLabel='name'
-                                  optionValue='id'
-                                  display='chip'
-                                  placeholder='Select Features'
-                                  className='w-full md:w-20rem'
-                                />
-                                <br />
-                                {this.state.requestappversion !==
-                                  this.state.decodedtoken.appversion ||
-                                this.state.requestfeatures.some(
-                                  (el) =>
-                                    !this.state.decodedtoken.features.includes(
-                                      el
-                                    )
-                                ) ||
-                                this.state.decodedtoken.features.some(
-                                  (el) =>
-                                    !this.state.requestfeatures.includes(el)
-                                )
-                                  ? 'Reload required for changes to take effect'
-                                  : ''}
-                              </div>
-                            </Fragment>
-                          )}
-                        </Card>
-                      </div>
-                    )}
+                            <div>
+                              <ToggleButton
+                                onLabel='Experimental app'
+                                offLabel='Stable app'
+                                checked={
+                                  this.state.requestappversion ===
+                                  'experimental'
+                                }
+                                onChange={(e) =>
+                                  this.setToggleRequestAppversion()
+                                }
+                              />{' '}
+                              <br />
+                              Features:
+                              <br />
+                              <MultiSelect
+                                value={this.state.requestfeatures}
+                                onChange={(e) => this.changeFeatures(e.value)}
+                                options={availFeatures}
+                                optionLabel='name'
+                                optionValue='id'
+                                display='chip'
+                                placeholder='Select Features'
+                                className='w-full md:w-20rem'
+                              />
+                              <br />
+                              {this.state.requestappversion !==
+                                this.state.decodedtoken.appversion ||
+                              this.state.requestfeatures.some(
+                                (el) =>
+                                  !this.state.decodedtoken.features.includes(el)
+                              ) ||
+                              this.state.decodedtoken.features.some(
+                                (el) => !this.state.requestfeatures.includes(el)
+                              )
+                                ? 'Reload required for changes to take effect'
+                                : ''}
+                            </div>
+                          </Fragment>
+                        )}
+                      </Card>
+                    </div>
+                    )
                     {cloudstatus && (
                       <div className='p-col-12 p-md-6'>
                         <Card title='Cloud status'>

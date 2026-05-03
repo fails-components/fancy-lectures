@@ -418,6 +418,18 @@ export class Welcome extends Component {
                         icon='pi pi-plus'
                         onClick={this.openWindow}
                       />
+                      <h3>Read the manual</h3>
+                      <Button
+                        icon='pi pi-question'
+                        className='p-button-primary  p-button-rounded p-m-2'
+                        label='Open documentaion'
+                        onClick={() => {
+                          window.open(
+                            '/static/docs/docs/docents/intro/',
+                            '_blank'
+                          )
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

@@ -66,6 +66,10 @@ RUN export REACT_APP_VERSION=$(npm pkg get version | sed 's/"//g'); \
     export PUBLIC_URL=/static/experimental/lecture/;\
     export REACT_APP_JUPYTER_PROXY_DOMAINS="pypi.org files.pythonhosted.org cdn.jsdelivr.net raw.githubusercontent.com repo.prefix.dev shards.prefix.dev prefix.dev";\
     npm run build
+# build the documentation
+WORKDIR ${BASE_WORK}/node_modules/@fails-components/docs
+RUN export PUBLIC_URL=/static/docs/;\
+    npm run build
 ARG STATIC_SERVER_WORK
 WORKDIR ${BASE_WORK}
 RUN mkdir -p ${STATIC_SERVER_WORK}/oss-attribution
@@ -115,6 +119,7 @@ COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureappex
        /usr/share/nginx/html/static/experimental/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/experimental/lecture/sw.js /usr/share/nginx/html/static/experimental/lecture/service-worker.js
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/docs/build/ /usr/share/nginx/html/static/docs
 ARG STATIC_SERVER_WORK
 COPY --from=build-stage ${STATIC_SERVER_WORK}/oss-attribution/ /usr/share/nginx/html/static/oss/
 RUN mkdir -p /usr/share/nginx/html/config
@@ -135,6 +140,7 @@ COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/appexperimen
 COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/lectureappexperimental/build/ /usr/share/nginx/html/static/experimental/lecture
 #workaround to remove old service worker
 RUN cp /usr/share/nginx/html/static/experimental/lecture/sw.js /usr/share/nginx/html/static/experimental/lecture/service-worker.js
+COPY --from=build-stage ${BASE_WORK}/node_modules/@fails-components/docs/build/ /usr/share/nginx/html/static/docs
 
 ARG STATIC_SERVER_WORK
 COPY --from=build-stage ${STATIC_SERVER_WORK}/oss-attribution/ /usr/share/nginx/html/static/oss/

@@ -33,12 +33,21 @@
     "@fails-components/lectureappstable": "npm:@fails-components/lectureapp@^2.0.0-dev.6",
     "@fails-components/ltihandler": "^2.0.0-dev.6",
     "@fails-components/notepadhandler": "^2.0.0-dev.6",
-    "@fails-components/noteshandler": "^2.0.0-dev.6"
+    "@fails-components/noteshandler": "^2.0.0-dev.6",
+    "@fails-components/docs": "^2.0.0-dev.6"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "*"
+    "@rollup/rollup-linux-x64-gnu": "*",
+    "@rspack/binding-linux-x64-gnu": "*",
+    "lightningcss-linux-x64-gnu": "*",
+    "@swc/core-linux-x64-gnu": "*",
+    "@swc/html-linux-x64-gnu": "*"
   },
   "overrides": {
-    "@rollup/rollup-linux-x64-gnu": "$rollup"
+    "@rollup/rollup-linux-x64-gnu": "$rollup",
+    "@rspack/binding-linux-x64-gnu": "$rspack",
+    "lightningcss-linux-x64-gnu": "$lightningcss",
+    "@swc/core-linux-x64-gnu": "$@swc/core",
+    "@swc/html-linux-x64-gnu": "$@swc/html"
   }
 }
