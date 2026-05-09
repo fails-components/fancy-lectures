@@ -1,10 +1,13 @@
 node_modules
 files
 .env.development.local
+.env.production.local
 packages/*/.env.development.local
+packages/*/.env.production.local
 packages/*/build
 packages/*/dist
 daemons/*/.env.development.local
+daemons/*/.env.production.local
 daemons/*/build
 daemons/*/dist
 /.npmrc
