@@ -55,7 +55,7 @@ jobs:
             
             let activeContainers = allContainersWithContext
             if (isTag) {
-              activeContainers = allContainersWithContext.filter(c => refName.includes(c.container) && c.container !== 'staticserver')
+              activeContainers = allContainersWithContext.filter(c => refName.includes(c.container) /* && c.container !== 'staticserver' */)
             }
             
             core.setOutput('has_jobs', activeContainers.length > 0)
