@@ -26,7 +26,7 @@
     "@fails-components/config": "^2.0.0-dev.6",
     "@fails-components/data": "^2.0.0-dev.6",
     "@fails-components/drawobjects": "^2.0.0-dev.6",
-    "@fails-components/jupyter-react-edit": "^0.0.4",
+    "@fails-components/jupyter-react-edit": "^0.0.5",
     "@fortawesome/fontawesome-svg-core": "^6.5.1",
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
     "@fortawesome/react-fontawesome": "^0.2.0",

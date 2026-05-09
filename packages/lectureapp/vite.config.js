@@ -52,8 +52,25 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         workbox: {
           sourcemap: true,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}']
-        }
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
+          globIgnores: ['**/vision_wasm_module_internal-*.wasm']
+        },
+        runtimeCaching: [
+          {
+            urlPattern: /.*vision_wasm_module_internal.*\.*$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'mediapipe-wasm-cache',
+              expiration: {
+                maxEntries: 5,
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       }) /* ,
       visualizer({
         open: true, // Automatically opens the report in your browser after build
@@ -63,7 +80,7 @@ export default defineConfig(() => {
       }) */
     ],
     worker: {
-      format: 'module'
+      format: 'es'
     },
     server: {
       port: 3000,
@@ -94,7 +111,8 @@ export default defineConfig(() => {
         '@fails-components/avkeystore',
         '@fails-components/avreactwidgets',
         '@fails-components/data',
-        '@fails-components/drawobjects'
+        '@fails-components/drawobjects',
+        '@mediapipe/tasks-vision'
       ],
       include: ['pdfjs-dist', 'libav.js']
     },

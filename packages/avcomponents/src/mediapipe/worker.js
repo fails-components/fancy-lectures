@@ -15,7 +15,9 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-import { ImageSegmenter, FilesetResolver } from '@mediapipe/tasks-vision'
+import { ImageSegmenter } from '@mediapipe/tasks-vision'
+import visionWasmModuleJs from '@mediapipe/tasks-vision/vision_wasm_module_internal.js?url'
+import visionWasmModuleBinary from '@mediapipe/tasks-vision/vision_wasm_module_internal.wasm?url'
 class AVBackgroundRemover {
   static fragmentShaderCodeColor = `#version 300 es
   precision mediump float;
@@ -232,33 +234,9 @@ class AVBackgroundRemover {
   }
 
   async initSegmenter() {
-    let wasmFileSet
-    if (await FilesetResolver.isSimdSupported()) {
-      wasmFileSet = {
-        wasmLoaderPath: new URL(
-          import.meta
-            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.js'),
-          import.meta.url
-        ).pathname,
-        wasmBinaryPath: new URL(
-          import.meta
-            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm'),
-          import.meta.url
-        ).pathname
-      }
-    } else {
-      wasmFileSet = {
-        wasmLoaderPath: new URL(
-          import.meta
-            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm'),
-          import.meta.url
-        ).pathname,
-        wasmBinaryPath: new URL(
-          import.meta
-            .resolve('@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm'),
-          import.meta.url
-        ).pathname
-      }
+    const wasmFileSet = {
+      wasmLoaderPath: visionWasmModuleJs,
+      wasmBinaryPath: visionWasmModuleBinary
     }
 
     return ImageSegmenter.createFromOptions(wasmFileSet, {

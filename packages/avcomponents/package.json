@@ -21,7 +21,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "file:./packages/vision_pkg.tgz",
+    "@mediapipe/tasks-vision": "^0.10.35",
     "bson": "^7.2.0",
     "libav.js": "=4.8.6",
     "libavjs-webcodecs-polyfill": "^0.4.4"
