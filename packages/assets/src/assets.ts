@@ -745,7 +745,7 @@ export class FailsAssets {
         }
         // in the S3 case, mime is a callback
         if (response?.headers?.['content-type']) {
-          mime(response?.headers?.['content-type'])
+          mime(response?.headers?.['content-type'] as string)
         } else throw new Error('no mime type from s3')
       } catch (error) {
         console.log('axios response', response)
