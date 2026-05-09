@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/staticserver",
-  "version": "2.0.0-dev.6",
+  "version": "2.0.0-dev.7",
   "description": "fails static webpages served through nginx",
   "private": true,
   "scripts": {
@@ -24,24 +24,24 @@
   "homepage": "https://github.com/fails-components/staticserver#readme",
   "dependencies": {
     "@fails-components/appexperimental": "npm:@fails-components/app@2.0.0-dev.6",
-    "@fails-components/apphandler": "^2.0.0-dev.6",
+    "@fails-components/apphandler": "^2.0.0-dev.7",
     "@fails-components/appstable": "npm:@fails-components/app@2.0.0-dev.6",
-    "@fails-components/authhandler": "^2.0.0-dev.6",
-    "@fails-components/avsdispatcher": "^2.0.0-dev.6",
-    "@fails-components/housekeeping": "^2.0.0-dev.6",
+    "@fails-components/authhandler": "^2.0.0-dev.7",
+    "@fails-components/avsdispatcher": "^2.0.0-dev.7",
+    "@fails-components/docs": "^2.0.0-dev.7",
+    "@fails-components/housekeeping": "^2.0.0-dev.7",
     "@fails-components/lectureappexperimental": "npm:@fails-components/lectureapp@^2.0.0-dev.6",
     "@fails-components/lectureappstable": "npm:@fails-components/lectureapp@^2.0.0-dev.6",
-    "@fails-components/ltihandler": "^2.0.0-dev.6",
-    "@fails-components/notepadhandler": "^2.0.0-dev.6",
-    "@fails-components/noteshandler": "^2.0.0-dev.6",
-    "@fails-components/docs": "^2.0.0-dev.6"
+    "@fails-components/ltihandler": "^2.0.0-dev.7",
+    "@fails-components/notepadhandler": "^2.0.0-dev.7",
+    "@fails-components/noteshandler": "^2.0.0-dev.7"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "*",
     "@rspack/binding-linux-x64-gnu": "*",
-    "lightningcss-linux-x64-gnu": "*",
     "@swc/core-linux-x64-gnu": "*",
-    "@swc/html-linux-x64-gnu": "*"
+    "@swc/html-linux-x64-gnu": "*",
+    "lightningcss-linux-x64-gnu": "*"
   },
   "overrides": {
     "@rollup/rollup-linux-x64-gnu": "$rollup",
