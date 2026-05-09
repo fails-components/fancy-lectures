@@ -53,7 +53,7 @@ export default defineConfig(() => {
         workbox: {
           sourcemap: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
-          globIgnores: ['**/vision_wasm_module_internal-*.wasm']
+          globIgnores: ['**/vision_wasm_module_internal-*.wasm', '**/libav-*.*']
         },
         runtimeCaching: [
           {
@@ -62,7 +62,21 @@ export default defineConfig(() => {
             options: {
               cacheName: 'mediapipe-wasm-cache',
               expiration: {
-                maxEntries: 5,
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /.*libav.*\.*$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'libav-wasm-cache',
+              expiration: {
+                maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {
