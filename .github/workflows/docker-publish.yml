@@ -8,7 +8,7 @@ on:
     branches: [ master ]
     # Publish semver tags as releases.
     tags: [ '*-v*.*.*' ]
-    paths: [ 'daemons/**' ]
+    paths: [ 'daemons/**', 'docs/**' ]
   workflow_dispatch:
     inputs:
       logLevel:
@@ -50,16 +50,16 @@ jobs:
               context: './daemons/' + container
             }))
            
-            const isTag = context.ref.startsWith('refs/tags/');
-            const refName = process.env.REF_NAME;
+            const isTag = context.ref.startsWith('refs/tags/')
+            const refName = process.env.REF_NAME
             
-            let activeContainers = allContainersWithContext;
+            let activeContainers = allContainersWithContext
             if (isTag) {
-              activeContainers = allContainersWithContext.filter(c => refName.includes(c.container));
+              activeContainers = allContainersWithContext.filter(c => refName.includes(c.container) && c.container !== 'staticserver')
             }
             
-            core.setOutput('has_jobs', activeContainers.length > 0);
-            core.setOutput('matrix', JSON.stringify({ include: activeContainers }));
+            core.setOutput('has_jobs', activeContainers.length > 0)
+            core.setOutput('matrix', JSON.stringify({ include: activeContainers }))
 
   build:
     needs: setup-matrix
