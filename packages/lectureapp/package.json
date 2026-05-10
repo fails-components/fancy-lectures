@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/lectureapp",
-  "version": "2.0.0-dev.10",
+  "version": "2.0.0-dev.11",
   "description": "Lecture app of fails",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -20,12 +20,12 @@
     "versionOFF": "cd ../.. && npx update-browserslist-db@latest --yes && git add package-lock.json"
   },
   "dependencies": {
-    "@fails-components/avcore": "^2.0.0-dev.10",
-    "@fails-components/avkeystore": "^2.0.0-dev.10",
-    "@fails-components/avreactwidgets": "^2.0.0-dev.10",
-    "@fails-components/config": "^2.0.0-dev.10",
-    "@fails-components/data": "^2.0.0-dev.10",
-    "@fails-components/drawobjects": "^2.0.0-dev.10",
+    "@fails-components/avcore": "^2.0.0-dev.11",
+    "@fails-components/avkeystore": "^2.0.0-dev.11",
+    "@fails-components/avreactwidgets": "^2.0.0-dev.11",
+    "@fails-components/config": "^2.0.0-dev.11",
+    "@fails-components/data": "^2.0.0-dev.11",
+    "@fails-components/drawobjects": "^2.0.0-dev.11",
     "@fails-components/jupyter-react-edit": "^0.0.5",
     "@fortawesome/fontawesome-svg-core": "^6.5.1",
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
