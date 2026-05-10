@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv'
-import { FailsAssets } from '@fails-components/security'
+import { FailsAssets } from '@fails-components/assets'
 dotenv.config()
 
 const fileassets = new FailsAssets({
