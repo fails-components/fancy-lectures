@@ -1,6 +1,6 @@
 !["FAILS logo"](failslogo.svg)
 # Migration warning
-This monorepo will be soon the main home of ** FAILS ** - components.
+This monorepo will be soon the main home of **FAILS** - components.
 We are currently in the process of migrating all packages and container images.
 The change will be reflected in the components version number 2.
 
