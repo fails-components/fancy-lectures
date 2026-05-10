@@ -14,12 +14,16 @@
   "exports": {
     ".": {
       "types": "./dist/config.d.ts",
+      "development": "./src/config.ts",
       "import": "./dist/config.js",
       "default": "./dist/config.js"
     }
   },
   "files": [
-    "dist",
+    "src/config.ts",
+    "dist/config.d.ts",
+    "dist/config.d.ts.map",
+    "dist/config.js",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],

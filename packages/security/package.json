@@ -8,17 +8,22 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
-  "main": "src/security.ts",
-  "module": "src/security.ts",
+  "main": "dist/security.js",
+  "module": "dist/security.js",
+  "types": "dist/security.d.ts",
   "exports": {
     ".": {
-      "types": "./src/security.ts",
-      "import": "./src/security.ts",
-      "default": "./src/security.ts"
+      "types": "./dist/security.d.ts",
+      "development": "./src/security.ts",
+      "import": "./dist/security.js",
+      "default": "./dist/security.js"
     }
   },
   "files": [
     "src/security.ts",
+    "dist/security.d.ts",
+    "dist/security.d.ts.map",
+    "dist/security.js",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],

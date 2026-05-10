@@ -9,15 +9,27 @@
     "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
   "main": "dist/data.js",
+  "module": "dist/data.js",
   "types": "dist/data.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/data.d.ts",
+      "development": "./src/data.ts",
+      "import": "./dist/data.js",
+      "default": "./dist/data.js"
+    }
+  },
   "files": [
-    "dist",
+    "src/data.ts",
+    "dist/data.d.ts",
+    "dist/data.d.ts.map",
+    "dist/data.js",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
   "type": "module",
   "engines": {
-    "node": ">=16"
+    "node": ">=24"
   },
   "scripts": {
     "build": "tsc",

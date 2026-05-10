@@ -8,17 +8,22 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
-  "main": "src/commonhandler.ts",
-  "module": "src/commonhandler.ts",
+  "main": "dist/commonhandler.js",
+  "module": "src/commonhandler.js",
+  "types": "dist/commonhandler.d.ts",
   "exports": {
     ".": {
-      "types": "./src/commonhandler.ts",
-      "import": "./src/commonhandler.ts",
-      "default": "./src/commonhandler.ts"
+      "types": "./dist/commonhandler.d.ts",
+      "development": "./src/commonhandler.ts",
+      "import": "./dist/commonhandler.js",
+      "default": "./dist/commonhandler.js"
     }
   },
   "files": [
     "src/commonhandler.ts",
+    "dist/commonhandler.js",
+    "dist/commonhandler.d.ts",
+    "dist/commonhandler.d.ts.map",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
@@ -27,6 +32,8 @@
     "node": ">=24"
   },
   "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
   },

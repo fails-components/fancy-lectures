@@ -8,17 +8,22 @@
     "type": "git",
     "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
-  "main": "src/assets.ts",
-  "module": "src/assets.ts",
+  "main": "dist/assets.js",
+  "module": "dist/assets.js",
+  "types": "dist/assets.d.ts",
   "exports": {
     ".": {
-      "types": "./src/assets.ts",
-      "import": "./src/assets.ts",
-      "default": "./src/assets.ts"
+      "types": "./dist/assets.d.ts",
+      "development": "./src/assets.ts",
+      "import": "./dist/assets.js",
+      "default": "./dist/assets.js"
     }
   },
   "files": [
     "src/assets.ts",
+    "dist/assets.d.ts",
+    "dist/assets.d.ts.map",
+    "dist/assets.js",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
@@ -28,6 +33,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "dev": "tsc --watch",
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
   },

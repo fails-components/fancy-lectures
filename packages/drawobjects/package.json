@@ -9,15 +9,27 @@
     "url": "git+https://github.com/fails-components/fancy-lectures.git"
   },
   "main": "dist/drawobjects.js",
+  "module": "dist/drawobjects.js",
   "types": "dist/drawobjects.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/drawobjects.d.ts",
+      "development": "./src/drawobjects.ts",
+      "import": "./dist/drawobjects.js",
+      "default": "./dist/drawobjects.js"
+    }
+  },
   "files": [
-    "dist",
+    "src/drawobjects.ts",
+    "dist/drawobjects.d.ts",
+    "dist/drawobjects.d.ts.map",
+    "dist/drawobjects.js",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
   "type": "module",
   "engines": {
-    "node": ">=16"
+    "node": ">=24"
   },
   "scripts": {
     "build": "tsc",

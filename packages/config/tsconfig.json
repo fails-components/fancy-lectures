@@ -1,14 +1,15 @@
 {
-  "extends": "../../tsconfig.json", 
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "emitDeclarationOnly": false,
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,
-     "target": "esnext",
-     "module": "nodenext",
-     "rewriteRelativeImportExtensions": true,
-     "erasableSyntaxOnly": true,
-     "verbatimModuleSyntax": true
+    "target": "esnext",
+    "module": "nodenext",
+    "rewriteRelativeImportExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
