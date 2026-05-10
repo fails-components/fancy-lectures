@@ -6,11 +6,9 @@ RUN npm install -g isolate-package
 
 COPY . .
 
-RUN if [ "$ENV" = "debug" ] ; then \
-        npm install --no-workspaces; \
-    else  \
-        npm ci --only=production --no-workspaces;\
-    fi
+RUN npm ci
+
+RUN npm run buildts
 
 ARG DAEMON_NAME
 WORKDIR /usr/src/fails/daemons/${DAEMON_NAME}
@@ -22,11 +20,7 @@ ARG DAEMON_NAME
 WORKDIR /usr/src/fails/daemons/${DAEMON_NAME}
 COPY --from=prebuilder /usr/src/fails/daemons/${DAEMON_NAME}/isolate/ ./
 
-RUN if [ "$ENV" = "debug" ] ; then \
-        npm install --no-workspaces; \
-    else  \
-        npm ci --only=production --no-workspaces;\
-    fi
+RUN npm ci
 
 EXPOSE 8080
 
