@@ -25,6 +25,13 @@ function checkEnv(
   return env[prop]
 }
 
+function checkEnvOpt(
+  env: Record<string, string | undefined>,
+  prop: string
+): string | undefined {
+  return env[prop]
+}
+
 export class FailsConfig {
   constructor(args?: { react: boolean }) {
     if (args && args.react) this.react = true
@@ -174,7 +181,7 @@ export class FailsConfig {
         region: checkEnv(env, 'FAILS_S3_REGION'),
         bucket: checkEnv(env, 'FAILS_S3_BUCKET'),
         host: checkEnv(env, 'FAILS_S3_HOST'),
-        alturl: checkEnv(env, 'FAILS_S3_ALTURL')
+        alturl: checkEnvOpt(env, 'FAILS_S3_ALTURL')
       }
     }
 
@@ -480,7 +487,7 @@ export class FailsConfig {
     region: string
     bucket: string
     host: string
-    alturl: string
+    alturl?: string
   }
   private mongourl_: string
   private mongoname_: string
