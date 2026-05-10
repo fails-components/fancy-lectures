@@ -18,7 +18,7 @@
     }
   },
   "files": [
-    "src/security.js",
+    "src/security.ts",
     "failslogo.svg",
     "failslogolicensereadme.txt"
   ],
