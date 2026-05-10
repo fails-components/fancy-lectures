@@ -43,8 +43,7 @@ jobs:
               'ltihandler',
               'notepadhandler',
               'noteshandler',
-              'staticserver',
-              'staticserver-noassets'
+              'staticserver'
             ]
             const allContainersWithContext = allContainers.map((container) => ({
               container,
