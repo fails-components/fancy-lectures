@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/staticserver",
-  "version": "2.0.0-dev.8",
+  "version": "2.0.0-dev.9",
   "description": "fails static webpages served through nginx",
   "private": true,
   "scripts": {
@@ -24,17 +24,17 @@
   "homepage": "https://github.com/fails-components/staticserver#readme",
   "dependencies": {
     "@fails-components/appexperimental": "npm:@fails-components/app@2.0.0-dev.7",
-    "@fails-components/apphandler": "^2.0.0-dev.8",
+    "@fails-components/apphandler": "^2.0.0-dev.9",
     "@fails-components/appstable": "npm:@fails-components/app@2.0.0-dev.7",
-    "@fails-components/authhandler": "^2.0.0-dev.8",
-    "@fails-components/avsdispatcher": "^2.0.0-dev.8",
-    "@fails-components/docs": "^2.0.0-dev.8",
-    "@fails-components/housekeeping": "^2.0.0-dev.8",
+    "@fails-components/authhandler": "^2.0.0-dev.9",
+    "@fails-components/avsdispatcher": "^2.0.0-dev.9",
+    "@fails-components/docs": "^2.0.0-dev.9",
+    "@fails-components/housekeeping": "^2.0.0-dev.9",
     "@fails-components/lectureappexperimental": "npm:@fails-components/lectureapp@^2.0.0-dev.7",
     "@fails-components/lectureappstable": "npm:@fails-components/lectureapp@^2.0.0-dev.7",
-    "@fails-components/ltihandler": "^2.0.0-dev.8",
-    "@fails-components/notepadhandler": "^2.0.0-dev.8",
-    "@fails-components/noteshandler": "^2.0.0-dev.8"
+    "@fails-components/ltihandler": "^2.0.0-dev.9",
+    "@fails-components/notepadhandler": "^2.0.0-dev.9",
+    "@fails-components/noteshandler": "^2.0.0-dev.9"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "*",

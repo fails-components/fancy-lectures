@@ -1,6 +1,6 @@
 {
   "name": "@fails-components/drawobjects",
-  "version": "2.0.0-dev.8",
+  "version": "2.0.0-dev.9",
   "description": "Supplies DrawObjects classes for use within the fails ecosystem",
   "author": "Marten Richter",
   "license": "AGPL-3.0-or-later",
@@ -43,7 +43,7 @@
     "cross-env": "^7.0.3"
   },
   "dependencies": {
-    "@fails-components/data": "^2.0.0-dev.8",
+    "@fails-components/data": "^2.0.0-dev.9",
     "color": "^5.0.3"
   },
   "publishConfig": {
