@@ -32,6 +32,8 @@
     "node": ">=24"
   },
   "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
     "test": "run-s  test:lint",
     "test:lint": "eslint ."
   },
