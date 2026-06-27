@@ -767,8 +767,9 @@ export class BlackboardNotepad extends Component {
             const coalevents = event.nativeEvent.getCoalescedEvents()
             coalevents.forEach(this.processEvent)
             this.pointerdraw[event.pointerId] += coalevents.length
-          }
+          } else {
           this.processEvent(event)
+          }
         }
       } else if (this.addformpictmode !== 0) {
         const pos = { x: event.clientX, y: event.clientY }
