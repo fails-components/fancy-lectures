@@ -465,7 +465,7 @@ export class Blackboard extends Component {
       this.workobj[objid].addToPath(x, y, pressure)
       const now = Date.now()
 
-      // console.log("addtopath rs",x,y,pressure);
+      //  console.log('addtopath rs', x, y, pressure)
 
       if (!this.redrawing && !this.preworkobj[objid]) {
         this.isdirty = true
@@ -482,7 +482,7 @@ export class Blackboard extends Component {
       // TODO handle objid
       this.preworkobj[objid].addToPath(x, y, pressure)
 
-      // console.log("addtopath rs",x,y,pressure);
+      // console.log('preaddtopath rs', x, y, pressure)
       const now = Date.now()
 
       if (this.state.fogpos) this.setState({ fogpos: false })
