@@ -1001,6 +1001,7 @@ export class DrawObjectGlyph extends DrawObject {
       // console.log("cached path", this.svgpathstring);
       return this.svgpathstring // perfect no work todo
     }
+    const PRECISION = 2
 
     const glyph = this
     if (glyph.pathpoints && glyph.pathpoints.length > 2) {
@@ -1057,9 +1058,9 @@ export class DrawObjectGlyph extends DrawObject {
         } else {
           wsadd =
             'L' +
-            (curpoint.x - sx + nx).toFixed(2) +
+            (curpoint.x - sx + nx).toFixed(PRECISION) +
             ',' +
-            (curpoint.y - sy + ny).toFixed(2) +
+            (curpoint.y - sy + ny).toFixed(PRECISION) +
             ' '
         }
         const weadd =
@@ -1074,31 +1075,31 @@ export class DrawObjectGlyph extends DrawObject {
         if (i === 0) {
           pathstrings[0] =
             'M' +
-            (curpoint.x - sx - nx).toFixed(2) +
+            (curpoint.x - sx - nx).toFixed(PRECISION) +
             ',' +
-            (curpoint.y - sy - ny).toFixed(2) +
+            (curpoint.y - sy - ny).toFixed(PRECISION) +
             ' '
           pathstrings[1] =
             'A' +
-            (curpoint.w * 0.5).toFixed(2) +
+            (curpoint.w * 0.5).toFixed(PRECISION) +
             ',' +
-            (curpoint.w * 0.5).toFixed(2) +
+            (curpoint.w * 0.5).toFixed(PRECISION) +
             ',0,1,1,' +
-            (curpoint.x - sx + nx).toFixed(2) +
+            (curpoint.x - sx + nx).toFixed(PRECISION) +
             ',' +
-            (curpoint.y - sy + ny).toFixed(2) +
+            (curpoint.y - sy + ny).toFixed(PRECISION) +
             ' '
         }
         if (i === glyph.pathpoints.length - 1) {
           pathstrings[harr] =
             'A' +
-            (curpoint.w * 0.5).toFixed(2) +
+            (curpoint.w * 0.5).toFixed(PRECISION) +
             ',' +
-            (curpoint.w * 0.5).toFixed(2) +
+            (curpoint.w * 0.5).toFixed(PRECISION) +
             ',0,1,1,' +
-            (curpoint.x - sx - nx).toFixed(2) +
+            (curpoint.x - sx - nx).toFixed(PRECISION) +
             ',' +
-            (curpoint.y - sy - ny).toFixed(2) +
+            (curpoint.y - sy - ny).toFixed(PRECISION) +
             ' '
         }
       }
@@ -1120,26 +1121,26 @@ export class DrawObjectGlyph extends DrawObject {
       // handle single point
       this.svgpathstring =
         'M' +
-        (curpoint.x - curpoint.w * 0.5 - sx).toFixed(2) +
+        (curpoint.x - curpoint.w * 0.5 - sx).toFixed(PRECISION) +
         ',' +
-        (curpoint.y - sy).toFixed(2) +
+        (curpoint.y - sy).toFixed(PRECISION) +
         ' ' +
         'A' +
-        (curpoint.w * 0.5).toFixed(2) +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
         ',' +
-        (curpoint.w * 0.5).toFixed(2) +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
         ',0,1,1,' +
-        (curpoint.x + curpoint.w * 0.5 - sx).toFixed(2) +
+        (curpoint.x + curpoint.w * 0.5 - sx).toFixed(PRECISION) +
         ',' +
-        (curpoint.y - sy).toFixed(2) +
+        (curpoint.y - sy).toFixed(PRECISION) +
         'A' +
-        (curpoint.w * 0.5).toFixed(2) +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
         ',' +
-        (curpoint.w * 0.5).toFixed(2) +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
         ',0,1,1,' +
-        (curpoint.x - curpoint.w * 0.5 - sx).toFixed(2) +
+        (curpoint.x - curpoint.w * 0.5 - sx).toFixed(PRECISION) +
         ',' +
-        (curpoint.y - sy).toFixed(2) +
+        (curpoint.y - sy).toFixed(PRECISION) +
         ' Z'
       this.svgpathversion = this.version
       // console.log("single point svg", this.svgpathstring);
