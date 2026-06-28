@@ -996,7 +996,7 @@ export class DrawObjectGlyph extends DrawObject {
     return newobj
   }
 
-  SVGPath() {
+  oldSVGPath() {
     if (this.svgpathversion === this.version) {
       // console.log("cached path", this.svgpathstring);
       return this.svgpathstring // perfect no work todo
@@ -1146,6 +1146,276 @@ export class DrawObjectGlyph extends DrawObject {
       // console.log("single point svg", this.svgpathstring);
       return this.svgpathstring
     } else return null
+  }
+
+  SVGPath() {
+    if (this.svgpathversion === this.version) {
+      // console.log("cached path", this.svgpathstring);
+      return this.svgpathstring // perfect no work todo
+    }
+    const PRECISION = 2
+
+    const glyph = this
+
+    if (!glyph.pathpoints || glyph.pathpoints.length < 1) return null
+
+    if (glyph.pathpoints.length === 1) {
+      // single point case
+      const firstpoint = glyph.pathpoints[0]
+      const sx = firstpoint.x ?? 0
+      const sy = firstpoint.y ?? 0
+
+      const curpoint = firstpoint
+      // handle single point
+      this.svgpathstring =
+        'M' +
+        (curpoint.x - curpoint.w * 0.5 - sx).toFixed(PRECISION) +
+        ',' +
+        (curpoint.y - sy).toFixed(PRECISION) +
+        ' ' +
+        'A' +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
+        ',' +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
+        ',0,1,1,' +
+        (curpoint.x + curpoint.w * 0.5 - sx).toFixed(PRECISION) +
+        ',' +
+        (curpoint.y - sy).toFixed(PRECISION) +
+        'A' +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
+        ',' +
+        (curpoint.w * 0.5).toFixed(PRECISION) +
+        ',0,1,1,' +
+        (curpoint.x - curpoint.w * 0.5 - sx).toFixed(PRECISION) +
+        ',' +
+        (curpoint.y - sy).toFixed(PRECISION) +
+        ' Z'
+      this.svgpathversion = this.version
+      // console.log("single point svg", this.svgpathstring);
+      return this.svgpathstring
+    }
+
+    // was 2
+    // let lastpoint = null
+    // if (glyph.pathpoints && glyph.pathpoints.length > 2)
+    //   lastpoint = glyph.pathpoints[glyph.pathpoints.length - 1]
+    let firstpoint = glyph.pathpoints[0]
+
+    const sx = firstpoint.x ?? 0
+    const sy = firstpoint.y ?? 0
+    // console.log(glyph.pathpoints);
+    const plength = glyph.pathpoints.length
+    const pathstrings = new Array(2 * plength + 2)
+    // let lastnx=null;
+    // let lastny=null;
+
+    const dlength = glyph.pathpoints.length - 1
+    const dstore = new Float64Array(dlength * 2)
+
+    for (let i = 0; i < dlength; i++) {
+      dstore[2 * i] = glyph.pathpoints[i + 1].x - glyph.pathpoints[i].x
+      dstore[2 * i + 1] = glyph.pathpoints[i + 1].y - glyph.pathpoints[i].y
+    }
+    const tstore = new Float64Array(plength * 2)
+    const wstore = new Float64Array(plength)
+    const pstore = new Float64Array(plength * 2)
+
+    // tangent store
+    // first point
+    tstore[0] = dstore[0]
+    tstore[1] = dstore[1]
+    pstore[0] = glyph.pathpoints[0].x
+    pstore[1] = glyph.pathpoints[0].y
+    wstore[0] = glyph.pathpoints[0].w
+    // middle segment
+    for (let i = 1; i < plength - 1; i++) {
+      tstore[2 * i] = (dstore[2 * (i - 1)] + dstore[2 * i]) * 0.5
+      tstore[2 * i + 1] = (dstore[2 * (i - 1) + 1] + dstore[2 * i + 1]) * 0.5
+      pstore[2 * i] = glyph.pathpoints[i].x
+      pstore[2 * i + 1] = glyph.pathpoints[i].y
+      wstore[i] = glyph.pathpoints[i].w
+    }
+    // last segment
+    tstore[2 * (plength - 1)] = dstore[2 * (plength - 1)]
+    tstore[2 * (plength - 1) + 1] = dstore[2 * (plength - 1) + 1]
+    pstore[2 * (plength - 1)] = glyph.pathpoints[plength - 1].x
+    pstore[2 * (plength - 1) + 1] = glyph.pathpoints[plength - 1].y
+    wstore[plength - 1] = glyph.pathpoints[plength - 1].w
+
+    // calculate normal offsets
+    const nstore = new Float64Array(plength * 2)
+
+    let lastValidDx = 1
+    let lastValidDy = 0
+
+    for (let i = 0; i < plength; i++) {
+      let dx = tstore[2 * i]
+      let dy = tstore[2 * i + 1]
+      let norm = Math.sqrt(dx * dx + dy * dy)
+      const w = wstore[i]
+
+      if (norm < w * 0.5 * 0.1) {
+        // very rare case, but very stupid
+        if (i === 0) {
+          dx = pstore[2 * (i + 1)] - pstore[2 * i]
+          dy = pstore[2 * (i + 1) + 1] - pstore[2 * i + 1]
+        } else {
+          dx = pstore[2 * i] - pstore[2 * (i - 1)]
+          dy = pstore[2 * i + 1] - pstore[2 * (i - 1) + 1]
+        }
+        norm = Math.sqrt(dx * dx + dy * dy)
+      }
+      if (norm > 0) {
+        dx *= 1 / norm
+        dy *= 1 / norm
+        lastValidDx = dx
+        lastValidDy = dy
+      } else {
+        dx = lastValidDx
+        dy = lastValidDy
+      }
+      // now use cross product with (0,0,1)
+      nstore[2 * i] = dy * w * 0.5
+      nstore[2 * i + 1] = -dx * w * 0.5
+    }
+
+    // pathpoints
+
+    // first point
+    pathstrings[0] =
+      'M' +
+      (pstore[2 * 0] - sx - nstore[0]).toFixed(PRECISION) +
+      ',' +
+      (pstore[2 * 0 + 1] - sy - nstore[1]).toFixed(PRECISION) +
+      ' '
+    // Arc at the beginning
+    pathstrings[1] =
+      'A' +
+      (wstore[0] * 0.5).toFixed(PRECISION) +
+      ',' +
+      (wstore[0] * 0.5).toFixed(PRECISION) +
+      ',0,1,1,' +
+      (pstore[2 * 0] - sx + nstore[0]).toFixed(PRECISION) +
+      ',' +
+      (pstore[2 * 0 + 1] - sy + nstore[1]).toFixed(PRECISION) +
+      ' '
+
+    // middle segments first direction
+    for (let i = 1; i < plength - 1; i++) {
+      /* // Line segment
+      pathstrings[2 * (i + 1)] =
+        'L' +
+        (pstore[2 * i] - sx + nstore[2 * i]).toFixed(PRECISION) +
+        ',' +
+        (pstore[2 * i + 1] - sy + nstore[2 * i + 1]).toFixed(PRECISION) +
+        ' ' */
+      // cubic segment
+      const curx = pstore[2 * i] + nstore[2 * i]
+      const cury = pstore[2 * i + 1] + nstore[2 * i + 1]
+      const nextx = pstore[2 * (i + 1)] + nstore[2 * (i + 1)]
+      const nexty = pstore[2 * (i + 1) + 1] + nstore[2 * (i + 1) + 1]
+      const refx = curx - sx
+      const refy = cury - sy
+      const npointx = 0.5 * (curx + nextx) - sx
+      const npointy = 0.5 * (cury + nexty) - sy
+      pathstrings[i + 1] =
+        'Q' +
+        refx.toFixed(PRECISION) +
+        ',' +
+        refy.toFixed(PRECISION) +
+        ',' +
+        npointx.toFixed(PRECISION) +
+        ',' +
+        npointy.toFixed(PRECISION) +
+        ' '
+    }
+    // last segment
+    {
+      const i = plength - 1
+      const curx = pstore[2 * i] + nstore[2 * i]
+      const cury = pstore[2 * i + 1] + nstore[2 * i + 1]
+      const refx = curx - sx
+      const refy = cury - sy
+      const npointx = curx - sx
+      const npointy = cury - sy
+      pathstrings[i + 1] =
+        'Q' +
+        refx.toFixed(PRECISION) +
+        ',' +
+        refy.toFixed(PRECISION) +
+        ',' +
+        npointx.toFixed(PRECISION) +
+        ',' +
+        npointy.toFixed(PRECISION) +
+        ' '
+    }
+    // endcap
+    {
+      const i = plength - 1
+      const w = wstore[i]
+      const curx = pstore[2 * i] - nstore[2 * i]
+      const cury = pstore[2 * i + 1] - nstore[2 * i + 1]
+      pathstrings[i + 2] =
+        'A' +
+        (w * 0.5).toFixed(PRECISION) +
+        ',' +
+        (w * 0.5).toFixed(PRECISION) +
+        ',0,1,1,' +
+        (curx - sx).toFixed(PRECISION) +
+        ',' +
+        (cury - sy).toFixed(PRECISION) +
+        ' '
+    }
+    // now we go back
+    // middle segments second direction
+    for (let i = plength - 2; i > 0; i--) {
+      // cubic segment
+      const curx = pstore[2 * i] - nstore[2 * i]
+      const cury = pstore[2 * i + 1] - nstore[2 * i + 1]
+      const nextx = pstore[2 * (i - 1)] - nstore[2 * (i - 1)]
+      const nexty = pstore[2 * (i - 1) + 1] - nstore[2 * (i - 1) + 1]
+      const refx = curx - sx
+      const refy = cury - sy
+      const npointx = 0.5 * (curx + nextx) - sx
+      const npointy = 0.5 * (cury + nexty) - sy
+      pathstrings[2 * plength - i] =
+        'Q' +
+        refx.toFixed(PRECISION) +
+        ',' +
+        refy.toFixed(PRECISION) +
+        ',' +
+        npointx.toFixed(PRECISION) +
+        ',' +
+        npointy.toFixed(PRECISION) +
+        ' '
+    }
+    // last segment
+    {
+      const i = 0
+      const curx = pstore[2 * i] - nstore[2 * i]
+      const cury = pstore[2 * i + 1] - nstore[2 * i + 1]
+      const refx = curx - sx
+      const refy = cury - sy
+      const npointx = curx - sx
+      const npointy = cury - sy
+      pathstrings[2 * plength - i] =
+        'Q' +
+        refx.toFixed(PRECISION) +
+        ',' +
+        refy.toFixed(PRECISION) +
+        ',' +
+        npointx.toFixed(PRECISION) +
+        ',' +
+        npointy.toFixed(PRECISION) +
+        ' '
+    }
+
+    pathstrings[2 * plength + 1] = 'Z'
+    console.log('pathstrings mystery', pathstrings)
+    this.svgpathstring = pathstrings.join('')
+    this.svgpathversion = this.version
+    console.log('calculated path', this.svgpathstring)
+    return this.svgpathstring
   }
 
   getWeightSlices(numslicesheight: number) {
