@@ -752,6 +752,19 @@ export class DrawObjectForm extends DrawObject {
   private lw: number = 0
 }
 
+// By Gemini flash
+function safeFloatGcd(a: number, b: number) {
+  let iterations = 0
+  const eps = 0.005 // Grid snapping tolerance window
+
+  while (Math.abs(a - b) > eps && iterations < 20) {
+    if (a > b) a = a - b
+    else b = b - a
+    iterations++
+  }
+  return Math.min(a, b)
+}
+
 export class DrawObjectGlyph extends DrawObject {
   constructor(objid: number) {
     super('glyph', objid)
@@ -1013,8 +1026,8 @@ export class DrawObjectGlyph extends DrawObject {
       if (glyph.pathpoints && glyph.pathpoints.length > 0)
         firstpoint = glyph.pathpoints[0]
 
-      const sx = firstpoint ? firstpoint.x : 0
-      const sy = firstpoint ? firstpoint.y : 0
+      const sx = (firstpoint ? firstpoint.x : 0).toFixed(PRECISION)
+      const sy = (firstpoint ? firstpoint.y : 0).toFixed(PRECISION)
       // console.log(glyph.pathpoints);
       const harr = glyph.pathpoints.length + 1
       const pathstrings = new Array(2 * harr + 1)
@@ -1204,43 +1217,233 @@ export class DrawObjectGlyph extends DrawObject {
     const sx = firstpoint.x ?? 0
     const sy = firstpoint.y ?? 0
     // console.log(glyph.pathpoints);
-    const plength = glyph.pathpoints.length
-    const pathstrings = new Array(2 * plength + 2)
-    // let lastnx=null;
-    // let lastny=null;
+    let plength = glyph.pathpoints.length
+    let pstore = new Float64Array(plength * 2)
+    let wstore = new Float64Array(plength)
+    for (let i = 0; i < plength; i++) {
+      pstore[2 * i] = glyph.pathpoints[i].x
+      pstore[2 * i + 1] = glyph.pathpoints[i].y
+      wstore[i] = glyph.pathpoints[i].w
+    }
+    // Grid detection algorithm with momentum reconstruction by GeminiFlash
+    // =========================================================================
+    // DECOUPLED SUBPIXEL PRECISION RESTORATION (INLINE PRE-PROCESSING)
+    // =========================================================================
+    if (plength >= 3) {
+      let gcdX = 0
+      let gcdY = 0
 
-    const dlength = glyph.pathpoints.length - 1
+      // Scan steps to find the underlying grid factor dynamically
+      const scanLimit = Math.min(plength, 20)
+      for (let i = 1; i < scanLimit; i++) {
+        const dx = Math.abs(pstore[2 * i] - pstore[2 * (i - 1)])
+        const dy = Math.abs(pstore[2 * i + 1] - pstore[2 * (i - 1) + 1])
+
+        if (dx > 0.05) {
+          // Ignore micro-jitters smaller than 5% of a pixel
+          gcdX = gcdX === 0 ? dx : safeFloatGcd(gcdX, dx)
+        }
+        if (dy > 0.05) {
+          gcdY = gcdY === 0 ? dy : safeFloatGcd(gcdY, dy)
+        }
+      }
+
+      // Determine grid alignment independently for each axis
+      let matchesX = 0,
+        totalX = 0
+      let matchesY = 0,
+        totalY = 0
+
+      for (let i = 1; i < plength; i++) {
+        const dx = Math.abs(pstore[2 * i] - pstore[2 * (i - 1)])
+        const dy = Math.abs(pstore[2 * i + 1] - pstore[2 * (i - 1) + 1])
+
+        if (dx > 0.001 && gcdX > 0.005) {
+          totalX++
+          if (Math.abs(dx / gcdX - Math.round(dx / gcdX)) < 0.01) matchesX++
+        }
+        if (dy > 0.001 && gcdY > 0.005) {
+          totalY++
+          if (Math.abs(dy / gcdY - Math.round(dy / gcdY)) < 0.01) matchesY++
+        }
+      }
+
+      const isGridX = totalX > 0 && matchesX / totalX > 0.85
+      const isGridY = totalY > 0 && matchesY / totalY > 0.85
+
+      // 2. RUN LOCAL SEGMENT-BASED INERTIAL SMOOTHING
+      if (isGridX || isGridY) {
+        const refinedPstore = new Float64Array(plength * 2)
+
+        // Anchor absolute start
+        refinedPstore[0] = pstore[0]
+        refinedPstore[1] = pstore[1]
+
+        let vx = 0
+        let vy = 0
+
+        for (let i = 1; i < plength - 1; i++) {
+          const idx = 2 * i
+          const prevIdx = 2 * (i - 1)
+          const currentWidth = wstore[i]
+
+          const targetVx = pstore[idx] - refinedPstore[prevIdx]
+          const targetVy = pstore[idx + 1] - refinedPstore[prevIdx + 1]
+
+          // CRITICAL UPDATE: Compute smoothing intensities independently per axis
+          // AND evaluate them locally based on the CURRENT point's width.
+          let severityX = 0
+          let severityY = 0
+
+          if (isGridX && gcdX > 0) {
+            // Shaky if local width is less than 6 grid units wide
+            severityX = Math.max(
+              0.0,
+              Math.min(0.75, 1.0 - currentWidth / (gcdX * 6.0))
+            )
+          }
+          if (isGridY && gcdY > 0) {
+            severityY = Math.max(
+              0.0,
+              Math.min(0.75, 1.0 - currentWidth / (gcdY * 6.0))
+            )
+          }
+
+          // Blend velocity using local axis severity factors
+          vx = vx * severityX + targetVx * (1.0 - severityX)
+          vy = vy * severityY + targetVy * (1.0 - severityY)
+
+          refinedPstore[idx] = refinedPstore[prevIdx] + vx
+          refinedPstore[idx + 1] = refinedPstore[prevIdx + 1] + vy
+        }
+
+        // Anchor absolute end
+        const finalIdx = 2 * (plength - 1)
+        refinedPstore[finalIdx] = pstore[finalIdx]
+        refinedPstore[finalIdx + 1] = pstore[finalIdx + 1]
+
+        pstore = refinedPstore
+      }
+    }
+    // Refinement via Chainkin algorithm provided by Gemini Flash
+    // --- PARAMETERS FOR REFINEMENT ---
+    const refinementIterations = 1
+    const distanceFactor = 1.0
+
+    for (let iter = 0; iter < refinementIterations; iter++) {
+      if (plength < 2) break
+
+      const numSegments = plength - 1
+      const splitFlags = new Uint8Array(numSegments)
+
+      // =========================================================================
+      // PASS 1: CORRECTED COUNTING LOGIC
+      // =========================================================================
+      let nextLength = 1 // Start at 1 to account strictly for the absolute first point
+
+      for (let i = 0; i < numSegments; i++) {
+        const idxA = 2 * i
+        const idxB = 2 * (i + 1)
+
+        const dx = pstore[idxB] - pstore[idxA]
+        const dy = pstore[idxB + 1] - pstore[idxA + 1]
+        const distSq = dx * dx + dy * dy
+
+        const avgW = (wstore[i] + wstore[i + 1]) * 0.5
+        const threshold = distanceFactor * avgW
+        const thresholdSq = threshold * threshold
+
+        if (distSq > thresholdSq) {
+          nextLength += 2 // Adds two completely new intermediate points
+          splitFlags[i] = 1
+        } else {
+          nextLength += 1 // Adds exactly one point (carrying the segment forward)
+          splitFlags[i] = 0
+        }
+      }
+
+      // =========================================================================
+      // PASS 2: CORRESPONDING FILL LOGIC
+      // =========================================================================
+      const nextPstore = new Float64Array(nextLength * 2)
+      const nextWstore = new Float64Array(nextLength)
+
+      // Explicitly write the absolute first point
+      nextPstore[0] = pstore[0]
+      nextPstore[1] = pstore[1]
+      nextWstore[0] = wstore[0]
+
+      let writeIdx = 1
+
+      for (let i = 0; i < numSegments; i++) {
+        const idxA = 2 * i
+        const idxB = 2 * (i + 1)
+
+        const ax = pstore[idxA]
+        const ay = pstore[idxA + 1]
+        const aw = wstore[i]
+
+        const bx = pstore[idxB]
+        const by = pstore[idxB + 1]
+        const bw = wstore[i + 1]
+
+        if (splitFlags[i] === 1) {
+          // Point Q (25%)
+          nextPstore[2 * writeIdx] = ax * 0.75 + bx * 0.25
+          nextPstore[2 * writeIdx + 1] = ay * 0.75 + by * 0.25
+          nextWstore[writeIdx] = aw * 0.75 + bw * 0.25
+          writeIdx++
+
+          // Point R (75%)
+          nextPstore[2 * writeIdx] = ax * 0.25 + bx * 0.75
+          nextPstore[2 * writeIdx + 1] = ay * 0.25 + by * 0.75
+          nextWstore[writeIdx] = aw * 0.25 + bw * 0.75
+          writeIdx++
+        } else {
+          // If we don't split, we cleanly push point B forward to close out the segment.
+          // This automatically captures the final terminal point naturally when i === numSegments - 1.
+          nextPstore[2 * writeIdx] = bx
+          nextPstore[2 * writeIdx + 1] = by
+          nextWstore[writeIdx] = bw
+          writeIdx++
+        }
+      }
+
+      // Double-check verification assertion for your dev environment:
+      // If this triggers, your write pointer deviated from Pass 1's calculation.
+      if (writeIdx !== nextLength) {
+        console.error(
+          `Index mismatch: expected ${nextLength} points, wrote ${writeIdx}`
+        )
+      }
+
+      // Overwrite references for the next iteration step safely
+      pstore = nextPstore
+      wstore = nextWstore
+      plength = nextLength
+    }
+    // Refinement via Chainkin algorithm provided by Gemini Flash END
+    const dlength = plength - 1
     const dstore = new Float64Array(dlength * 2)
 
     for (let i = 0; i < dlength; i++) {
-      dstore[2 * i] = glyph.pathpoints[i + 1].x - glyph.pathpoints[i].x
-      dstore[2 * i + 1] = glyph.pathpoints[i + 1].y - glyph.pathpoints[i].y
+      dstore[2 * i] = pstore[2 * (i + 1)] - pstore[2 * i]
+      dstore[2 * i + 1] = pstore[2 * (i + 1) + 1] - pstore[2 * i + 1]
     }
     const tstore = new Float64Array(plength * 2)
-    const wstore = new Float64Array(plength)
-    const pstore = new Float64Array(plength * 2)
 
     // tangent store
     // first point
     tstore[0] = dstore[0]
     tstore[1] = dstore[1]
-    pstore[0] = glyph.pathpoints[0].x
-    pstore[1] = glyph.pathpoints[0].y
-    wstore[0] = glyph.pathpoints[0].w
     // middle segment
     for (let i = 1; i < plength - 1; i++) {
       tstore[2 * i] = (dstore[2 * (i - 1)] + dstore[2 * i]) * 0.5
       tstore[2 * i + 1] = (dstore[2 * (i - 1) + 1] + dstore[2 * i + 1]) * 0.5
-      pstore[2 * i] = glyph.pathpoints[i].x
-      pstore[2 * i + 1] = glyph.pathpoints[i].y
-      wstore[i] = glyph.pathpoints[i].w
     }
     // last segment
     tstore[2 * (plength - 1)] = dstore[2 * (plength - 1)]
     tstore[2 * (plength - 1) + 1] = dstore[2 * (plength - 1) + 1]
-    pstore[2 * (plength - 1)] = glyph.pathpoints[plength - 1].x
-    pstore[2 * (plength - 1) + 1] = glyph.pathpoints[plength - 1].y
-    wstore[plength - 1] = glyph.pathpoints[plength - 1].w
 
     // calculate normal offsets
     const nstore = new Float64Array(plength * 2)
@@ -1280,6 +1483,7 @@ export class DrawObjectGlyph extends DrawObject {
     }
 
     // pathpoints
+    const pathstrings = new Array(2 * plength + 2)
 
     // first point
     pathstrings[0] =

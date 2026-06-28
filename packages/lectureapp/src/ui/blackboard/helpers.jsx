@@ -23,14 +23,15 @@ import Color from 'color'
 export class SVGWriting2 extends Component {
   render() {
     const glyph = this.props.glyph
+    const PRECISION = 2
     const viewbox =
-      Math.round(glyph.area.left) +
+      glyph.area.left.toFixed(PRECISION) +
       ' ' +
-      Math.round(glyph.area.top) +
+      glyph.area.top.toFixed(PRECISION) +
       ' ' +
-      Math.round(glyph.area.right - glyph.area.left) +
+      (glyph.area.right - glyph.area.left).toFixed(PRECISION) +
       ' ' +
-      Math.round(glyph.area.bottom - glyph.area.top) +
+      (glyph.area.bottom - glyph.area.top).toFixed(PRECISION) +
       ' '
 
     let stroke = 'none'
