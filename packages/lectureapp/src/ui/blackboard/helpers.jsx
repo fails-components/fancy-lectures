@@ -73,28 +73,27 @@ export class SVGWriting2 extends Component {
       position: 'absolute',
       zIndex: this.props.zIndex,
       left:
-        Math.round(
+        (
           ((glyph.area.left + sx) * this.props.pixelwidth) / glyph.svgscale +
-            ox * this.props.pixelwidth
-        ) + 'px',
+          ox * this.props.pixelwidth
+        ).toFixed(PRECISION) + 'px',
       width:
-        Math.round(
+        (
           ((glyph.area.right - glyph.area.left) * this.props.pixelwidth) /
-            glyph.svgscale
-        ) + 'px',
+          glyph.svgscale
+        ).toFixed(PRECISION) + 'px',
       top:
-        Math.round(
+        (
           ((glyph.area.top + sy) * this.props.pixelwidth) / glyph.svgscale +
-            oy * this.props.pixelwidth
-        ) + 'px',
+          oy * this.props.pixelwidth
+        ).toFixed(PRECISION) + 'px',
       height:
-        Math.round(
+        (
           ((glyph.area.bottom - glyph.area.top) * this.props.pixelwidth) /
-            glyph.svgscale
-        ) + 'px',
+          glyph.svgscale
+        ).toFixed(PRECISION) + 'px',
       pointerEvents: 'none' // deactive this option , if you like to pick an svg element by cursor for debugging
     }
-
     if (this.props.preview) stroke = 'purple'
     if (this.props.predraw) stroke = 'cyan'
     if (glyph.isSelected()) {

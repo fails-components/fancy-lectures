@@ -768,7 +768,7 @@ export class BlackboardNotepad extends Component {
             coalevents.forEach(this.processEvent)
             this.pointerdraw[event.pointerId] += coalevents.length
           } else {
-          this.processEvent(event)
+            this.processEvent(event)
           }
         }
       } else if (this.addformpictmode !== 0) {
