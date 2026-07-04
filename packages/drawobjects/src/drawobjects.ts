@@ -1026,8 +1026,8 @@ export class DrawObjectGlyph extends DrawObject {
       if (glyph.pathpoints && glyph.pathpoints.length > 0)
         firstpoint = glyph.pathpoints[0]
 
-      const sx = (firstpoint ? firstpoint.x : 0).toFixed(PRECISION)
-      const sy = (firstpoint ? firstpoint.y : 0).toFixed(PRECISION)
+      const sx = +(firstpoint ? firstpoint.x : 0).toFixed(PRECISION)
+      const sy = +(firstpoint ? firstpoint.y : 0).toFixed(PRECISION)
       // console.log(glyph.pathpoints);
       const harr = glyph.pathpoints.length + 1
       const pathstrings = new Array(2 * harr + 1)
