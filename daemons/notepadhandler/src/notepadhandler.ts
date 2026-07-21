@@ -1136,7 +1136,6 @@ export class NoteScreenConnection extends CommonConnection {
     oldtoken?: ScreenLectureToken
     error?: string
   }> {
-    console.log('getLectureToken mark 1')
     const newtoken: ScreenLectureToken = {
       user: oldtoken.user,
       purpose: 'notepad',
@@ -1148,10 +1147,8 @@ export class NoteScreenConnection extends CommonConnection {
       name: oldtoken.name,
       maxrenew: oldtoken.maxrenew - 1
     }
-    console.log('getLectureToken mark 2')
     if (!oldtoken.maxrenew || !(oldtoken.maxrenew > 0))
       return { error: 'maxrenew token failed', oldtoken: oldtoken }
-    console.log('getLectureToken mark 3')
     try {
       this.redis.hSet(
         'lecture:{' +
@@ -1167,7 +1164,6 @@ export class NoteScreenConnection extends CommonConnection {
     } catch (error) {
       console.log('redis problem in getNotepadToken', error)
     }
-    console.log('getLectureToken mark 4')
     return { token: await this.signNotepadJwt(newtoken), decoded: newtoken }
   }
 
