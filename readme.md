@@ -1,9 +1,4 @@
 !["FAILS logo"](failslogo.svg)
-# Migration warning
-This monorepo will be soon the main home of **FAILS** - components.
-We are currently in the process of migrating all packages and container images.
-The change will be reflected in the components version number 2.
-
 # Fancy automated internet lecture system (**FAILS**) - components
 
 This is main monorepo of FAILS components. (Created as consolidation of the multiple repos used before for FAILS)
