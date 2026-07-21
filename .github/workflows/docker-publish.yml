@@ -49,7 +49,11 @@ jobs:
               container,
               context: './daemons/' + container
             }))
-            allContainersWithContext.push({ container: 'staticserver-noassets', context: './daemons/staticserver'})
+            allContainersWithContext.push({ 
+              container: 'staticserver-noassets',
+              context: './daemons/staticserver',
+              target: 'staticserver-noassets'
+            })
            
             const isTag = context.ref.startsWith('refs/tags/')
             const refName = process.env.REF_NAME
@@ -156,6 +160,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          target: ${{ matrix.container }}
+          target: ${{ matrix.target || ''}}
           cache-from: type=gha
           cache-to: type=gha,mode=max
