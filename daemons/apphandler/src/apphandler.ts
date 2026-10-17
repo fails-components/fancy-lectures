@@ -1383,10 +1383,10 @@ export class AppHandler {
             do {
               const scanret = await node.scan(lectcursor, {
                 MATCH:
-                  'lecture:????????-????-????-????-????????????:notescreens',
+                  'lecture:{????????-????-????-????-????????????}:notescreens',
                 COUNT: 40
               })
-              const lectuuids = scanret.keys.map((el) => el.slice(8, 44))
+              const lectuuids = scanret.keys.map((el) => el.slice(9, 45))
               const nowborder1 = Date.now() - 20 * 60 * 1000
               const nowborder2 = Date.now() - 5 * 60 * 1000 - 10 * 1000
               // perfect, we can now get the number of clients for each of them
