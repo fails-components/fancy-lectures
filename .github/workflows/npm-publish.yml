@@ -33,7 +33,7 @@ jobs:
         run: npm run buildts
 
       - name: Publish to npm
-        run: npx lerna publish from-git --yes
+        run: npx lerna publish from-package --yes --concurrency 1
         env:
           NPM_CONFIG_PROVENANCE: true
 #  publish-container:
