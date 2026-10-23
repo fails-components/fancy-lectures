@@ -30,8 +30,8 @@
     "@fails-components/avsdispatcher": "^2.0.0",
     "@fails-components/docs": "^2.0.2",
     "@fails-components/housekeeping": "^2.0.2",
-    "@fails-components/lectureappexperimental": "npm:@fails-components/lectureapp@2.0.0",
-    "@fails-components/lectureappstable": "npm:@fails-components/lectureapp@2.0.0",
+    "@fails-components/lectureappexperimental": "npm:@fails-components/lectureapp@2.0.3",
+    "@fails-components/lectureappstable": "npm:@fails-components/lectureapp@2.0.3",
     "@fails-components/ltihandler": "^2.0.3",
     "@fails-components/notepadhandler": "^2.0.2",
     "@fails-components/noteshandler": "^2.0.2"
