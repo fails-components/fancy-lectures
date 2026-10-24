@@ -97,14 +97,16 @@ jobs:
           BUILD="false"
           CLEAN_VER=""
 
-          if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "Trigger: Schedule/Manual -> Building."
-            BUILD="true"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "Trigger: Tag -> Building."
             BUILD="true"
             # Extract clean version (v1.2.3 -> 1.2.3)
             CLEAN_VER=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+
+          elif [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Trigger: Schedule/Manual -> Building."
+            BUILD="true"
+         
           elif [[ "${{ steps.changed.outputs.src }}" == "true" ]]; then
             echo "Trigger: Push with changes -> Building."
             BUILD="true"
